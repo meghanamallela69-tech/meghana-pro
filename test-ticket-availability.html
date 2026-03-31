@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Ticket Availability</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .refresh-btn {
+            display: block;
+            margin: 20px auto;
+            padding: 12px 24px;
+            background-color: #a2783a;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .refresh-btn:hover {
+            background-color: #8b6a30;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .event-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .event-title {
+            color: #a2783a;
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        .ticket-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .ticket-type {
+            background: #f9fafb;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #a2783a;
+        }
+        .ticket-name {
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 8px;
+        }
+        .ticket-detail {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        .label {
+            color: #6b7280;
+        }
+        .value {
+            font-weight: 600;
+            color: #374151;
+        }
+        .available {
+            color: #10b981;
+            font-weight: 700;
+        }
+        .total-available {
+            background: #d1fae5;
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+            text-align: center;
+            font-weight: 600;
+            color: #059669;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6b7280;
+        }
+        .error {
+            background: #fee2e2;
+            color: #dc2626;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .note {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎫 Live Ticket Availability Test</h1>
+    
+    <button class="refresh-btn" onclick="fetchEvents()">🔄 Refresh Data</button>
+    
+    <div class="note">
+        <strong>ℹ️ Testing Dynamic Calculation:</strong><br>
+        This page fetches data directly from the API every time you click "Refresh". 
+        The availability is calculated dynamically as: <code>quantityTotal - quantitySold</code>
+    </div>
+    
+    <div id="container">
+        <div class="loading">Loading events...</div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000/api/v1';
+
+        async function fetchEvents() {
+            const container = document.getElementById('container');
+            container.innerHTML = '<div class="loading">Loading events...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/events`);
+                const data = await response.json();
+
+                if (!data.success) {
+                    throw new Error('Failed to fetch events');
+                }
+
+                const ticketedEvents = data.events.filter(e => e.eventType === 'ticketed');
+
+                if (ticketedEvents.length === 0) {
+                    container.innerHTML = '<div class="error">No ticketed events found</div>';
+                    return;
+                }
+
+                let html = '';
+                ticketedEvents.forEach(event => {
+                    html += `
+                        <div class="event-card">
+                            <div class="event-title">${event.title}</div>
+                            
+                            ${event.description ? `<p style="color: #6b7280; margin-bottom: 15px;">${event.description.substring(0, 150)}...</p>` : ''}
+                            
+                            <div class="total-available">
+                                📊 Total Available Tickets: ${event.availableTickets || 0}
+                            </div>
+                            
+                            <div class="ticket-info">
+                    `;
+
+                    if (event.ticketTypes && event.ticketTypes.length > 0) {
+                        event.ticketTypes.forEach(ticket => {
+                            const total = ticket.quantityTotal || ticket.quantity || 0;
+                            const sold = ticket.quantitySold || 0;
+                            const available = ticket.quantityAvailable || 0;
+                            
+                            html += `
+                                <div class="ticket-type">
+                                    <div class="ticket-name">🎟️ ${ticket.name}</div>
+                                    <div class="ticket-detail">
+                                        <span class="label">Total Capacity:</span>
+                                        <span class="value">${total}</span>
+                                    </div>
+                                    <div class="ticket-detail">
+                                        <span class="label">Tickets Sold:</span>
+                                        <span class="value">${sold}</span>
+                                    </div>
+                                    <div class="ticket-detail">
+                                        <span class="label">Available:</span>
+                                        <span class="available">${available}</span>
+                                    </div>
+                                    <div class="ticket-detail" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #e5e7eb;">
+                                        <span class="label">Calculation:</span>
+                                        <span class="value" style="color: #a2783a;">${total} - ${sold} = ${available}</span>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    } else {
+                        html += '<div class="error">No ticket types available</div>';
+                    }
+
+                    html += `
+                            </div>
+                        </div>
+                    `;
+                });
+
+                container.innerHTML = html;
+
+            } catch (error) {
+                container.innerHTML = `
+                    <div class="error">
+                        <strong>Error:</strong> ${error.message}<br><br>
+                        Make sure the backend server is running on port 5000
+                    </div>
+                `;
+                console.error('Error fetching events:', error);
+            }
+        }
+
+        // Auto-load on page load
+        fetchEvents();
+    </script>
+</body>
+</html>

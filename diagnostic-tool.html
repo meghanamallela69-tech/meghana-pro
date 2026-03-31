@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Diagnostic Tool</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #333; border-bottom: 3px solid #4CAF50; padding-bottom: 10px; }
+        h2 { color: #666; margin-top: 30px; }
+        .status { display: inline-block; padding: 5px 15px; border-radius: 4px; margin: 5px 0; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .warning { background: #fff3cd; color: #856404; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        button { background: #4CAF50; color: white; border: none; padding: 12px 24px; border-radius: 4px; cursor: pointer; font-size: 16px; margin: 10px 5px; }
+        button:hover { background: #45a049; }
+        .result { background: #f8f9fa; padding: 15px; border-left: 4px solid #4CAF50; margin: 15px 0; font-family: 'Courier New', monospace; font-size: 13px; overflow-x: auto; }
+        .item { background: white; border: 1px solid #ddd; padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .badge { display: inline-block; padding: 3px 8px; background: #007bff; color: white; border-radius: 3px; font-size: 12px; margin-right: 5px; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #f8f9fa; font-weight: 600; }
+        tr:hover { background: #f5f5f5; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 User Dashboard Diagnostic Tool</h1>
+        
+        <div id="login-section">
+            <p><strong>Status:</strong> <span id="auth-status" class="status error">Not Logged In</span></p>
+            <button onclick="checkAuth()">Check Login Status</button>
+            <button onclick="runDiagnostics()">Run Full Diagnostic</button>
+        </div>
+
+        <div id="results" style="display:none;">
+            <h2>📊 Diagnostic Results</h2>
+            
+            <h3>1. Authentication</h3>
+            <div id="auth-result"></div>
+
+            <h3>2. Events Data</h3>
+            <div id="events-result"></div>
+
+            <h3>3. Payments Data</h3>
+            <div id="payments-result"></div>
+
+            <h3>4. Notifications Data</h3>
+            <div id="notifications-result"></div>
+
+            <h3>5. Summary & Recommendations</h3>
+            <div id="summary-result"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000/api/v1';
+        
+        function getToken() {
+            return localStorage.getItem('token') || sessionStorage.getItem('token');
+        }
+
+        function checkAuth() {
+            const token = getToken();
+            const statusEl = document.getElementById('auth-status');
+            
+            if (token) {
+                statusEl.className = 'status success';
+                statusEl.textContent = '✓ Logged In';
+                alert('You are logged in! Token found.');
+            } else {
+                statusEl.className = 'status error';
+                statusEl.textContent = '✗ Not Logged In';
+                alert('Please login to the application first (open http://localhost:5173 in another tab and login), then come back and click "Check Login Status" again.');
+            }
+        }
+
+        async function runDiagnostics() {
+            const token = getToken();
+            if (!token) {
+                alert('Please login first!');
+                return;
+            }
+
+            document.getElementById('results').style.display = 'block';
+            
+            // Check Auth
+            document.getElementById('auth-result').innerHTML = '<div class="status success">✓ Logged in with valid token</div>';
+
+            // Check Events
+            try {
+                const eventsRes = await fetch(`${API_BASE}/events`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const eventsData = await eventsRes.json();
+                
+                if (eventsData.success) {
+                    const fullServiceCount = eventsData.events.filter(e => 
+                        e.eventType === 'full-service' || e.eventType === 'fullService'
+                    ).length;
+                    
+                    document.getElementById('events-result').innerHTML = `
+                        <div class="status success">✓ Found ${eventsData.events.length} events</div>
+                        <div class="item">
+                            <strong>Full Service Events:</strong> ${fullServiceCount}<br>
+                            <strong>Other Events:</strong> ${eventsData.events.length - fullServiceCount}<br>
+                            <em>Frontend should HIDE dates for full service events</em>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('events-result').innerHTML = `<div class="status error">✗ Error: ${error.message}</div>`;
+            }
+
+            // Check Payments
+            try {
+                const paymentsRes = await fetch(`${API_BASE}/payments/user/my-payments`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const paymentsData = await paymentsRes.json();
+                
+                if (paymentsData.success) {
+                    if (paymentsData.payments.length === 0) {
+                        document.getElementById('payments-result').innerHTML = `
+                            <div class="status warning">⚠ No payments found in database</div>
+                            <div class="item">
+                                <strong>Why?</strong> You haven't made any payments yet.<br>
+                                <strong>To test:</strong> Create a booking → Merchant approves → Make payment
+                            </div>
+                        `;
+                    } else {
+                        let html = `<div class="status success">✓ Found ${paymentsData.payments.length} payments</div>`;
+                        html += '<table><thead><tr><th>ID</th><th>Event Name</th><th>Type</th><th>Amount</th></tr></thead><tbody>';
+                        
+                        paymentsData.payments.forEach((p, i) => {
+                            const eventName = p.eventName || p.eventId?.title || p.bookingId?.serviceTitle || p.description || 'N/A';
+                            const eventType = p.eventType || p.eventId?.eventType || p.bookingId?.serviceCategory || 'N/A';
+                            
+                            html += `
+                                <tr>
+                                    <td>#${p._id.slice(-6)}</td>
+                                    <td>${eventName}</td>
+                                    <td>${eventType}</td>
+                                    <td>₹${p.totalAmount}</td>
+                                </tr>
+                            `;
+                        });
+                        
+                        html += '</tbody></table>';
+                        document.getElementById('payments-result').innerHTML = html;
+                    }
+                }
+            } catch (error) {
+                document.getElementById('payments-result').innerHTML = `<div class="status error">✗ Error: ${error.message}</div>`;
+            }
+
+            // Check Notifications
+            try {
+                const notifRes = await fetch(`${API_BASE}/notifications`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const notifData = await notifRes.json();
+                
+                if (notifData.success) {
+                    const notifications = notifData.notifications || [];
+                    
+                    if (notifications.length === 0) {
+                        document.getElementById('notifications-result').innerHTML = `
+                            <div class="status warning">⚠ No notifications found</div>
+                            <div class="item">
+                                <strong>Why?</strong> Notifications are created when actions happen:<br>
+                                - Booking an event<br>
+                                - Merchant approving/rejecting<br>
+                                - Making payments<br><br>
+                                <button onclick="createTestNotifications()">Create 5 Test Notifications</button>
+                            </div>
+                        `;
+                    } else {
+                        let html = `<div class="status success">✓ Found ${notifications.length} notifications</div>`;
+                        html += '<div style="max-height: 400px; overflow-y: auto;">';
+                        
+                        notifications.forEach((n, i) => {
+                            let color = '#6c757d';
+                            if (n.type === 'payment' || n.type === 'booking') color = '#28a745';
+                            if (n.type === 'booking_approved' || n.type === 'booking_status_update') color = '#17a2b8';
+                            if (n.type === 'payment_request' || n.type === 'booking_request') color = '#fd7e14';
+                            
+                            html += `
+                                <div class="item" style="border-left: 4px solid ${color};">
+                                    <span class="badge" style="background: ${color};">${n.type}</span>
+                                    <strong>${n.message.substring(0, 80)}...</strong><br>
+                                    <small>Read: ${n.read ? 'Yes' : 'No'} | Date: ${new Date(n.createdAt).toLocaleString()}</small>
+                                </div>
+                            `;
+                        });
+                        
+                        html += '</div>';
+                        document.getElementById('notifications-result').innerHTML = html;
+                    }
+                }
+            } catch (error) {
+                document.getElementById('notifications-result').innerHTML = `<div class="status error">✗ Error: ${error.message}</div>`;
+            }
+
+            // Summary
+            document.getElementById('summary-result').innerHTML = `
+                <div class="item">
+                    <h3>✅ All Systems Operational</h3>
+                    <p><strong>If you're still seeing issues:</strong></p>
+                    <ol>
+                        <li><strong>Clear browser cache:</strong> Press Ctrl + Shift + R</li>
+                        <li><strong>Hard refresh:</strong> Close and reopen the browser</li>
+                        <li><strong>Try incognito mode:</strong> Open app in private browsing</li>
+                        <li><strong>Check console:</strong> Press F12 and look for errors</li>
+                    </ol>
+                </div>
+            `;
+        }
+
+        async function createTestNotifications() {
+            const token = getToken();
+            if (!token) {
+                alert('Not logged in!');
+                return;
+            }
+
+            const testNotifs = [
+                { message: 'Payment successful! Your booking for "Wedding" is confirmed.', type: 'payment' },
+                { message: 'Booking approved for "Wedding". Please proceed to payment.', type: 'booking_approved' },
+                { message: 'Your booking status has been updated for "Wedding".', type: 'booking_status_update' },
+                { message: 'Payment request: Please complete payment for "Wedding".', type: 'payment_request' },
+                { message: 'New booking request received for "Birthday Party".', type: 'booking_request' }
+            ];
+
+            let created = 0;
+            for (const notif of testNotifs) {
+                try {
+                    const res = await fetch(`${API_BASE}/notifications/create-test`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(notif)
+                    });
+                    const data = await res.json();
+                    if (data.success) created++;
+                } catch (error) {
+                    console.error('Error:', error);
+                }
+            }
+
+            alert(`Created ${created}/5 test notifications! Refresh the page to see them.`);
+            setTimeout(runDiagnostics, 1000);
+        }
+    </script>
+</body>
+</html>
