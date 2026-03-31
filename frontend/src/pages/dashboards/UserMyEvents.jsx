@@ -128,15 +128,21 @@ const UserMyEvents = () => {
   };
 
   const handleCancelBooking = async (bookingId) => {
-    if (!window.confirm("Are you sure you want to cancel this booking?")) return;
+    if (!window.confirm("Are you sure you want to cancel this booking? This action cannot be undone.")) return;
     
     try {
-      await axios.put(`${API_BASE}/bookings/${bookingId}/cancel`, {}, {
+      const response = await axios.put(`${API_BASE}/event-bookings/${bookingId}/cancel`, {}, {
         headers: authHeaders(token),
       });
-      toast.success("Booking cancelled successfully");
-      fetchMyBookings();
+      
+      if (response.data.success) {
+        toast.success("Booking cancelled successfully");
+        fetchMyBookings(); // Refresh the bookings list
+      } else {
+        toast.error(response.data.message || "Failed to cancel booking");
+      }
     } catch (error) {
+      console.error("Cancel booking error:", error);
       toast.error(error.response?.data?.message || "Failed to cancel booking");
     }
   };
@@ -167,7 +173,20 @@ const UserMyEvents = () => {
   };
 
   const handleViewTicket = (booking) => {
-    setSelectedBooking(booking);
+    // Clean the booking data to remove MongoDB objects and convert Maps
+    const cleanedBooking = {
+      ...booking,
+      _id: booking._id?.toString() || booking._id,
+      selectedTickets: booking.selectedTickets instanceof Map 
+        ? Object.fromEntries(booking.selectedTickets) 
+        : booking.selectedTickets || {},
+      // Ensure all nested objects are plain objects
+      ticket: booking.ticket ? { ...booking.ticket } : null,
+      payment: booking.payment ? { ...booking.payment } : null,
+      merchantResponse: booking.merchantResponse ? { ...booking.merchantResponse } : null
+    };
+    
+    setSelectedBooking(cleanedBooking);
     setTicketModalOpen(true);
   };
 
@@ -203,6 +222,8 @@ const UserMyEvents = () => {
         return { icon: <FiXCircle />, color: "bg-red-100 text-red-700", label: "Rejected" };
       case "cancelled":
         return { icon: <FiXCircle />, color: "bg-gray-100 text-gray-700", label: "Cancelled" };
+      case "expired":
+        return { icon: <FiXCircle />, color: "bg-orange-100 text-orange-700", label: "Expired" };
       default:
         return { icon: <FiClock />, color: "bg-amber-100 text-amber-700", label: status || "Pending" };
     }
@@ -273,8 +294,9 @@ const UserMyEvents = () => {
       );
     }
 
-    // View Ticket button for confirmed/completed bookings with ticket
-    if ((status === "confirmed" || status === "completed") && booking.ticket?.ticketNumber) {
+    // View Ticket button for paid bookings (both confirmed/completed and paid status)
+    if ((["confirmed", "completed", "paid"].includes(status) || booking.payment?.paid) && 
+        (booking.ticket?.ticketNumber || booking.ticketId || booking.paymentId)) {
       buttons.push(
         <button
           key="ticket"
@@ -287,8 +309,8 @@ const UserMyEvents = () => {
       );
     }
 
-    // Cancel button for pending/approved bookings
-    if (["pending", "approved", "accepted", "awaiting_advance"].includes(status)) {
+    // Cancel button for pending/approved bookings (but not paid ones)
+    if (["pending", "approved", "accepted", "awaiting_advance"].includes(status) && !booking.payment?.paid) {
       buttons.push(
         <button
           key="cancel"

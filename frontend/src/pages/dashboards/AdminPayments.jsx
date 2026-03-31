@@ -2,9 +2,8 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import AdminLayout from "../../components/admin/AdminLayout";
-import { FaCreditCard, FaDollarSign, FaPercentage, FaStore, FaExchangeAlt, FaCheck, FaTimes, FaClock } from "react-icons/fa";
+import { FaCreditCard, FaDollarSign, FaPercentage, FaStore, FaExchangeAlt, FaCheck, FaTimes, FaClock, FaWallet, FaCheckCircle, FaTimesCircle } from "react-icons/fa";
 import useAuth from "../../context/useAuth";
-
 import { API_BASE, authHeaders } from "../../lib/http";
 
 const AdminPayments = () => {
@@ -15,6 +14,8 @@ const AdminPayments = () => {
   const [commissionData, setCommissionData] = useState(null);
   const [payouts, setPayouts] = useState([]);
   const [refundRequests, setRefundRequests] = useState([]);
+  const [withdrawals, setWithdrawals] = useState([]);
+  const [withdrawalStats, setWithdrawalStats] = useState({ pending: 0, pendingAmount: 0 });
   const [loading, setLoading] = useState(true);
 
   // Fetch all payment data
@@ -51,6 +52,13 @@ const AdminPayments = () => {
       if (refundResponse.data.success) {
         setRefundRequests(refundResponse.data.refunds || []);
       }
+
+      // Fetch withdrawal requests
+      const withdrawalResponse = await axios.get(`${API_BASE}/admin/withdrawals`, { headers });
+      if (withdrawalResponse.data.success) {
+        setWithdrawals(withdrawalResponse.data.withdrawals || []);
+        setWithdrawalStats(withdrawalResponse.data.stats || { pending: 0, pendingAmount: 0 });
+      }
     } catch (error) {
       console.error("Error fetching payment data:", error);
       toast.error(error.response?.data?.message || "Failed to load payment data");
@@ -84,6 +92,29 @@ const AdminPayments = () => {
     } catch (error) {
       console.error("Error handling refund:", error);
       toast.error(error.response?.data?.message || "Failed to process refund");
+    }
+  };
+
+  // Handle withdrawal action
+  const handleWithdrawalAction = async (withdrawalId, action) => {
+    const message = action === "reject"
+      ? prompt("Enter reason for rejection:")
+      : prompt("Enter payment reference (optional):", "");
+
+    if (action === "reject" && message === null) return; // cancelled
+
+    try {
+      const res = await axios.post(
+        `${API_BASE}/admin/withdrawals/${withdrawalId}/action`,
+        { action, message: message || "", paymentReference: action === "approve" ? message : undefined },
+        { headers: authHeaders(token) }
+      );
+      if (res.data.success) {
+        toast.success(`Withdrawal ${action}d successfully`);
+        fetchAllData();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || `Failed to ${action} withdrawal`);
     }
   };
 
@@ -237,6 +268,22 @@ const AdminPayments = () => {
                   </span>
                 )}
               </button>
+              <button
+                onClick={() => setActiveTab("withdrawals")}
+                className={`px-4 py-3 text-sm font-medium border-b-2 transition ${
+                  activeTab === "withdrawals"
+                    ? "border-blue-600 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+              >
+                <FaWallet className="inline mr-2" />
+                Withdrawals
+                {withdrawalStats.pending > 0 && (
+                  <span className="ml-2 bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full">
+                    {withdrawalStats.pending}
+                  </span>
+                )}
+              </button>
             </nav>
           </div>
 
@@ -261,11 +308,11 @@ const AdminPayments = () => {
                     {transactions.map((tx) => (
                       <tr key={tx._id} className="hover:bg-gray-50">
                         <td className="px-4 py-3 text-xs font-mono text-gray-600">
-                          {tx.bookingId?.serviceTitle || tx.eventId?.title || tx.description || 'N/A'}
+                          {tx.eventName || tx.bookingId?.serviceTitle || tx.eventId?.title || tx.description || 'N/A'}
                         </td>
                         <td className="px-4 py-3 text-sm">
-                          <div className="text-gray-900">{tx.bookingId?.user?.name || 'Unknown'}</div>
-                          <div className="text-xs text-gray-500">{tx.bookingId?.user?.email || ''}</div>
+                          <div className="text-gray-900">{tx.userName || tx.userId?.name || 'Unknown'}</div>
+                          <div className="text-xs text-gray-500">{tx.userEmail || tx.userId?.email || ''}</div>
                         </td>
                         <td className="px-4 py-3 text-sm font-medium text-gray-900">
                           {formatCurrency(tx.totalAmount)}
@@ -427,6 +474,126 @@ const AdminPayments = () => {
                             Reject
                           </button>
                         </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
+            {/* Withdrawals Tab */}
+            {activeTab === "withdrawals" && (
+              <div className="space-y-4">
+                {/* Stats row */}
+                <div className="grid grid-cols-3 gap-4 mb-2">
+                  {[
+                    { label: "Total Requests", value: withdrawalStats.total || 0, color: "text-gray-800" },
+                    { label: "Pending Approval", value: withdrawalStats.pending || 0, color: "text-orange-600" },
+                    { label: "Pending Amount", value: `₹${(withdrawalStats.pendingAmount || 0).toLocaleString("en-IN")}`, color: "text-orange-600" },
+                  ].map(s => (
+                    <div key={s.label} className="bg-orange-50 border border-orange-100 rounded-lg p-4">
+                      <p className="text-xs text-gray-500">{s.label}</p>
+                      <p className={`text-xl font-bold mt-1 ${s.color}`}>{s.value}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {withdrawals.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500">
+                    <FaWallet className="mx-auto text-5xl text-gray-300 mb-4" />
+                    <p className="font-medium">No withdrawal requests</p>
+                  </div>
+                ) : (
+                  withdrawals.map((w) => (
+                    <div key={w._id} className={`border rounded-xl p-5 ${w.status === "pending" ? "border-orange-200 bg-orange-50" : "border-gray-200 bg-white"}`}>
+                      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                        {/* Left: merchant + amount info */}
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center font-bold text-indigo-700">
+                              {w.merchant?.name?.[0]?.toUpperCase() || "M"}
+                            </div>
+                            <div>
+                              <p className="font-semibold text-gray-900">{w.merchant?.name || "Unknown Merchant"}</p>
+                              <p className="text-xs text-gray-500">{w.merchant?.email}</p>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm mt-3">
+                            <div>
+                              <span className="text-gray-500">Amount:</span>
+                              <span className="ml-2 font-bold text-gray-900 text-base">₹{w.amount.toLocaleString("en-IN")}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Status:</span>
+                              <span className={`ml-2 font-semibold px-2 py-0.5 rounded-full text-xs ${
+                                w.status === "pending" ? "bg-yellow-100 text-yellow-700" :
+                                w.status === "approved" ? "bg-green-100 text-green-700" :
+                                w.status === "rejected" ? "bg-red-100 text-red-700" :
+                                "bg-blue-100 text-blue-700"
+                              }`}>
+                                {w.status.charAt(0).toUpperCase() + w.status.slice(1)}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Requested:</span>
+                              <span className="ml-2 text-gray-700">{new Date(w.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>
+                            </div>
+                            {w.bankDetails?.bankName && (
+                              <div>
+                                <span className="text-gray-500">Bank:</span>
+                                <span className="ml-2 text-gray-700">{w.bankDetails.bankName}</span>
+                              </div>
+                            )}
+                            {w.bankDetails?.accountNumber && (
+                              <div>
+                                <span className="text-gray-500">Account:</span>
+                                <span className="ml-2 text-gray-700">****{w.bankDetails.accountNumber.slice(-4)}</span>
+                              </div>
+                            )}
+                            {w.bankDetails?.ifscCode && (
+                              <div>
+                                <span className="text-gray-500">IFSC:</span>
+                                <span className="ml-2 text-gray-700">{w.bankDetails.ifscCode}</span>
+                              </div>
+                            )}
+                            {w.bankDetails?.accountHolderName && (
+                              <div>
+                                <span className="text-gray-500">Holder:</span>
+                                <span className="ml-2 text-gray-700">{w.bankDetails.accountHolderName}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {w.adminResponse?.message && (
+                            <div className={`mt-3 p-2 rounded text-xs ${w.status === "rejected" ? "bg-red-50 text-red-600" : "bg-green-50 text-green-600"}`}>
+                              Admin note: {w.adminResponse.message}
+                            </div>
+                          )}
+                          {w.paymentReference && (
+                            <p className="text-xs text-gray-400 mt-1">Payment Ref: {w.paymentReference}</p>
+                          )}
+                        </div>
+
+                        {/* Right: action buttons (only for pending) */}
+                        {w.status === "pending" && (
+                          <div className="flex flex-col gap-2 min-w-[140px]">
+                            <button
+                              onClick={() => handleWithdrawalAction(w._id, "approve")}
+                              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium text-sm"
+                            >
+                              <FaCheckCircle size={14} />
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => handleWithdrawalAction(w._id, "reject")}
+                              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium text-sm"
+                            >
+                              <FaTimesCircle size={14} />
+                              Reject
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))

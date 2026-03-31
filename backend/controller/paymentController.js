@@ -6,6 +6,7 @@ import { User } from "../models/userSchema.js";
 import { processPaymentDistribution, processRefund } from "../services/paymentDistributionService.js";
 import { v4 as uuidv4 } from "uuid";
 import mongoose from "mongoose";
+import NotificationService from "../services/notificationService.js";
 
 // Process payment for a booking with commission distribution
 export const processPayment = async (req, res) => {
@@ -13,13 +14,6 @@ export const processPayment = async (req, res) => {
     const { bookingId } = req.params;
     const { paymentMethod, paymentAmount } = req.body;
     const userId = req.user.userId;
-
-    console.log(`=== PROCESS PAYMENT ===`);
-    console.log(`Booking ID: ${bookingId}`);
-    console.log(`User ID: ${userId}`);
-    console.log(`Payment Method: ${paymentMethod}`);
-    console.log(`Payment Amount: ${paymentAmount}`);
-
     // Find the booking
     const booking = await Booking.findById(bookingId);
     if (!booking) {
@@ -80,40 +74,63 @@ export const processPayment = async (req, res) => {
       description: `Payment for ${event.title}`
     });
 
+    // For ticketed events, convert reserved tickets to sold tickets
+    if (booking.eventType === "ticketed" && booking.ticketType && booking.ticketCount) {
+      const ticketType = event.ticketTypes.find(t => t.name === booking.ticketType);
+      if (ticketType) {
+        // Ensure we have the new field names
+        if (!ticketType.quantityTotal && ticketType.quantity) {
+          ticketType.quantityTotal = ticketType.quantity;
+        }
+        if (!ticketType.quantitySold) {
+          ticketType.quantitySold = 0;
+        }
+        
+        // Move from reserved to sold
+        ticketType.quantitySold += booking.ticketCount;
+        ticketType.quantityReserved = Math.max(0, (ticketType.quantityReserved || 0) - booking.ticketCount);
+        
+        // Recalculate total available tickets
+        event.availableTickets = event.ticketTypes.reduce((total, ticket) => {
+          const reserved = ticket.quantityReserved || 0;
+          const totalQty = ticket.quantityTotal || ticket.quantity || 0;
+          const sold = ticket.quantitySold || 0;
+          return total + (totalQty - sold - reserved);
+        }, 0);
+        
+        await event.save();
+      }
+    }
+
     // Update booking with additional details
     await Booking.findByIdAndUpdate(bookingId, {
       ticketId,
       ticketGenerated: true
     });
 
-    // Create notification for user
+    // Create notification for user using NotificationService
     try {
-      await Notification.create({
-        user: booking.user,
-        message: `Payment successful! Your booking for "${event.title}" is confirmed. Ticket ID: ${ticketId}`,
-        eventId: event._id,
-        bookingId: booking._id,
-        type: "payment"
-      });
+      await NotificationService.notifyPaymentReceived(
+        booking.user,
+        booking._id,
+        distributionResult.distribution.totalAmount,
+        event.title
+      );
     } catch (notifError) {
       console.error("Failed to create payment notification:", notifError);
     }
 
-    // Create notification for merchant
+    // Create notification for merchant using NotificationService
     try {
-      await Notification.create({
-        user: booking.merchant || event.createdBy,
-        message: `Payment received for "${event.title}" booking. Amount: ₹${distributionResult.distribution.merchantAmount}`,
-        eventId: event._id,
-        bookingId: booking._id,
-        type: "payment"
-      });
+      await NotificationService.notifyMerchantPaymentReceived(
+        booking.merchant || event.createdBy,
+        booking._id,
+        distributionResult.distribution.merchantAmount,
+        event.title
+      );
     } catch (notifError) {
       console.error("Failed to create merchant notification:", notifError);
     }
-
-    console.log(`✅ Payment processed successfully for booking ${bookingId}`);
-
     return res.status(200).json({
       success: true,
       message: "Payment processed successfully",
@@ -144,19 +161,12 @@ export const processPayment = async (req, res) => {
 export const getUserBookings = async (req, res) => {
   try {
     const userId = req.user.userId;
-
-    console.log(`=== GET USER BOOKINGS ===`);
-    console.log(`User ID: ${userId}`);
-
     const bookings = await Booking.find({
       user: userId,
       type: "event"
     })
       .populate("merchant", "name email")
       .sort({ createdAt: -1 });
-
-    console.log(`Found ${bookings.length} bookings for user ${userId}`);
-
     // Format bookings with additional info
     const formattedBookings = bookings.map(booking => ({
       ...booking.toObject(),
@@ -224,12 +234,6 @@ export const processBookingRefund = async (req, res) => {
     const { bookingId } = req.params;
     const { refundReason } = req.body;
     const userId = req.user.userId;
-
-    console.log(`=== PROCESS REFUND ===`);
-    console.log(`Booking ID: ${bookingId}`);
-    console.log(`User ID: ${userId}`);
-    console.log(`Refund Reason: ${refundReason}`);
-
     // Find the booking
     const booking = await Booking.findById(bookingId);
     if (!booking) {
@@ -291,9 +295,6 @@ export const processBookingRefund = async (req, res) => {
     } catch (notifError) {
       console.error("Failed to create merchant refund notification:", notifError);
     }
-
-    console.log(`✅ Refund processed successfully for booking ${bookingId}`);
-
     return res.status(200).json({
       success: true,
       message: "Refund processed successfully",
@@ -581,11 +582,6 @@ export const getUserPayments = async (req, res) => {
   try {
     const userId = req.user.userId;
     const { status } = req.query; // Optional filter: all, completed, pending, failed
-    
-    console.log(`=== GET USER PAYMENTS ===`);
-    console.log(`User ID: ${userId}`);
-    console.log(`Status Filter: ${status || 'all'}`);
-    
     // Build query - use userId directly as MongoDB handles string ObjectIds
     const query = { userId };
     
@@ -602,9 +598,6 @@ export const getUserPayments = async (req, res) => {
       .populate('bookingId', 'serviceTitle serviceCategory eventDate serviceType bookingStatus')
       .sort({ createdAt: -1 })
       .limit(100); // Limit to 100 most recent
-    
-    console.log(`Found ${payments.length} payments for user ${userId}`);
-    
     // Enhance payments with event/booking data
     const enhancedPayments = payments.map(payment => {
       const paymentObj = payment.toObject();
@@ -654,11 +647,6 @@ export const getPaymentDetails = async (req, res) => {
   try {
     const { paymentId } = req.params;
     const userId = req.user.userId;
-    
-    console.log(`=== GET PAYMENT DETAILS ===`);
-    console.log(`Payment ID: ${paymentId}`);
-    console.log(`User ID: ${userId}`);
-    
     // Find payment and verify ownership
     const payment = await Payment.findOne({ 
       _id: paymentId,
@@ -674,9 +662,6 @@ export const getPaymentDetails = async (req, res) => {
         message: "Payment not found or access denied"
       });
     }
-    
-    console.log(`Found payment for booking: ${payment.bookingId?._id}`);
-    
     // Get booking details if available
     let bookingDetails = null;
     if (payment.bookingId) {

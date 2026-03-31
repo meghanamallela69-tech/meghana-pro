@@ -4,13 +4,12 @@ import { Payment } from "../models/paymentSchema.js";
 import { Withdrawal } from "../models/withdrawalSchema.js";
 import { Booking } from "../models/bookingSchema.js";
 import { User } from "../models/userSchema.js";
+import { Notification } from "../models/notificationSchema.js";
 import { uploadMultipleImages, deleteMultipleImages } from "../util/cloudinary.js";
+import NotificationService from "../services/notificationService.js";
 
 export const createEvent = async (req, res) => {
   try {
-    console.log('📝 Creating event...');
-    console.log('Request body:', req.body);
-    console.log('Uploaded files:', req.files && Array.isArray(req.files) ? req.files.map(f => ({ name: f.originalname, fieldname: f.fieldname })) : 'No files');
     
     const {
       title, description, category, price, rating, features,
@@ -25,25 +24,13 @@ export const createEvent = async (req, res) => {
 
     // Handle image uploads - separate banner and gallery
     let images = [];
-    
-    console.log('📸 Checking uploaded files...');
-    console.log('req.files type:', typeof req.files);
-    console.log('req.files is Array:', Array.isArray(req.files));
-    console.log('req.files value:', req.files);
-    console.log('req.file:', req.file);
-    
     // Upload banner image (required)
     if (req.files && Array.isArray(req.files) && req.files.length > 0) {
-      console.log(`📸 Processing ${req.files.length} files from array`);
-      
       // Find banner image (should be first or named bannerImage)
       const bannerFile = req.files.find(f => f.fieldname === 'bannerImage') || req.files[0];
-      console.log('Banner file:', bannerFile?.fieldname, bannerFile?.originalname);
-      
       if (bannerFile) {
         try {
           const uploadedBanner = await uploadMultipleImages([bannerFile.path]);
-          console.log('Uploaded banner:', uploadedBanner);
           if (uploadedBanner && uploadedBanner.length > 0) {
             images.push(uploadedBanner[0]);
           }
@@ -58,13 +45,10 @@ export const createEvent = async (req, res) => {
       
       // Upload gallery images (optional, max 3)
       const galleryFiles = req.files.filter(f => f.fieldname === 'galleryImages');
-      console.log(`Gallery files count: ${galleryFiles.length}`);
-      
       if (galleryFiles && galleryFiles.length > 0) {
         try {
           const galleryPaths = galleryFiles.map(f => f.path);
           const uploadedGallery = await uploadMultipleImages(galleryPaths);
-          console.log('Uploaded gallery:', uploadedGallery);
           images = [...images, ...uploadedGallery];
         } catch (uploadError) {
           console.error('Failed to upload gallery images:', uploadError.message);
@@ -73,17 +57,13 @@ export const createEvent = async (req, res) => {
       }
     } else if (req.files && typeof req.files === 'object' && !Array.isArray(req.files)) {
       // Handle multer.fields() which returns an object with arrays
-      console.log('📸 Processing files from multer.fields() object');
       
       // Get banner image
       const bannerFiles = req.files.bannerImage || [];
       if (bannerFiles && bannerFiles.length > 0) {
         const bannerFile = bannerFiles[0];
-        console.log('Banner file from object:', bannerFile.fieldname, bannerFile.originalname);
-        
         try {
           const uploadedBanner = await uploadMultipleImages([bannerFile.path]);
-          console.log('Uploaded banner:', uploadedBanner);
           if (uploadedBanner && uploadedBanner.length > 0) {
             images.push(uploadedBanner[0]);
           }
@@ -98,13 +78,10 @@ export const createEvent = async (req, res) => {
       
       // Get gallery images
       const galleryFiles = req.files.galleryImages || [];
-      console.log(`Gallery files from object: ${galleryFiles.length}`);
-      
       if (galleryFiles && galleryFiles.length > 0) {
         try {
           const galleryPaths = galleryFiles.map(f => f.path);
           const uploadedGallery = await uploadMultipleImages(galleryPaths);
-          console.log('Uploaded gallery:', uploadedGallery);
           images = [...images, ...uploadedGallery];
         } catch (uploadError) {
           console.error('Failed to upload gallery images:', uploadError.message);
@@ -113,7 +90,6 @@ export const createEvent = async (req, res) => {
       }
     } else if (req.file) {
       // Fallback: handle single file upload (if multer configuration changes)
-      console.log('📸 Processing single file:', req.file.originalname);
       try {
         const uploadedImage = await uploadMultipleImages([req.file.path]);
         if (uploadedImage && uploadedImage.length > 0) {
@@ -123,11 +99,7 @@ export const createEvent = async (req, res) => {
         console.error('Failed to upload image:', uploadError.message);
       }
     } else {
-      console.log('⚠️ No images uploaded - event will be created without images');
     }
-    
-    console.log('✅ Total images to save:', images.length);
-    console.log('Images array:', JSON.stringify(images, null, 2));
 
     // Parse features
     let parsedFeatures = features || [];
@@ -174,15 +146,6 @@ export const createEvent = async (req, res) => {
 
     const tickets = isTicketed ? (totalFromTypes || Number(totalTickets) || 0) : 0;
 
-    console.log('Creating event with data:', {
-      title: title.trim(),
-      category,
-      eventType,
-      price: isTicketed ? lowestTicketPrice : (Number(price) || 0),
-      images: images.length,
-      ticketTypes: parsedTicketTypes.length
-    });
-
     const event = await Event.create({
       title: title.trim(),
       description: description || "",
@@ -204,8 +167,19 @@ export const createEvent = async (req, res) => {
       addons: parsedAddons,
       createdBy: req.user.userId,
     });
+    // Notify all admins about new event
+    try {
+      const merchant = await User.findById(req.user.userId).select("name");
+      await NotificationService.notifyAllAdmins(
+        `New event "${event.title}" created by merchant ${merchant?.name || "Unknown"}`,
+        "event_created",
+        "medium",
+        event._id
+      );
+    } catch (notifErr) {
+      console.error("Failed to notify admin of new event:", notifErr);
+    }
 
-    console.log('✅ Event created successfully:', event._id);
     return res.status(201).json({ success: true, event });
   } catch (error) {
     console.error('❌ Create event error:', error);
@@ -260,24 +234,17 @@ export const updateEvent = async (req, res) => {
     }
 
     // Handle image upload if new images are provided
-    console.log('📸 Update event - Checking uploaded files...');
-    console.log('req.files:', req.files);
-    console.log('req.files type:', typeof req.files);
-    console.log('req.files is Array:', Array.isArray(req.files));
     
     let newImages = [];
     
     // Check if new files were uploaded
     if (req.files && typeof req.files === 'object' && !Array.isArray(req.files)) {
       // Handle multer.fields() which returns an object with arrays
-      console.log('📸 Processing files from multer.fields() object for update');
       
       // Get banner image
       const bannerFiles = req.files.bannerImage || [];
       if (bannerFiles && bannerFiles.length > 0) {
         const bannerFile = bannerFiles[0];
-        console.log('New banner file:', bannerFile.fieldname, bannerFile.originalname);
-        
         try {
           const uploadedBanner = await uploadMultipleImages([bannerFile.path]);
           if (uploadedBanner && uploadedBanner.length > 0) {
@@ -290,8 +257,6 @@ export const updateEvent = async (req, res) => {
       
       // Get gallery images
       const galleryFiles = req.files.galleryImages || [];
-      console.log(`Gallery files for update: ${galleryFiles.length}`);
-      
       if (galleryFiles && galleryFiles.length > 0) {
         try {
           const galleryPaths = galleryFiles.map(f => f.path);
@@ -303,7 +268,6 @@ export const updateEvent = async (req, res) => {
       }
     } else if (req.files && Array.isArray(req.files) && req.files.length > 0) {
       // Fallback: handle if files come as array
-      console.log(`📸 Processing ${req.files.length} files from array for update`);
       try {
         const imagePaths = req.files.map(file => file.path);
         const uploadedImages = await uploadMultipleImages(imagePaths);
@@ -313,7 +277,6 @@ export const updateEvent = async (req, res) => {
       }
     } else if (req.file) {
       // Fallback: handle single file
-      console.log('📸 Processing single file for update:', req.file.originalname);
       try {
         const uploadedImage = await uploadMultipleImages([req.file.path]);
         if (uploadedImage && uploadedImage.length > 0) {
@@ -326,20 +289,15 @@ export const updateEvent = async (req, res) => {
     
     // If new images were uploaded, replace old ones
     if (newImages && newImages.length > 0) {
-      console.log(`✅ New images uploaded: ${newImages.length}`);
-      
       // Delete old images from Cloudinary
       if (event.images && event.images.length > 0) {
         const oldPublicIds = event.images.map(img => img.public_id);
-        console.log('Deleting old images from Cloudinary:', oldPublicIds);
         await deleteMultipleImages(oldPublicIds);
       }
       
       // Replace with new images
       event.images = newImages;
-      console.log('Event images updated:', event.images.length);
     } else {
-      console.log('ℹ️ No new images uploaded - keeping existing images');
     }
     
     await event.save();
@@ -352,7 +310,6 @@ export const updateEvent = async (req, res) => {
 export const listMyEvents = async (req, res) => {
   try {
     const events = await Event.find({ createdBy: req.user.userId });
-    console.log("Listing events:", events);
     return res.status(200).json({ success: true, events });
   } catch (error) {
     console.error("Error listing events:", error);
@@ -416,11 +373,19 @@ export const getEarnings = async (req, res) => {
     const merchantId = req.user.userId;
     
     // Get all payments for this merchant
-    const payments = await Payment.find({ merchantId }).sort({ createdAt: -1 });
+    const payments = await Payment.find({ merchantId })
+      .populate('userId', 'name email')
+      .populate({
+        path: 'bookingId',
+        select: 'serviceTitle eventTitle user',
+        populate: { path: 'user', select: 'name email' }
+      })
+      .populate('eventId', 'title')
+      .sort({ createdAt: -1 });
     
     // Calculate totals
-    const totalEarnings = payments.reduce((sum, p) => sum + p.merchantAmount, 0);
-    const totalCommission = payments.reduce((sum, p) => sum + p.adminCommission, 0);
+    const totalEarnings = payments.reduce((sum, p) => sum + (p.merchantAmount || 0), 0);
+    const totalCommission = payments.reduce((sum, p) => sum + (p.adminCommission || 0), 0);
     
     // Get pending withdrawals
     const pendingWithdrawals = await Withdrawal.find({ 
@@ -429,15 +394,59 @@ export const getEarnings = async (req, res) => {
     });
     const pendingAmount = pendingWithdrawals.reduce((sum, w) => sum + w.amount, 0);
     
-    // Available balance = total earnings - pending withdrawals
-    const availableBalance = totalEarnings - pendingAmount;
-    
-    // Get completed withdrawals
     const completedWithdrawals = await Withdrawal.find({ 
       merchant: merchantId, 
       status: { $in: ["approved", "completed"] } 
     });
     const withdrawnAmount = completedWithdrawals.reduce((sum, w) => sum + w.amount, 0);
+    const availableBalance = Math.max(0, totalEarnings - pendingAmount - withdrawnAmount);
+
+    // Build transaction list — resolve event name and customer name from all possible sources
+    const transactionList = await Promise.all(payments.map(async (p) => {
+      // Resolve event name: eventId.title > bookingId.serviceTitle > description > lookup from Event
+      let eventName = p.eventId?.title 
+        || p.bookingId?.serviceTitle 
+        || p.bookingId?.eventTitle;
+      
+      // If still not found, try looking up the event directly from the booking's serviceId
+      if (!eventName && p.bookingId?.serviceId) {
+        try {
+          const ev = await Event.findById(p.bookingId.serviceId).select('title');
+          eventName = ev?.title;
+        } catch {}
+      }
+
+      // Fallback to description field stored in Payment
+      if (!eventName && p.description) {
+        // description is like "Payment for Wedding" or "Payment for service: Birthday party"
+        const match = p.description.match(/(?:for\s+(?:service:\s+)?|for booking:\s+)(.+)/i);
+        eventName = match ? match[1].trim() : p.description;
+      }
+
+      eventName = eventName || 'Unknown Event';
+
+      // Resolve customer name: userId.name > bookingId.user.name
+      const customerName = p.userId?.name 
+        || p.bookingId?.user?.name 
+        || 'Unknown Customer';
+
+      const customerEmail = p.userId?.email 
+        || p.bookingId?.user?.email 
+        || '';
+
+      return {
+        _id: p._id,
+        eventName,
+        customerName,
+        customerEmail,
+        amount: p.merchantAmount,
+        totalAmount: p.totalAmount,
+        commission: p.adminCommission,
+        date: p.createdAt,
+        status: p.paymentStatus,
+        paymentMethod: p.paymentMethod,
+      };
+    }));
     
     return res.status(200).json({ 
       success: true, 
@@ -447,15 +456,7 @@ export const getEarnings = async (req, res) => {
         pendingAmount,
         withdrawnAmount,
         commissionDeducted: totalCommission,
-        transactionList: payments.map(p => ({
-          bookingId: p.bookingId,
-          amount: p.merchantAmount,
-          totalAmount: p.totalAmount,
-          commission: p.adminCommission,
-          date: p.createdAt,
-          status: p.paymentStatus,
-          paymentMethod: p.paymentMethod
-        }))
+        transactionList
       }
     });
   } catch (error) {
@@ -474,37 +475,40 @@ export const requestWithdrawal = async (req, res) => {
     if (!amount || amount <= 0) {
       return res.status(400).json({ success: false, message: "Invalid amount" });
     }
-    
-    // Check available balance
-    const payments = await Payment.find({ merchantId });
-    const totalEarnings = payments.reduce((sum, p) => sum + p.merchantAmount, 0);
-    
-    const pendingWithdrawals = await Withdrawal.find({ 
-      merchant: merchantId, 
-      status: { $in: ["pending", "processing"] } 
-    });
-    const pendingAmount = pendingWithdrawals.reduce((sum, w) => sum + w.amount, 0);
-    
-    const availableBalance = totalEarnings - pendingAmount;
-    
-    if (amount > availableBalance) {
-      return res.status(400).json({ 
-        success: false, 
-        message: `Insufficient balance. Available: ₹${availableBalance.toFixed(2)}` 
-      });
+
+    if (amount < 100) {
+      return res.status(400).json({ success: false, message: "Minimum withdrawal amount is ₹100" });
     }
     
-    // Create withdrawal request
+    // Create withdrawal request (admin will verify balance before approving)
     const withdrawal = await Withdrawal.create({
       merchant: merchantId,
       amount,
       status: "pending",
       bankDetails: bankDetails || {}
     });
-    
+    // Notify all admins about withdrawal request
+    try {
+      const merchant = await User.findById(merchantId).select("name email");
+      const merchantName = merchant?.name || "Unknown Merchant";
+      const merchantEmail = merchant?.email || "";
+      const adminIds = await User.find({ role: "admin" }).select("_id");
+      for (const admin of adminIds) {
+        await Notification.create({
+          user: admin._id,
+          message: `Withdrawal request of ₹${Number(amount).toLocaleString("en-IN")} from merchant ${merchantName} (${merchantEmail}) is pending your approval.`,
+          type: "payment_request",
+          priority: "high",
+          read: false
+        });
+      }
+    } catch (notifErr) {
+      console.error("Failed to notify admin of withdrawal request:", notifErr);
+    }
+
     return res.status(201).json({ 
       success: true, 
-      message: "Withdrawal request submitted successfully",
+      message: "Withdrawal request submitted successfully. Admin will review and approve.",
       withdrawal 
     });
   } catch (error) {
@@ -534,30 +538,59 @@ export const getMerchantPayments = async (req, res) => {
   try {
     const merchantId = req.user.userId;
     
-    // Get all payments for this merchant
+    // Get all payments for this merchant with full population
     const payments = await Payment.find({ merchantId })
       .sort({ createdAt: -1 })
-      .populate('bookingId', 'eventId user')
-      .populate('eventId', 'title')
-      .populate('userId', 'name email');
+      .populate('userId', 'name email')
+      .populate({
+        path: 'bookingId',
+        select: 'serviceTitle eventTitle serviceId user',
+        populate: { path: 'user', select: 'name email' }
+      })
+      .populate('eventId', 'title');
     
     // Calculate stats
-    const totalEarnings = payments.reduce((sum, p) => sum + p.merchantAmount, 0);
+    const totalEarnings = payments.reduce((sum, p) => sum + (p.merchantAmount || 0), 0);
     
-    // Format payments for frontend
-    const formattedPayments = payments.map(p => ({
-      _id: p._id,
-      event: p.eventId,
-      user: p.userId,
-      customerName: p.userId?.name || 'Unknown',
-      customerEmail: p.userId?.email || '',
-      amount: p.merchantAmount,
-      totalAmount: p.totalAmount,
-      commission: p.adminCommission,
-      status: p.paymentStatus,
-      paymentMethod: p.paymentMethod,
-      createdAt: p.createdAt,
-      transactionId: p.transactionId
+    // Format payments resolving event name and customer from all sources
+    const formattedPayments = await Promise.all(payments.map(async (p) => {
+      // Resolve event name
+      let eventName = p.eventId?.title 
+        || p.bookingId?.serviceTitle 
+        || p.bookingId?.eventTitle;
+
+      if (!eventName && p.bookingId?.serviceId) {
+        try {
+          const ev = await Event.findById(p.bookingId.serviceId).select('title');
+          eventName = ev?.title;
+        } catch {}
+      }
+
+      if (!eventName && p.description) {
+        const match = p.description.match(/(?:for\s+(?:service:\s+)?|for booking:\s+)(.+)/i);
+        eventName = match ? match[1].trim() : p.description;
+      }
+
+      eventName = eventName || 'Unknown Event';
+
+      // Resolve customer name
+      const customerName = p.userId?.name || p.bookingId?.user?.name || 'Unknown Customer';
+      const customerEmail = p.userId?.email || p.bookingId?.user?.email || '';
+
+      return {
+        _id: p._id,
+        eventName,
+        customerName,
+        customerEmail,
+        amount: p.merchantAmount,
+        totalAmount: p.totalAmount,
+        commission: p.adminCommission,
+        status: p.paymentStatus,
+        paymentMethod: p.paymentMethod,
+        createdAt: p.createdAt,
+        transactionId: p.transactionId,
+        description: p.description,
+      };
     }));
     
     return res.status(200).json({ 

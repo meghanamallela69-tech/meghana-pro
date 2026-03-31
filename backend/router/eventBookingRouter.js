@@ -16,7 +16,8 @@ import {
   rejectBooking,
   completeBooking,
   processPayment,
-  addRating
+  addRating,
+  cancelBooking
 } from "../controller/eventBookingController.js";
 import { auth } from "../middleware/authMiddleware.js";
 import { ensureRole } from "../middleware/roleMiddleware.js";
@@ -31,6 +32,7 @@ router.get("/event/:eventId/tickets", auth, getEventTicketTypes);
 router.get("/my-bookings", auth, getBookingsByUserId);
 router.get("/user/:userId", auth, getBookingsByUserId);
 router.put("/:bookingId/pay", auth, processPayment);
+router.put("/:bookingId/cancel", auth, cancelBooking);
 router.post("/:bookingId/rating", auth, addRating);
 
 // Merchant routes

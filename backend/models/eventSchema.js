@@ -23,8 +23,12 @@ const eventSchema = new mongoose.Schema(
       {
         name: { type: String, required: true },        // e.g. "Regular", "VIP"
         price: { type: Number, required: true, min: 0 },
-        quantity: { type: Number, required: true, min: 0 },
-        available: { type: Number, required: true, min: 0 },
+        // Support both old and new field names for backward compatibility
+        quantity: { type: Number, min: 0 }, // Old field name
+        available: { type: Number, min: 0 }, // Old field name
+        quantityTotal: { type: Number, min: 0 }, // New field name
+        quantitySold: { type: Number, default: 0, min: 0 },
+        quantityReserved: { type: Number, default: 0, min: 0 }, // For pending bookings
       }
     ],
     status: { type: String, enum: ["active", "inactive", "completed"], default: "active" },

@@ -188,13 +188,16 @@ export const getMerchantAnalyticsSummary = async (req, res) => {
 
     // Get all bookings for these events
     const bookings = await Booking.find({
-      serviceId: { $in: eventIds }
+      serviceId: { $in: eventIds.map(id => id.toString()) }
     });
 
     // Calculate overall metrics
     const totalEvents = events.length;
     const totalBookings = bookings.length;
-    const totalRevenue = bookings.reduce((sum, b) => sum + (b.totalPrice || 0), 0);
+    // Only count revenue from paid/confirmed bookings
+    const totalRevenue = bookings
+      .filter(b => b.payment?.paid || b.paymentStatus === 'paid' || ['paid', 'confirmed', 'completed'].includes(b.status))
+      .reduce((sum, b) => sum + (b.totalPrice || 0), 0);
     const totalTicketsSold = bookings.reduce((sum, b) => sum + (b.guestCount || 0), 0);
 
     // Per-event summary
@@ -208,7 +211,9 @@ export const getMerchantAnalyticsSummary = async (req, res) => {
         eventTitle: event.title,
         eventType: event.eventType,
         bookings: eventBookings.length,
-        revenue: eventBookings.reduce((sum, b) => sum + (b.totalPrice || 0), 0),
+        revenue: eventBookings
+          .filter(b => b.payment?.paid || b.paymentStatus === 'paid' || ['paid', 'confirmed', 'completed'].includes(b.status))
+          .reduce((sum, b) => sum + (b.totalPrice || 0), 0),
         ticketsSold: eventBookings.reduce((sum, b) => sum + (b.guestCount || 0), 0),
         status: event.status
       };

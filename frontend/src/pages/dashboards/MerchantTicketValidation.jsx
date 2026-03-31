@@ -23,52 +23,75 @@ const MerchantTicketValidation = () => {
     setLoading(true);
     
     try {
-      // Call the actual API endpoint
+      console.log(`🎫 Validating ticket: ${ticketCode.trim()}`);
+      
       const response = await axios.get(
         `${API_BASE}/bookings/merchant/validate-ticket/${encodeURIComponent(ticketCode.trim())}`,
         { headers: authHeaders(token) }
       );
 
+      console.log(`🎫 Validation response:`, response.data);
       const data = response.data;
       
-      if (data.success) {
-        setValidationResult({
+      // Debug: Log the exact structure we're receiving
+      console.log('🔍 Raw response data:', JSON.stringify(data, null, 2));
+      console.log('🔍 Booking object:', JSON.stringify(data.booking, null, 2));
+      
+      if (data.success && data.booking) {
+        // Extract clean data from the booking object
+        const cleanResult = {
           valid: true,
-          ...data.booking,
-          validatedAt: new Date()
-        });
-        toast.success(data.message || "Ticket is valid!");
+          ticketNumber: data.booking.ticketNumber,
+          userName: data.booking.userName,
+          userEmail: data.booking.userEmail,
+          userPhone: data.booking.userPhone,
+          eventTitle: data.booking.eventTitle,
+          status: data.booking.status,
+          paymentStatus: data.booking.paymentStatus,
+          totalPrice: data.booking.totalPrice,
+          finalAmount: data.booking.finalAmount,
+          quantity: data.booking.quantity,
+          guestCount: data.booking.guestCount,
+          ticketType: data.booking.ticketType,
+          validatedAt: data.booking.validatedAt || new Date().toISOString()
+        };
+        
+        setValidationResult(cleanResult);
+        toast.success("✅ Ticket validated successfully! Attendee can enter.");
       } else {
-        // Handle already used case
-        if (data.booking) {
-          setValidationResult({
-            valid: false,
-            alreadyUsed: true,
-            ...data.booking,
-            usedAt: data.usedAt ? new Date(data.usedAt) : null
-          });
-        } else {
-          setValidationResult({
-            valid: false,
-            error: data.message || "Ticket is invalid"
-          });
-        }
+        setValidationResult({
+          valid: false,
+          error: data.message || "Ticket validation failed"
+        });
         toast.error(data.message || "Ticket validation failed");
       }
     } catch (error) {
       console.error("Validation error:", error);
       
-      const errorMessage = error.response?.data?.message || error.message || "Failed to validate ticket";
+      const errorData = error.response?.data;
+      const errorMessage = errorData?.message || error.message || "Failed to validate ticket";
       
-      // Check if it's an "already used" error with booking details
-      if (error.response?.data?.booking) {
-        const errorData = error.response.data;
-        setValidationResult({
+      // Check if it's an error with booking details (like already used or invalid)
+      if (errorData?.booking) {
+        const cleanErrorResult = {
           valid: false,
-          alreadyUsed: true,
-          ...errorData.booking,
-          usedAt: errorData.usedAt ? new Date(errorData.usedAt) : null
-        });
+          alreadyUsed: errorData.alreadyUsed || errorData.message?.includes('already been used'),
+          ticketNumber: errorData.booking.ticketNumber,
+          userName: errorData.booking.userName,
+          userEmail: errorData.booking.userEmail,
+          userPhone: errorData.booking.userPhone,
+          eventTitle: errorData.booking.eventTitle,
+          status: errorData.booking.status,
+          paymentStatus: errorData.booking.paymentStatus,
+          totalPrice: errorData.booking.totalPrice,
+          finalAmount: errorData.booking.finalAmount,
+          quantity: errorData.booking.quantity,
+          guestCount: errorData.booking.guestCount,
+          ticketType: errorData.booking.ticketType,
+          usedAt: errorData.usedAt,
+          error: errorMessage
+        };
+        setValidationResult(cleanErrorResult);
       } else {
         setValidationResult({
           valid: false,
@@ -204,99 +227,177 @@ const MerchantTicketValidation = () => {
                   <p className={`text-sm ${
                     validationResult.valid ? 'text-green-600' : 'text-red-600'
                   }`}>
-                    {validationResult.error || `Status: ${validationResult.status}`}
+                    {validationResult.alreadyUsed ? 'Ticket already validated' : 
+                     validationResult.error ? validationResult.error : 
+                     validationResult.valid ? 'Entry approved' : 'Entry denied'}
                   </p>
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Ticket Number:</span>
-                  <span className="text-sm font-mono font-medium">{validationResult.ticketNumber || validationResult.id}</span>
+              {/* Only show ticket details if we have clean data */}
+              {(validationResult.ticketNumber || validationResult.userName || validationResult.eventTitle) ? (
+                <>
+                  {/* Clean ticket information display */}
+                  <div className="space-y-4">
+                    {/* Ticket Number - Always show if available */}
+                    {validationResult.ticketNumber && (
+                      <div className="bg-white p-3 rounded-lg border">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium text-gray-700">Ticket Number:</span>
+                          <span className="text-sm font-mono font-bold text-blue-600">
+                            {String(validationResult.ticketNumber)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Attendee Information */}
+                    {validationResult.userName && (
+                      <div className="bg-white p-3 rounded-lg border">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                            <FaUser className="text-gray-400" />
+                            Attendee:
+                          </span>
+                          <span className="text-sm font-semibold text-gray-900">
+                            {String(validationResult.userName)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Event Information */}
+                    {validationResult.eventTitle && (
+                      <div className="bg-white p-3 rounded-lg border">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                            <FaCalendarAlt className="text-gray-400" />
+                            Event:
+                          </span>
+                          <span className="text-sm font-semibold text-gray-900 text-right max-w-xs truncate">
+                            {String(validationResult.eventTitle)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Ticket Type */}
+                    {validationResult.ticketType && (
+                      <div className="bg-white p-3 rounded-lg border">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                            <FaHashtag className="text-gray-400" />
+                            Ticket Type:
+                          </span>
+                          <span className="text-sm font-semibold text-gray-900">
+                            {String(validationResult.ticketType)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Quantity */}
+                    {(validationResult.quantity || validationResult.guestCount) && (
+                      <div className="bg-white p-3 rounded-lg border">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium text-gray-700">Quantity:</span>
+                          <span className="text-sm font-semibold text-gray-900">
+                            {validationResult.quantity || validationResult.guestCount} person(s)
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Total Price */}
+                    {(validationResult.totalPrice || validationResult.finalAmount) && (
+                      <div className="bg-white p-3 rounded-lg border">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium text-gray-700">Total Price:</span>
+                          <span className="text-sm font-bold text-green-600">
+                            ₹{Number(validationResult.totalPrice || validationResult.finalAmount || 0).toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Status Information */}
+                    {(validationResult.status || validationResult.paymentStatus) && (
+                      <div className="bg-white p-3 rounded-lg border">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium text-gray-700">Status:</span>
+                          <div className="flex gap-2">
+                            {validationResult.status && (
+                              <span className={`text-xs font-medium px-3 py-1 rounded-full ${
+                                (validationResult.status === 'confirmed' || validationResult.status === 'paid') ? 'bg-green-100 text-green-700' :
+                                validationResult.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                'bg-gray-100 text-gray-700'
+                              }`}>
+                                {String(validationResult.status).toUpperCase()}
+                              </span>
+                            )}
+                            {validationResult.paymentStatus && (
+                              <span className={`text-xs font-medium px-3 py-1 rounded-full ${
+                                validationResult.paymentStatus === 'paid' ? 'bg-green-100 text-green-700' :
+                                'bg-red-100 text-red-700'
+                              }`}>
+                                {String(validationResult.paymentStatus).toUpperCase()}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Contact Information */}
+                    {validationResult.userPhone && (
+                      <div className="bg-white p-3 rounded-lg border">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium text-gray-700">Phone:</span>
+                          <span className="text-sm font-semibold text-gray-900">
+                            {String(validationResult.userPhone)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {validationResult.userEmail && (
+                      <div className="bg-white p-3 rounded-lg border">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium text-gray-700">Email:</span>
+                          <span className="text-sm font-semibold text-gray-900 truncate max-w-xs">
+                            {String(validationResult.userEmail)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Validation Time */}
+                    {validationResult.validatedAt && (
+                      <div className="bg-white p-3 rounded-lg border">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium text-gray-700">Validated At:</span>
+                          <span className="text-sm font-semibold text-gray-900">
+                            {new Date(validationResult.validatedAt).toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                /* Fallback for cases where we don't have clean data */
+                <div className="bg-white p-4 rounded-lg border">
+                  <p className="text-sm text-gray-600">
+                    {validationResult.valid ? 
+                      "✅ Ticket validation successful - Entry approved" : 
+                      `❌ ${validationResult.error || 'Ticket validation failed'}`
+                    }
+                  </p>
                 </div>
-                
-                {validationResult.userName && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600 flex items-center gap-2">
-                      <FaUser className="text-gray-400" />
-                      Attendee:
-                    </span>
-                    <span className="text-sm font-medium">{validationResult.userName}</span>
-                  </div>
-                )}
-                
-                {validationResult.eventTitle && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600 flex items-center gap-2">
-                      <FaCalendarAlt className="text-gray-400" />
-                      Event:
-                    </span>
-                    <span className="text-sm font-medium">{validationResult.eventTitle}</span>
-                  </div>
-                )}
-                
-                {validationResult.ticketType && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600 flex items-center gap-2">
-                      <FaHashtag className="text-gray-400" />
-                      Ticket Type:
-                    </span>
-                    <span className="text-sm font-medium">{validationResult.ticketType}</span>
-                  </div>
-                )}
-                
-                {validationResult.quantity && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Quantity:</span>
-                    <span className="text-sm font-medium">{validationResult.quantity}</span>
-                  </div>
-                )}
-                
-                {validationResult.totalPrice && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Total Price:</span>
-                    <span className="text-sm font-medium">₹{validationResult.totalPrice.toLocaleString()}</span>
-                  </div>
-                )}
-                
-                {validationResult.status && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Status:</span>
-                    <span className={`text-sm font-medium px-2 py-1 rounded ${
-                      validationResult.status === 'confirmed' ? 'bg-green-100 text-green-700' :
-                      validationResult.status === 'paid' ? 'bg-blue-100 text-blue-700' :
-                      'bg-gray-100 text-gray-700'
-                    }`}>
-                      {validationResult.status}
-                    </span>
-                  </div>
-                )}
-                
-                {validationResult.validatedAt && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Validated At:</span>
-                    <span className="text-sm">
-                      {validationResult.validatedAt.toLocaleString()}
-                    </span>
-                  </div>
-                )}
-                
-                {validationResult.userPhone && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Phone:</span>
-                    <span className="text-sm font-medium">{validationResult.userPhone}</span>
-                  </div>
-                )}
-                
-                {validationResult.userEmail && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Email:</span>
-                    <span className="text-sm font-medium truncate max-w-xs">{validationResult.userEmail}</span>
-                  </div>
-                )}
-              </div>
+              )}
 
-              {validationResult.valid && (
+              {/* Success message for valid tickets */}
+              {validationResult.valid && !validationResult.alreadyUsed && (
                 <div className="mt-4 pt-4 border-t border-green-200">
                   <p className="text-sm text-green-700 flex items-center gap-2">
                     <FaCheckCircle className="text-lg" />
@@ -308,14 +409,28 @@ const MerchantTicketValidation = () => {
                 </div>
               )}
               
+              {/* Already validated message */}
               {validationResult.alreadyUsed && (
                 <div className="mt-4 pt-4 border-t border-red-200">
                   <p className="text-sm text-red-700 flex items-center gap-2">
                     <FaTimesCircle className="text-lg" />
-                    <strong>⚠ Ticket Already Used</strong>
+                    <strong>⚠ Ticket Already Validated</strong>
                   </p>
                   <p className="text-xs text-red-600 mt-2">
-                    This ticket was previously validated on {validationResult.usedAt?.toLocaleString()}
+                    This ticket was previously validated{validationResult.usedAt ? ` on ${validationResult.usedAt.toLocaleString()}` : ''}. Entry denied.
+                  </p>
+                </div>
+              )}
+
+              {/* Error message for invalid tickets */}
+              {!validationResult.valid && !validationResult.alreadyUsed && validationResult.error && (
+                <div className="mt-4 pt-4 border-t border-red-200">
+                  <p className="text-sm text-red-700 flex items-center gap-2">
+                    <FaTimesCircle className="text-lg" />
+                    <strong>❌ Validation Failed</strong>
+                  </p>
+                  <p className="text-xs text-red-600 mt-2">
+                    {validationResult.error}
                   </p>
                 </div>
               )}

@@ -6,109 +6,51 @@ import { API_BASE, authHeaders } from "../lib/http";
 const useNotificationBadges = () => {
   const { token } = useAuth();
   const [badgeCounts, setBadgeCounts] = useState({
-    bookings: 0,
-    payments: 0,
-    total: 0,
-    hasMore: false,
+    bookings: 0, payments: 0, system: 0, total: 0, hasMore: false, role: null
   });
-  const [loading, setLoading] = useState(false);
 
-  // Fetch unread counts
   const fetchUnreadCounts = useCallback(async () => {
     if (!token) return;
-    
     try {
-      const response = await axios.get(`${API_BASE}/notifications/unread-counts`, {
+      const { data } = await axios.get(`${API_BASE}/notifications/unread-counts`, {
         headers: authHeaders(token),
       });
-
-      if (response.data.success) {
-        setBadgeCounts(response.data.data);
-      }
-    } catch (error) {
-      console.error("Error fetching unread counts:", error);
-    }
+      if (data.success) setBadgeCounts(data.data);
+    } catch {}
   }, [token]);
 
-  // Mark all notifications as read
   const markAllAsRead = async () => {
     try {
-      const response = await axios.post(
-        `${API_BASE}/notifications/mark-all-read`,
-        {},
-        {
-          headers: authHeaders(token),
-        }
-      );
-
-      if (response.data.success) {
-        // Refresh counts to get accurate state
-        await fetchUnreadCounts();
-      }
-    } catch (error) {
-      console.error("Error marking all as read:", error);
-    }
+      await axios.post(`${API_BASE}/notifications/mark-all-read`, {}, { headers: authHeaders(token) });
+      await fetchUnreadCounts();
+    } catch {}
   };
 
-  // Mark specific notification as read
   const markAsRead = async (notificationId) => {
     try {
-      const response = await axios.patch(
-        `${API_BASE}/notifications/${notificationId}/read`,
-        {},
-        {
-          headers: authHeaders(token),
-        }
-      );
-
-      if (response.data.success) {
-        // Refresh counts
-        await fetchUnreadCounts();
-      }
-    } catch (error) {
-      console.error("Error marking notification as read:", error);
-    }
+      await axios.patch(`${API_BASE}/notifications/${notificationId}/read`, {}, { headers: authHeaders(token) });
+      await fetchUnreadCounts();
+    } catch {}
   };
 
-  // Reset booking badge only
   const resetBookingBadge = useCallback(async () => {
     try {
-      // Mark all booking-type notifications as read
-      const response = await axios.post(
-        `${API_BASE}/notifications/mark-booking-read`,
-        {},
-        {
-          headers: authHeaders(token),
-        }
-      );
-
-      if (response.data.success) {
-        // Refresh counts to get accurate state
-        await fetchUnreadCounts();
-      }
-    } catch (error) {
-      console.error("Error resetting booking badge:", error);
-      // Fallback: just refresh counts
+      await axios.post(`${API_BASE}/notifications/mark-booking-read`, {}, { headers: authHeaders(token) });
+      await fetchUnreadCounts();
+    } catch {
       await fetchUnreadCounts();
     }
   }, [token, fetchUnreadCounts]);
 
-  // Poll for updates every 30 seconds
+  const refreshBadges = fetchUnreadCounts;
+
   useEffect(() => {
     fetchUnreadCounts();
-    
-    const interval = setInterval(fetchUnreadCounts, 30000); // 30 seconds
-    
+    const interval = setInterval(fetchUnreadCounts, 10000);
     return () => clearInterval(interval);
   }, [fetchUnreadCounts]);
 
-  return {
-    badgeCounts,
-    refreshBadges: fetchUnreadCounts,
-    markAllAsRead,
-    markAsRead,
-    resetBookingBadge,
-  };
+  return { badgeCounts, refreshBadges, markAllAsRead, markAsRead, resetBookingBadge };
 };
 
 export default useNotificationBadges;

@@ -3,48 +3,34 @@ import { Event } from "../models/eventSchema.js";
 import { Notification } from "../models/notificationSchema.js";
 import { Coupon } from "../models/couponSchema.js";
 import { v4 as uuidv4 } from "uuid";
+import NotificationService from "../services/notificationService.js";
 
 // Generic create booking endpoint that routes to appropriate handler
 export const createBooking = async (req, res) => {
   try {
     const { eventId, quantity } = req.body;
-    
-    console.log("=== CREATE BOOKING REQUEST ===");
-    console.log("REQ BODY:", JSON.stringify(req.body, null, 2));
-    console.log("USER:", JSON.stringify(req.user, null, 2));
-    console.log("Headers:", JSON.stringify(req.headers, null, 2));
 
     if (!eventId) {
-      console.log("❌ Missing eventId");
       return res.status(400).json({
         success: false,
         message: "Event ID is required"
       });
     }
-
-    console.log("🔍 Looking for event with ID:", eventId);
-
     // Find the event to determine type
     const event = await Event.findById(eventId);
     if (!event) {
-      console.log("❌ Event not found with ID:", eventId);
       return res.status(404).json({
         success: false,
         message: "Event not found"
       });
     }
-
-    console.log("✅ Event found:", event.title, "Type:", event.eventType);
-
     // Route to appropriate handler based on event type
     if (event.eventType === "full-service") {
-      console.log("🔄 Routing to full-service booking handler");
       // For full-service events, we need additional fields
       const { serviceDate, notes, guestCount, couponCode } = req.body;
       req.body = { eventId, serviceDate, notes, guestCount, couponCode };
       return createFullServiceBooking(req, res);
     } else if (event.eventType === "ticketed") {
-      console.log("🔄 Routing to ticketed booking handler");
       // For ticketed events, use default ticket type if not specified
       const { ticketType, paymentMethod, couponCode } = req.body;
       req.body = { 
@@ -56,7 +42,6 @@ export const createBooking = async (req, res) => {
       };
       return createTicketedBooking(req, res);
     } else {
-      console.log("❌ Invalid event type:", event.eventType);
       return res.status(400).json({
         success: false,
         message: "Invalid event type"
@@ -75,22 +60,10 @@ export const createBooking = async (req, res) => {
 // Create booking for full-service events (requires merchant approval)
 export const createFullServiceBooking = async (req, res) => {
   try {
-    console.log("=== FULL SERVICE BOOKING REQUEST ===");
-    console.log("Request body:", JSON.stringify(req.body, null, 2));
     
     const { eventId, serviceDate, notes, guestCount, couponCode } = req.body;
     const userId = req.user.userId || req.user._id;
-
-    console.log(`=== CREATE FULL SERVICE BOOKING ===`);
-    console.log(`Event ID: ${eventId}`);
-    console.log(`User ID: ${userId}`);
-    console.log(`Service Date: ${serviceDate}`);
-    console.log(`Guest Count: ${guestCount}`);
-    console.log(`Notes: ${notes}`);
-    console.log(`Coupon Code: ${couponCode}`);
-
     if (!userId) {
-      console.log("❌ No user ID found");
       return res.status(401).json({
         success: false,
         message: "User authentication required"
@@ -101,35 +74,25 @@ export const createFullServiceBooking = async (req, res) => {
     const { User } = await import("../models/userSchema.js");
     const user = await User.findById(userId).select("name email");
     if (!user) {
-      console.log("❌ User not found");
       return res.status(404).json({
         success: false,
         message: "User not found"
       });
     }
 
-    console.log(`✅ User found: ${user.name} (${user.email})`);
 
     // Find the event
     const event = await Event.findById(eventId).populate("createdBy", "name email");
     if (!event) {
-      console.log("❌ Event not found in full-service handler");
       return res.status(404).json({ success: false, message: "Event not found" });
     }
-
-    console.log("✅ Event found for full-service booking:", event.title);
-
     // Verify it's a full-service event
     if (event.eventType !== "full-service") {
-      console.log("❌ Event is not full-service type:", event.eventType);
       return res.status(400).json({ 
         success: false, 
         message: "This endpoint is only for full-service events" 
       });
     }
-
-    console.log("🔄 Creating new booking...");
-
     // Calculate pricing with coupon if provided
     const originalAmount = event.price || 0;
     let discountAmount = 0;
@@ -137,8 +100,6 @@ export const createFullServiceBooking = async (req, res) => {
     let couponId = null;
 
     if (couponCode) {
-      console.log("🎫 Processing coupon:", couponCode);
-      
       // Find and validate coupon
       const coupon = await Coupon.findOne({ 
         code: couponCode.toUpperCase(),
@@ -209,8 +170,6 @@ export const createFullServiceBooking = async (req, res) => {
       discountAmount = Math.round(discountAmount * 100) / 100;
       finalAmount = originalAmount - discountAmount;
       couponId = coupon._id;
-
-      console.log(`✅ Coupon applied: ${couponCode}, Discount: ₹${discountAmount}, Final: ₹${finalAmount}`);
     }
 
     // Create booking with pending status
@@ -247,7 +206,6 @@ export const createFullServiceBooking = async (req, res) => {
       review: null
     };
 
-    console.log("📝 Booking data to save:", JSON.stringify(bookingData, null, 2));
 
     const booking = await Booking.create(bookingData);
 
@@ -264,11 +222,7 @@ export const createFullServiceBooking = async (req, res) => {
           }
         }
       });
-      console.log("✅ Coupon usage updated");
     }
-
-    console.log("✅ Booking created successfully:", booking._id);
-
     // Create notification for merchant
     try {
       await Notification.create({
@@ -278,13 +232,22 @@ export const createFullServiceBooking = async (req, res) => {
         bookingId: booking._id,
         type: "booking"
       });
-      console.log("✅ Notification created for merchant");
     } catch (notifError) {
       console.error("⚠️ Failed to create notification:", notifError);
     }
 
-    console.log(`✅ Full service booking created successfully: ${booking._id}`);
-
+    // Notify all admins about new booking
+    try {
+      await NotificationService.notifyAllAdmins(
+        `New booking for "${event.title}" — ₹${bookingData.totalPrice || 0}`,
+        "booking",
+        "low",
+        null,
+        booking._id
+      );
+    } catch (notifErr) {
+      console.error("Failed to notify admin of new booking:", notifErr);
+    }
     return res.status(201).json({
       success: true,
       message: "Service booking request sent to merchant",
@@ -308,14 +271,6 @@ export const createTicketedBooking = async (req, res) => {
   try {
     const { eventId, ticketType, quantity, paymentMethod, couponCode } = req.body;
     const userId = req.user.userId || req.user._id;
-
-    console.log(`=== CREATE TICKETED BOOKING ===`);
-    console.log(`Event ID: ${eventId}`);
-    console.log(`User ID: ${userId}`);
-    console.log(`Ticket Type: ${ticketType}`);
-    console.log(`Quantity: ${quantity}`);
-    console.log(`Coupon Code: ${couponCode}`);
-
     // Validate quantity
     if (!quantity || quantity <= 0) {
       return res.status(400).json({
@@ -334,7 +289,6 @@ export const createTicketedBooking = async (req, res) => {
       });
     }
 
-    console.log(`✅ User found: ${user.name} (${user.email})`);
 
     // Find the event
     const event = await Event.findById(eventId).populate("createdBy", "name email");
@@ -359,8 +313,12 @@ export const createTicketedBooking = async (req, res) => {
       });
     }
 
-    // Check ticket availability
-    const availableQuantity = selectedTicketType.quantityTotal - selectedTicketType.quantitySold;
+    // Check ticket availability (account for both sold and reserved tickets)
+    const reservedQuantity = selectedTicketType.quantityReserved || 0;
+    const totalQuantity = selectedTicketType.quantityTotal || selectedTicketType.quantity || 0;
+    const soldQuantity = selectedTicketType.quantitySold || 0;
+    const availableQuantity = totalQuantity - soldQuantity - reservedQuantity;
+    
     if (availableQuantity <= 0) {
       return res.status(400).json({
         success: false,
@@ -382,8 +340,6 @@ export const createTicketedBooking = async (req, res) => {
     let couponId = null;
 
     if (couponCode) {
-      console.log("🎫 Processing coupon:", couponCode);
-      
       // Find and validate coupon
       const coupon = await Coupon.findOne({ 
         code: couponCode.toUpperCase(),
@@ -454,27 +410,34 @@ export const createTicketedBooking = async (req, res) => {
       discountAmount = Math.round(discountAmount * 100) / 100;
       finalAmount = originalAmount - discountAmount;
       couponId = coupon._id;
-
-      console.log(`✅ Coupon applied: ${couponCode}, Discount: ₹${discountAmount}, Final: ₹${finalAmount}`);
     }
 
     // Generate payment and ticket IDs
     const paymentId = `PAY_${uuidv4().substring(0, 8).toUpperCase()}`;
     const ticketId = `TKT_${uuidv4().substring(0, 8).toUpperCase()}`;
 
-    // Update ticket availability (CRITICAL: Update sold count)
-    selectedTicketType.quantitySold += quantity;
+    // Reserve tickets (don't update sold count until payment is confirmed)
+    // Add reserved field to track pending bookings
+    if (!selectedTicketType.quantityReserved) {
+      selectedTicketType.quantityReserved = 0;
+    }
+    selectedTicketType.quantityReserved += quantity;
     
-    // Recalculate total available tickets across all ticket types
+    // Ensure we have quantityTotal field (migrate from old quantity field if needed)
+    if (!selectedTicketType.quantityTotal && selectedTicketType.quantity) {
+      selectedTicketType.quantityTotal = selectedTicketType.quantity;
+    }
+    
+    // Recalculate total available tickets (subtract both sold and reserved)
     event.availableTickets = event.ticketTypes.reduce((total, ticket) => {
-      return total + (ticket.quantityTotal - ticket.quantitySold);
+      const reserved = ticket.quantityReserved || 0;
+      const totalQty = ticket.quantityTotal || ticket.quantity || 0;
+      const sold = ticket.quantitySold || 0;
+      return total + (totalQty - sold - reserved);
     }, 0);
     
-    // Save the event with updated ticket counts
+    // Save the event with updated reservation counts
     await event.save();
-
-    console.log(`✅ Updated ticket availability: ${ticketType} sold: ${selectedTicketType.quantitySold}/${selectedTicketType.quantityTotal}`);
-
     // Create confirmed booking with pending payment (user needs to pay)
     const booking = await Booking.create({
       user: userId,
@@ -524,23 +487,32 @@ export const createTicketedBooking = async (req, res) => {
           }
         }
       });
-      console.log("✅ Coupon usage updated");
     }
 
-    // Create notification for user
+    // Create notification for user using NotificationService
     try {
-      await Notification.create({
-        user: userId,
-        message: `Ticket booking created for "${event.title}". Please complete payment to confirm your tickets.`,
-        eventId: event._id,
-        bookingId: booking._id,
-        type: "booking"
-      });
+      await NotificationService.notifyBookingCreated(
+        userId,
+        booking._id,
+        event.title
+      );
     } catch (notifError) {
       console.error("Failed to create notification:", notifError);
     }
 
-    console.log(`✅ Ticketed booking created (payment pending): ${booking._id}`);
+
+    // Notify all admins about new ticketed booking
+    try {
+      await NotificationService.notifyAllAdmins(
+        `New ticket booking for "${event.title}" — ₹${finalAmount}`,
+        "booking",
+        "low",
+        null,
+        booking._id
+      );
+    } catch (notifErr) {
+      console.error("Failed to notify admin of ticketed booking:", notifErr);
+    }
 
     return res.status(201).json({
       success: true,
@@ -590,13 +562,20 @@ export const getEventTicketTypes = async (req, res) => {
       });
     }
 
-    const ticketTypesWithAvailability = event.ticketTypes.map(ticket => ({
-      name: ticket.name,
-      price: ticket.price,
-      quantityTotal: ticket.quantityTotal,
-      quantitySold: ticket.quantitySold,
-      quantityAvailable: ticket.quantityTotal - ticket.quantitySold
-    }));
+    const ticketTypesWithAvailability = event.ticketTypes.map(ticket => {
+      const totalQty = ticket.quantityTotal || ticket.quantity || 0;
+      const sold = ticket.quantitySold || 0;
+      const reserved = ticket.quantityReserved || 0;
+      
+      return {
+        name: ticket.name,
+        price: ticket.price,
+        quantityTotal: totalQty,
+        quantitySold: sold,
+        quantityReserved: reserved,
+        quantityAvailable: totalQty - sold - reserved
+      };
+    });
 
     return res.status(200).json({
       success: true,
@@ -622,11 +601,6 @@ export const approveFullServiceBooking = async (req, res) => {
   try {
     const { bookingId } = req.params;
     const merchantId = req.user.userId;
-
-    console.log(`=== APPROVE FULL SERVICE BOOKING ===`);
-    console.log(`Booking ID: ${bookingId}`);
-    console.log(`Merchant ID: ${merchantId}`);
-
     // Find the booking
     const booking = await Booking.findById(bookingId).populate("user", "name email");
     if (!booking) {
@@ -665,9 +639,6 @@ export const approveFullServiceBooking = async (req, res) => {
     } catch (notifError) {
       console.error("Failed to create notification:", notifError);
     }
-
-    console.log(`✅ Booking approved: ${bookingId}`);
-
     return res.status(200).json({
       success: true,
       message: "Booking approved successfully",
@@ -689,11 +660,6 @@ export const rejectFullServiceBooking = async (req, res) => {
     const { bookingId } = req.params;
     const { reason } = req.body;
     const merchantId = req.user.userId;
-
-    console.log(`=== REJECT FULL SERVICE BOOKING ===`);
-    console.log(`Booking ID: ${bookingId}`);
-    console.log(`Merchant ID: ${merchantId}`);
-
     // Find the booking
     const booking = await Booking.findById(bookingId).populate("user", "name email");
     if (!booking) {
@@ -727,9 +693,6 @@ export const rejectFullServiceBooking = async (req, res) => {
     } catch (notifError) {
       console.error("Failed to create notification:", notifError);
     }
-
-    console.log(`✅ Booking rejected: ${bookingId}`);
-
     return res.status(200).json({
       success: true,
       message: "Booking rejected successfully",
@@ -749,10 +712,6 @@ export const rejectFullServiceBooking = async (req, res) => {
 export const getMerchantServiceRequests = async (req, res) => {
   try {
     const merchantId = req.user.userId;
-
-    console.log(`=== GET MERCHANT SERVICE REQUESTS ===`);
-    console.log(`Merchant ID: ${merchantId}`);
-
     const bookings = await Booking.find({
       merchant: merchantId,
       eventType: "full-service",
@@ -760,9 +719,6 @@ export const getMerchantServiceRequests = async (req, res) => {
     })
       .populate("user", "name email")
       .sort({ createdAt: -1 });
-
-    console.log(`Found ${bookings.length} service requests for merchant ${merchantId}`);
-
     return res.status(200).json({
       success: true,
       bookings
@@ -783,11 +739,6 @@ export const updateEvent = async (req, res) => {
     const { eventId } = req.params;
     const merchantId = req.user.userId;
     const { title, description, category, location, date, time, price, ticketTypes, features } = req.body;
-
-    console.log(`=== UPDATE EVENT ===`);
-    console.log(`Event ID: ${eventId}`);
-    console.log(`Merchant ID: ${merchantId}`);
-
     // Find the event
     const event = await Event.findById(eventId);
     if (!event) {
@@ -858,9 +809,6 @@ export const updateEvent = async (req, res) => {
 
     // Save the updated event
     await event.save();
-
-    console.log(`✅ Event updated successfully: ${eventId}`);
-
     return res.status(200).json({
       success: true,
       message: "Event updated successfully",
@@ -881,11 +829,6 @@ export const acceptBooking = async (req, res) => {
   try {
     const { id } = req.params;
     const merchantId = req.user.userId;
-
-    console.log(`=== ACCEPT BOOKING ===`);
-    console.log(`Booking ID: ${id}`);
-    console.log(`Merchant ID: ${merchantId}`);
-
     const booking = await Booking.findById(id).populate("user", "name email");
     if (!booking) {
       return res.status(404).json({ success: false, message: "Booking not found" });
@@ -924,9 +867,6 @@ export const acceptBooking = async (req, res) => {
     } catch (notifError) {
       console.error("Failed to create notification:", notifError);
     }
-
-    console.log(`✅ Booking accepted: ${id}`);
-
     return res.status(200).json({
       success: true,
       message: "Booking accepted successfully",
@@ -948,11 +888,6 @@ export const rejectBooking = async (req, res) => {
     const { id } = req.params;
     const { reason } = req.body;
     const merchantId = req.user.userId;
-
-    console.log(`=== REJECT BOOKING ===`);
-    console.log(`Booking ID: ${id}`);
-    console.log(`Merchant ID: ${merchantId}`);
-
     const booking = await Booking.findById(id).populate("user", "name email");
     if (!booking) {
       return res.status(404).json({ success: false, message: "Booking not found" });
@@ -993,9 +928,6 @@ export const rejectBooking = async (req, res) => {
     } catch (notifError) {
       console.error("Failed to create notification:", notifError);
     }
-
-    console.log(`✅ Booking rejected: ${id}`);
-
     return res.status(200).json({
       success: true,
       message: "Booking rejected successfully",
@@ -1016,11 +948,6 @@ export const completeBooking = async (req, res) => {
   try {
     const { id } = req.params;
     const merchantId = req.user.userId;
-
-    console.log(`=== COMPLETE BOOKING ===`);
-    console.log(`Booking ID: ${id}`);
-    console.log(`Merchant ID: ${merchantId}`);
-
     const booking = await Booking.findById(id).populate("user", "name email");
     if (!booking) {
       return res.status(404).json({ success: false, message: "Booking not found" });
@@ -1059,9 +986,6 @@ export const completeBooking = async (req, res) => {
     } catch (notifError) {
       console.error("Failed to create notification:", notifError);
     }
-
-    console.log(`✅ Booking completed: ${id}`);
-
     return res.status(200).json({
       success: true,
       message: "Booking completed successfully",
@@ -1082,11 +1006,6 @@ export const processPayment = async (req, res) => {
   try {
     const { bookingId } = req.params;
     const userId = req.user.userId;
-
-    console.log(`=== PROCESS PAYMENT ===`);
-    console.log(`Booking ID: ${bookingId}`);
-    console.log(`User ID: ${userId}`);
-
     const booking = await Booking.findById(bookingId);
     if (!booking) {
       return res.status(404).json({ success: false, message: "Booking not found" });
@@ -1112,22 +1031,41 @@ export const processPayment = async (req, res) => {
     booking.paymentDate = new Date();
     await booking.save();
 
-    // Create notification for merchant
+    // Notify USER — payment confirmed
     try {
-      const { Notification } = await import("../models/notificationSchema.js");
-      await Notification.create({
-        user: booking.merchant,
-        message: `Payment received for booking "${booking.eventTitle}" from ${booking.user?.name || "User"}`,
-        eventId: booking.eventId,
-        bookingId: booking._id,
-        type: "payment_received"
-      });
-    } catch (notifError) {
-      console.error("Failed to create notification:", notifError);
+      await NotificationService.notifyPaymentReceived(
+        booking.user,
+        booking._id,
+        booking.finalAmount || booking.totalPrice,
+        booking.eventTitle || booking.serviceTitle || "Event"
+      );
+    } catch (notifErr) {
+      console.error("Failed to notify user of payment:", notifErr);
     }
 
-    console.log(`✅ Payment processed: ${bookingId}`);
+    // Notify MERCHANT — payment received
+    try {
+      if (booking.merchant) {
+        await NotificationService.notifyMerchantPaymentReceived(
+          booking.merchant,
+          booking._id,
+          booking.finalAmount || booking.totalPrice,
+          booking.eventTitle || booking.serviceTitle || "Event"
+        );
+      }
+    } catch (notifErr) {
+      console.error("Failed to notify merchant of payment:", notifErr);
+    }
 
+    // Notify admin
+    try {
+      await NotificationService.notifyAllAdmins(
+        `Payment of ₹${booking.finalAmount || booking.totalPrice} received for "${booking.eventTitle || 'Event'}"`,
+        "payment", "medium", null, booking._id
+      );
+    } catch (notifErr) {
+      console.error("Failed to notify admin of payment:", notifErr);
+    }
     return res.status(200).json({
       success: true,
       message: "Payment processed successfully",
@@ -1149,12 +1087,6 @@ export const addRating = async (req, res) => {
     const { bookingId } = req.params;
     const { rating, review } = req.body;
     const userId = req.user.userId;
-
-    console.log(`=== ADD RATING ===`);
-    console.log(`Booking ID: ${bookingId}`);
-    console.log(`User ID: ${userId}`);
-    console.log(`Rating: ${rating}`);
-
     // Validate rating
     if (!rating || rating < 1 || rating > 5) {
       return res.status(400).json({
@@ -1217,7 +1149,6 @@ export const addRating = async (req, res) => {
         event.rating.totalRatings = newTotalRatings;
         await event.save();
         
-        console.log(`✅ Event rating updated: ${event.rating.average} (${newTotalRatings} ratings)`);
       }
     } catch (eventError) {
       console.error("Failed to update event rating:", eventError);
@@ -1234,9 +1165,6 @@ export const addRating = async (req, res) => {
     } catch (ratingError) {
       console.error("Failed to create rating record:", ratingError);
     }
-
-    console.log(`✅ Rating added: ${bookingId}`);
-
     return res.status(200).json({
       success: true,
       message: "Rating added successfully",
@@ -1256,10 +1184,6 @@ export const addRating = async (req, res) => {
 export const getMerchantBookings = async (req, res) => {
   try {
     const merchantId = req.user.userId;
-
-    console.log(`=== GET MERCHANT CONFIRMED BOOKINGS ===`);
-    console.log(`Merchant ID: ${merchantId}`);
-
     // Get confirmed bookings: completed + paid (includes both full-service and ticketed)
     const bookings = await Booking.find({
       merchant: merchantId,
@@ -1274,9 +1198,6 @@ export const getMerchantBookings = async (req, res) => {
       .populate("user", "name email")
       .populate("eventId", "title date location time")
       .sort({ createdAt: -1 });
-
-    console.log(`Found ${bookings.length} confirmed bookings for merchant`);
-
     // Format bookings with complete data
     const formattedBookings = bookings.map((booking) => {
       const bookingObj = booking.toObject();
@@ -1317,21 +1238,8 @@ export const getMerchantBookings = async (req, res) => {
         updatedAt: bookingObj.updatedAt
       };
     });
-
-    console.log(`Returning ${formattedBookings.length} confirmed bookings`);
-    
     // Debug: Log first booking to verify data structure
     if (formattedBookings.length > 0) {
-      console.log("Sample confirmed booking data:", {
-        eventTitle: formattedBookings[0].eventTitle,
-        eventLocation: formattedBookings[0].eventLocation,
-        eventTime: formattedBookings[0].eventTime,
-        customerName: formattedBookings[0].customerName,
-        rating: formattedBookings[0].rating,
-        eventType: formattedBookings[0].eventType,
-        bookingStatus: formattedBookings[0].bookingStatus,
-        paymentStatus: formattedBookings[0].paymentStatus
-      });
     }
 
     return res.status(200).json({
@@ -1352,10 +1260,6 @@ export const getMerchantBookings = async (req, res) => {
 export const getBookingsByUserId = async (req, res) => {
   try {
     const userId = req.user.userId || req.user._id;
-
-    console.log(`=== GET USER BOOKINGS ===`);
-    console.log(`User ID: ${userId}`);
-
     const bookings = await Booking.find({
       user: userId,
       type: "event"
@@ -1363,9 +1267,6 @@ export const getBookingsByUserId = async (req, res) => {
       .populate("merchant", "name email")
       .populate("eventId", "eventType title") // Populate event details including eventType
       .sort({ createdAt: -1 });
-
-    console.log(`Found ${bookings.length} bookings for user ${userId}`);
-
     // Format bookings with additional info
     const formattedBookings = bookings.map(booking => {
       const bookingObj = booking.toObject();
@@ -1403,12 +1304,6 @@ export const updateBookingStatus = async (req, res) => {
     const { bookingId } = req.params;
     const { status } = req.body;
     const merchantId = req.user.userId;
-
-    console.log(`=== UPDATE BOOKING STATUS ===`);
-    console.log(`Booking ID: ${bookingId}`);
-    console.log(`New Status: ${status}`);
-    console.log(`Merchant ID: ${merchantId}`);
-
     // Validate status
     const validStatuses = ["pending", "processing", "completed"];
     if (!validStatuses.includes(status)) {
@@ -1465,9 +1360,6 @@ export const updateBookingStatus = async (req, res) => {
     } catch (notifError) {
       console.error("Failed to create notification:", notifError);
     }
-
-    console.log(`✅ Booking status updated to ${status}: ${bookingId}`);
-
     return res.status(200).json({
       success: true,
       message: `Booking status updated to ${status} successfully`,
@@ -1488,11 +1380,6 @@ export const markBookingCompleted = async (req, res) => {
   try {
     const { bookingId } = req.params;
     const merchantId = req.user.userId;
-
-    console.log(`=== MARK BOOKING COMPLETED ===`);
-    console.log(`Booking ID: ${bookingId}`);
-    console.log(`Merchant ID: ${merchantId}`);
-
     // Find the booking
     const booking = await Booking.findById(bookingId).populate("user", "name email");
     if (!booking) {
@@ -1532,9 +1419,6 @@ export const markBookingCompleted = async (req, res) => {
     } catch (notifError) {
       console.error("Failed to create notification:", notifError);
     }
-
-    console.log(`✅ Booking marked as completed: ${bookingId}`);
-
     return res.status(200).json({
       success: true,
       message: "Booking marked as completed successfully",
@@ -1563,20 +1447,12 @@ export const getBookingsByUserIdAdmin = async (req, res) => {
         message: "Access denied"
       });
     }
-
-    console.log(`=== GET BOOKINGS BY USER ID ===`);
-    console.log(`Requested User ID: ${userId}`);
-    console.log(`Requesting User ID: ${requestingUserId}`);
-
     const bookings = await Booking.find({
       user: userId,
       type: "event"
     })
       .populate("merchant", "name email")
       .sort({ createdAt: -1 });
-
-    console.log(`Found ${bookings.length} bookings for user ${userId}`);
-
     return res.status(200).json({
       success: true,
       bookings: bookings
@@ -1588,5 +1464,159 @@ export const getBookingsByUserIdAdmin = async (req, res) => {
       success: false,
       message: "Failed to fetch bookings"
     });
+  }
+};
+
+// Cancel booking and release reserved tickets
+export const cancelBooking = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const userId = req.user.userId || req.user._id;
+    // Find the booking
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      return res.status(404).json({ success: false, message: "Booking not found" });
+    }
+
+    // Verify the booking belongs to the user
+    if (String(booking.user) !== String(userId)) {
+      return res.status(403).json({ success: false, message: "Not authorized to cancel this booking" });
+    }
+
+    // Check if booking can be cancelled
+    if (booking.paymentStatus === "paid") {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Cannot cancel paid booking. Please request a refund instead." 
+      });
+    }
+
+    if (booking.status === "cancelled") {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Booking is already cancelled" 
+      });
+    }
+
+    // For ticketed events, release reserved tickets
+    if (booking.eventType === "ticketed" && booking.ticketType && booking.ticketCount) {
+      const event = await Event.findById(booking.eventId);
+      if (event) {
+        const ticketType = event.ticketTypes.find(t => t.name === booking.ticketType);
+        if (ticketType) {
+          // Release reserved tickets
+          ticketType.quantityReserved = Math.max(0, (ticketType.quantityReserved || 0) - booking.ticketCount);
+          
+          // Recalculate total available tickets
+          event.availableTickets = event.ticketTypes.reduce((total, ticket) => {
+            const reserved = ticket.quantityReserved || 0;
+            const totalQty = ticket.quantityTotal || ticket.quantity || 0;
+            const sold = ticket.quantitySold || 0;
+            return total + (totalQty - sold - reserved);
+          }, 0);
+          
+          await event.save();
+        }
+      }
+    }
+
+    // Update booking status
+    await Booking.findByIdAndUpdate(bookingId, {
+      status: "cancelled",
+      bookingStatus: "cancelled",
+      cancelledAt: new Date(),
+      cancelReason: "User cancelled"
+    });
+
+    // Create notification for user
+    try {
+      await Notification.create({
+        user: booking.user,
+        message: `Your booking for "${booking.eventTitle || 'Event'}" has been cancelled successfully.`,
+        eventId: booking.eventId,
+        bookingId: booking._id,
+        type: "booking"
+      });
+    } catch (notifError) {
+      console.error("Failed to create cancellation notification:", notifError);
+    }
+    return res.status(200).json({
+      success: true,
+      message: "Booking cancelled successfully",
+      bookingId: bookingId
+    });
+
+  } catch (error) {
+    console.error("Cancel booking error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to cancel booking",
+      error: error.message
+    });
+  }
+};
+
+// Cleanup expired reservations (should be called periodically)
+export const cleanupExpiredReservations = async () => {
+  try {
+    // Find bookings that are pending payment for more than 30 minutes
+    const expirationTime = new Date(Date.now() - 30 * 60 * 1000); // 30 minutes ago
+    
+    const expiredBookings = await Booking.find({
+      eventType: "ticketed",
+      paymentStatus: "pending",
+      status: "pending",
+      createdAt: { $lt: expirationTime }
+    });
+    for (const booking of expiredBookings) {
+      try {
+        // Release reserved tickets
+        const event = await Event.findById(booking.eventId);
+        if (event && booking.ticketType && booking.ticketCount) {
+          const ticketType = event.ticketTypes.find(t => t.name === booking.ticketType);
+          if (ticketType) {
+            ticketType.quantityReserved = Math.max(0, (ticketType.quantityReserved || 0) - booking.ticketCount);
+            
+            // Recalculate total available tickets
+            event.availableTickets = event.ticketTypes.reduce((total, ticket) => {
+              const reserved = ticket.quantityReserved || 0;
+              const totalQty = ticket.quantityTotal || ticket.quantity || 0;
+              const sold = ticket.quantitySold || 0;
+              return total + (totalQty - sold - reserved);
+            }, 0);
+            
+            await event.save();
+          }
+        }
+
+        // Mark booking as expired
+        await Booking.findByIdAndUpdate(booking._id, {
+          status: "expired",
+          bookingStatus: "expired",
+          expiredAt: new Date()
+        });
+
+        // Create notification for user
+        try {
+          await Notification.create({
+            user: booking.user,
+            message: `Your ticket reservation for "${booking.eventTitle || 'Event'}" has expired. Please book again if you still want to attend.`,
+            eventId: booking.eventId,
+            bookingId: booking._id,
+            type: "booking"
+          });
+        } catch (notifError) {
+          console.error("Failed to create expiration notification:", notifError);
+        }
+
+      } catch (bookingError) {
+        console.error(`Failed to process expired booking ${booking._id}:`, bookingError);
+      }
+    }
+    return expiredBookings.length;
+
+  } catch (error) {
+    console.error("Cleanup expired reservations error:", error);
+    return 0;
   }
 };

@@ -21,7 +21,9 @@ import {
   handleRefund,
   getRefundRequests,
   getAllBookings,
-  getAnalytics
+  getAnalytics,
+  getAllWithdrawals,
+  handleWithdrawal
 } from "../controller/adminController.js";
 
 const router = express.Router();
@@ -52,5 +54,9 @@ router.get("/bookings/all", auth, ensureRole("admin"), getAllBookings);
 
 // Analytics
 router.get("/analytics", auth, ensureRole("admin"), getAnalytics);
+
+// Withdrawal management
+router.get("/withdrawals", auth, ensureRole("admin"), getAllWithdrawals);
+router.post("/withdrawals/:id/action", auth, ensureRole("admin"), handleWithdrawal);
 
 export default router;

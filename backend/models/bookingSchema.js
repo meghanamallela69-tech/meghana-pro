@@ -45,7 +45,7 @@ const bookingSchema = new mongoose.Schema(
     // Workflow status for both event types
     status: { 
       type: String, 
-      enum: ["pending", "awaiting_advance", "advance_paid", "approved", "pending_payment", "accepted", "rejected", "paid", "confirmed", "processing", "cancelled", "completed"],
+      enum: ["pending", "awaiting_advance", "advance_paid", "approved", "pending_payment", "accepted", "rejected", "paid", "confirmed", "processing", "cancelled", "completed", "expired"],
       default: "pending" 
     },
     // For full-service: merchant acceptance and addons
@@ -100,7 +100,9 @@ const bookingSchema = new mongoose.Schema(
       generatedAt: { type: Date },
       ticketType: { type: String }, // For ticketed events (Regular, VIP, etc.)
       quantity: { type: Number, default: 1 },
-      pricePerTicket: { type: Number } // Price per individual ticket
+      pricePerTicket: { type: Number }, // Price per individual ticket
+      isUsed: { type: Boolean, default: false }, // Track if ticket has been used
+      usedAt: { type: Date } // When the ticket was used/validated
     },
     // Multiple ticket types selection (for ticketed events)
     selectedTickets: {

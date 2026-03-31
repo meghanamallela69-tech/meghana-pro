@@ -62,7 +62,17 @@ export const processPaymentDistribution = async (paymentData) => {
     });
 
     if (existingPayment) {
-      throw new Error("Payment already processed for this booking");
+      console.log(`⚠️ Payment already exists for booking ${bookingId}, returning existing record`);
+      // Return existing payment instead of throwing
+      const merchant = await User.findById(merchantId);
+      return {
+        success: true,
+        payment: existingPayment,
+        distribution: calculateCommission(existingPayment.totalAmount),
+        merchantWalletBalance: merchant?.walletBalance || 0,
+        adminTotalCommission: 0,
+        alreadyProcessed: true
+      };
     }
 
     // Step 3: Create payment record

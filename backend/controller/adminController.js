@@ -3,6 +3,8 @@ import { Event } from "../models/eventSchema.js";
 import { Registration } from "../models/registrationSchema.js";
 import { Booking } from "../models/bookingSchema.js";
 import { Payment } from "../models/paymentSchema.js";
+import { Withdrawal } from "../models/withdrawalSchema.js";
+import { Notification } from "../models/notificationSchema.js";
 import bcrypt from "bcryptjs";
 import { sendMail } from "../util/mailer.js";
 
@@ -10,8 +12,10 @@ import { sendMail } from "../util/mailer.js";
 export const getAllTransactions = async (req, res) => {
   try {
     const payments = await Payment.find()
-      .populate('bookingId', 'serviceTitle user')
+      .populate('userId', 'name email phone')
       .populate('merchantId', 'name email')
+      .populate('bookingId', 'serviceTitle eventTitle')
+      .populate('eventId', 'title')
       .sort({ createdAt: -1 });
 
     // Calculate totals
@@ -19,9 +23,29 @@ export const getAllTransactions = async (req, res) => {
     const totalCommission = payments.reduce((sum, p) => sum + (p.adminCommission || 0), 0);
     const totalMerchantPayout = payments.reduce((sum, p) => sum + (p.merchantAmount || 0), 0);
 
+    // Format transactions with clean user data
+    const transactions = payments.map(p => ({
+      _id: p._id,
+      transactionId: p.transactionId,
+      userName: p.userId?.name || 'Unknown',
+      userEmail: p.userId?.email || '',
+      merchantName: p.merchantId?.name || 'Unknown',
+      eventName: p.eventId?.title || p.bookingId?.serviceTitle || p.bookingId?.eventTitle || p.description || 'N/A',
+      totalAmount: p.totalAmount,
+      adminCommission: p.adminCommission,
+      merchantAmount: p.merchantAmount,
+      paymentStatus: p.paymentStatus,
+      paymentMethod: p.paymentMethod,
+      createdAt: p.createdAt,
+      // Keep raw refs for any other use
+      userId: p.userId,
+      merchantId: p.merchantId,
+      bookingId: p.bookingId,
+    }));
+
     return res.status(200).json({ 
       success: true, 
-      transactions: payments,
+      transactions,
       summary: {
         totalAmount,
         totalCommission,
@@ -737,5 +761,93 @@ export const getAnalytics = async (req, res) => {
       success: false, 
       message: error.message || "Failed to fetch analytics" 
     });
+  }
+};
+
+// Get all withdrawal requests (admin)
+export const getAllWithdrawals = async (req, res) => {
+  try {
+    const { status } = req.query;
+    const query = status && status !== "all" ? { status } : {};
+
+    const withdrawals = await Withdrawal.find(query)
+      .populate("merchant", "name email phone")
+      .populate("adminResponse.approvedBy", "name email")
+      .sort({ createdAt: -1 });
+
+    const stats = {
+      total: await Withdrawal.countDocuments(),
+      pending: await Withdrawal.countDocuments({ status: "pending" }),
+      approved: await Withdrawal.countDocuments({ status: "approved" }),
+      rejected: await Withdrawal.countDocuments({ status: "rejected" }),
+      totalAmount: withdrawals.reduce((s, w) => s + w.amount, 0),
+      pendingAmount: withdrawals.filter(w => w.status === "pending").reduce((s, w) => s + w.amount, 0),
+    };
+
+    return res.status(200).json({ success: true, withdrawals, stats });
+  } catch (error) {
+    console.error("Get all withdrawals error:", error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Approve or reject a withdrawal request (admin)
+export const handleWithdrawal = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { action, message, paymentReference } = req.body; // action: "approve" | "reject"
+    const adminId = req.user.userId;
+
+    if (!["approve", "reject"].includes(action)) {
+      return res.status(400).json({ success: false, message: "Invalid action. Use 'approve' or 'reject'" });
+    }
+
+    const withdrawal = await Withdrawal.findById(id).populate("merchant", "name email");
+    if (!withdrawal) {
+      return res.status(404).json({ success: false, message: "Withdrawal request not found" });
+    }
+
+    if (withdrawal.status !== "pending") {
+      return res.status(400).json({ success: false, message: `Withdrawal is already ${withdrawal.status}` });
+    }
+
+    withdrawal.status = action === "approve" ? "approved" : "rejected";
+    withdrawal.adminResponse = {
+      approvedBy: adminId,
+      responseDate: new Date(),
+      message: message || (action === "approve" ? "Withdrawal approved" : "Withdrawal rejected"),
+      rejectionReason: action === "reject" ? (message || "Rejected by admin") : undefined,
+    };
+
+    if (action === "approve") {
+      withdrawal.processedDate = new Date();
+      if (paymentReference) withdrawal.paymentReference = paymentReference;
+    }
+
+    await withdrawal.save();
+
+    // Notify the merchant
+    try {
+      await Notification.create({
+        user: withdrawal.merchant._id,
+        type: action === "approve" ? "payment_received" : "payment_failed",
+        title: action === "approve" ? "Withdrawal Approved" : "Withdrawal Rejected",
+        message: action === "approve"
+          ? `Your withdrawal request of ₹${withdrawal.amount.toLocaleString()} has been approved and will be credited to your account.`
+          : `Your withdrawal request of ₹${withdrawal.amount.toLocaleString()} was rejected. Reason: ${message || "No reason provided"}`,
+        read: false,
+      });
+    } catch (notifErr) {
+      console.error("Failed to send withdrawal notification:", notifErr);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Withdrawal ${action}d successfully`,
+      withdrawal,
+    });
+  } catch (error) {
+    console.error("Handle withdrawal error:", error);
+    return res.status(500).json({ success: false, message: error.message });
   }
 };

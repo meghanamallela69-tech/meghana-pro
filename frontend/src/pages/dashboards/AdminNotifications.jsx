@@ -2,12 +2,14 @@ import { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import AdminLayout from "../../components/admin/AdminLayout";
 import useAuth from "../../context/useAuth";
+import useNotificationBadges from "../../context/useNotificationBadges";
 import { API_BASE, authHeaders } from "../../lib/http";
-import { FaBell, FaEnvelope, FaCheck, FaTrash, FaEye, FaSearch, FaFilter } from "react-icons/fa";
+import { FaBell, FaEnvelope, FaCheck, FaTrash, FaEye, FaSearch, FaFilter, FaCalendarAlt, FaDollarSign, FaInbox } from "react-icons/fa";
 import toast from "react-hot-toast";
 
 const AdminNotifications = () => {
   const { token } = useAuth();
+  const { refreshBadges } = useNotificationBadges();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
@@ -19,6 +21,7 @@ const AdminNotifications = () => {
   const [totalPages, setTotalPages] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [activeFilter, setActiveFilter] = useState('all');
 
   const loadNotifications = useCallback(async () => {
     try {
@@ -26,19 +29,19 @@ const AdminNotifications = () => {
       const queryParams = new URLSearchParams({
         page: currentPage.toString(),
         limit: '20',
-        ...filters
+        ...(activeFilter !== 'all' && { type: activeFilter })
       });
 
       const response = await axios.get(
-        `${API_BASE}/admin-profile/notifications?${queryParams}`, 
+        `${API_BASE}/notifications?${queryParams}`, 
         { headers: authHeaders(token) }
       );
       
       if (response.data.success) {
         setNotifications(response.data.notifications || []);
-        setTotalPages(response.data.totalPages || 0);
-        setTotalCount(response.data.total || 0);
-        setUnreadCount(response.data.unreadCount || 0);
+        setTotalPages(response.data.pagination?.pages || 0);
+        setTotalCount(response.data.pagination?.total || 0);
+        setUnreadCount(response.data.notifications?.filter(n => !n.read).length || 0);
       }
     } catch (error) {
       console.error("Error loading notifications:", error);
@@ -46,27 +49,23 @@ const AdminNotifications = () => {
     } finally {
       setLoading(false);
     }
-  }, [token, currentPage, filters]);
+  }, [token, currentPage, activeFilter]);
 
   useEffect(() => {
     loadNotifications();
   }, [loadNotifications]);
 
-  const handleFilterChange = (e) => {
-    const { name, value } = e.target;
-    setFilters(prev => ({ ...prev, [name]: value }));
+  const handleFilterChange = (filterType) => {
+    setActiveFilter(filterType);
     setCurrentPage(1);
   };
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    loadNotifications();
-  };
+
 
   const markAsRead = async (id) => {
     try {
-      const response = await axios.put(
-        `${API_BASE}/admin-profile/notifications/${id}/read`,
+      const response = await axios.patch(
+        `${API_BASE}/notifications/${id}/read`,
         {},
         { headers: authHeaders(token) }
       );
@@ -74,6 +73,7 @@ const AdminNotifications = () => {
       if (response.data.success) {
         toast.success("Notification marked as read");
         loadNotifications();
+        refreshBadges();
       }
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to mark as read");
@@ -85,7 +85,7 @@ const AdminNotifications = () => {
 
     try {
       const response = await axios.post(
-        `${API_BASE}/admin-profile/notifications/read-all`,
+        `${API_BASE}/notifications/mark-all-read`,
         {},
         { headers: authHeaders(token) }
       );
@@ -93,6 +93,7 @@ const AdminNotifications = () => {
       if (response.data.success) {
         toast.success("All notifications marked as read");
         loadNotifications();
+        refreshBadges();
       }
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to mark all as read");
@@ -104,13 +105,14 @@ const AdminNotifications = () => {
 
     try {
       const response = await axios.delete(
-        `${API_BASE}/admin-profile/notifications/${id}`,
+        `${API_BASE}/notifications/${id}`,
         { headers: authHeaders(token) }
       );
 
       if (response.data.success) {
         toast.success("Notification deleted");
         loadNotifications();
+        refreshBadges();
       }
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to delete notification");
@@ -123,12 +125,49 @@ const AdminNotifications = () => {
   );
 
   const getTypeBadgeColor = (type) => {
-    const colors = {
-      booking: 'bg-blue-100 text-blue-700',
-      payment: 'bg-green-100 text-green-700',
-      general: 'bg-gray-100 text-gray-700'
-    };
-    return colors[type] || 'bg-gray-100 text-gray-700';
+    if (type?.includes('booking')) {
+      return 'bg-blue-100 text-blue-700';
+    } else if (type?.includes('payment')) {
+      return 'bg-green-100 text-green-700';
+    } else if (type?.includes('system') || type?.includes('registration') || type?.includes('event') || type?.includes('report')) {
+      return 'bg-purple-100 text-purple-700';
+    } else {
+      return 'bg-gray-100 text-gray-700';
+    }
+  };
+
+  const getNotificationIcon = (type) => {
+    if (type?.includes('booking')) {
+      return <FaCalendarAlt className="text-blue-600" />;
+    } else if (type?.includes('payment')) {
+      return <FaDollarSign className="text-green-600" />;
+    } else {
+      return <FaBell className="text-purple-600" />;
+    }
+  };
+
+  const filterTabs = [
+    { key: 'all', label: 'All', count: totalCount },
+    { key: 'booking', label: 'Bookings', icon: FaCalendarAlt },
+    { key: 'payment', label: 'Payments', icon: FaDollarSign },
+    { key: 'system', label: 'System', icon: FaBell },
+  ];
+
+  const createSelfNotification = async () => {
+    try {
+      const res = await axios.post(
+        `${API_BASE}/notifications/admin-self`,
+        { message: "Admin notification system is working correctly.", type: "system" },
+        { headers: authHeaders(token) }
+      );
+      if (res.data.success) {
+        toast.success("Notification created!");
+        loadNotifications();
+        refreshBadges();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to create notification");
+    }
   };
 
   return (
@@ -139,14 +178,16 @@ const AdminNotifications = () => {
             <h2 className="text-3xl font-bold text-gray-800">Notifications</h2>
             <p className="text-gray-600 mt-1">Manage your alerts and messages</p>
           </div>
-          {unreadCount > 0 && (
-            <button
-              onClick={markAllAsRead}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
-            >
-              <FaCheck /> Mark All Read ({unreadCount})
-            </button>
-          )}
+          <div className="flex items-center gap-3">
+            {unreadCount > 0 && (
+              <button
+                onClick={markAllAsRead}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
+              >
+                <FaCheck /> Mark All Read ({unreadCount})
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -189,74 +230,46 @@ const AdminNotifications = () => {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-6">
-        <form onSubmit={handleSearch} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Search
-              </label>
-              <input
-                type="text"
-                placeholder="Search notifications..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Type
-              </label>
-              <select
-                name="type"
-                value={filters.type}
-                onChange={handleFilterChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+      {/* Filter Tabs */}
+      <div className="mb-6">
+        <div className="flex flex-wrap gap-2 mb-4">
+          {filterTabs.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => handleFilterChange(tab.key)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
+                  activeFilter === tab.key
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
               >
-                <option value="">All Types</option>
-                <option value="booking">Booking</option>
-                <option value="payment">Payment</option>
-                <option value="general">General</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Status
-              </label>
-              <select
-                name="status"
-                value={filters.status}
-                onChange={handleFilterChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">All Statuses</option>
-                <option value="unread">Unread</option>
-                <option value="read">Read</option>
-              </select>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
-            >
-              <FaSearch /> Search
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setFilters({ type: '', status: '' });
-                setSearchTerm('');
-                setCurrentPage(1);
-              }}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
-            >
-              Reset
-            </button>
-          </div>
-        </form>
+                {Icon && <Icon className="text-sm" />}
+                {tab.label}
+                {tab.count !== undefined && (
+                  <span className={`px-2 py-0.5 rounded-full text-xs ${
+                    activeFilter === tab.key ? 'bg-white/20' : 'bg-gray-200'
+                  }`}>
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Search Bar */}
+        <div className="relative">
+          <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search notifications..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
       </div>
 
       {/* Notifications List */}
@@ -271,8 +284,21 @@ const AdminNotifications = () => {
           </div>
         ) : filteredNotifications.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
-            <FaBell className="mx-auto text-6xl text-gray-300 mb-4" />
-            <p>{searchTerm || filters.type || filters.status ? 'No notifications found' : 'No notifications'}</p>
+            <FaInbox className="mx-auto text-6xl text-gray-300 mb-4" />
+            <h3 className="text-lg font-semibold text-gray-700 mb-2">
+              {searchTerm ? 'No matching notifications' : 'No notifications yet'}
+            </h3>
+            <p className="text-gray-500 text-sm">
+              {searchTerm ? 'Try adjusting your search terms' : 'Notifications will appear here when customers register, make bookings, or merchants request withdrawals.'}
+            </p>
+            {!searchTerm && (
+              <button
+                onClick={createSelfNotification}
+                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition"
+              >
+                Test Notification System
+              </button>
+            )}
           </div>
         ) : (
           <div className="divide-y divide-gray-200">
@@ -285,10 +311,8 @@ const AdminNotifications = () => {
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-start gap-3 flex-1">
-                    <div className={`mt-1 ${
-                      !notif.read ? 'text-blue-600' : 'text-gray-400'
-                    }`}>
-                      <FaBell />
+                    <div className="mt-1">
+                      {getNotificationIcon(notif.type)}
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
@@ -303,12 +327,12 @@ const AdminNotifications = () => {
                       </div>
                       <div className="flex items-center gap-3 text-sm text-gray-500">
                         <span className={`px-2 py-1 rounded text-xs font-medium ${getTypeBadgeColor(notif.type)}`}>
-                          {notif.type}
+                          {notif.type?.replace('_', ' ') || 'general'}
                         </span>
                         <span>{new Date(notif.createdAt).toLocaleString('en-IN')}</span>
                         {notif.bookingId && (
                           <span className="text-xs">
-                            Booking: {notif.bookingId.serviceTitle}
+                            Booking: {notif.bookingId.serviceTitle || 'N/A'}
                           </span>
                         )}
                       </div>

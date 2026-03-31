@@ -13,20 +13,58 @@ const MerchantDashboard = () => {
   const { user, token } = useAuth();
   const navigate = useNavigate();
   const [events, setEvents] = useState([]);
-  const [participants, setParticipants] = useState([]);
+  const [stats, setStats] = useState({ totalEvents: 0, totalBookings: 0, totalRevenue: 0, upcoming: 0 });
   const headersJson = (t) => ({ ...authHeaders(t), "Content-Type": "application/json" });
 
-  const loadEvents = useCallback(async () => {
-    const { data } = await axios.get(`${API_BASE}/merchant/events`, { headers: authHeaders(token) });
-    setEvents(data.events || []);
+  const loadDashboard = useCallback(async () => {
+    try {
+      // Load events and analytics summary in parallel
+      const [eventsRes, summaryRes] = await Promise.all([
+        axios.get(`${API_BASE}/merchant/events`, { headers: authHeaders(token) }),
+        axios.get(`${API_BASE}/analytics/summary`, { headers: authHeaders(token) })
+      ]);
+
+      const eventsData = eventsRes.data.events || [];
+      setEvents(eventsData);
+
+      if (summaryRes.data.success) {
+        const s = summaryRes.data.summary;
+        const upcoming = eventsData.filter(e => e.date && new Date(e.date) >= new Date()).length;
+        setStats({
+          totalEvents: s.totalEvents || eventsData.length,
+          totalBookings: s.totalBookings || 0,
+          totalRevenue: s.totalRevenue || 0,
+          upcoming
+        });
+      } else {
+        // Fallback: compute from events
+        const upcoming = eventsData.filter(e => e.date && new Date(e.date) >= new Date()).length;
+        setStats({
+          totalEvents: eventsData.length,
+          totalBookings: 0,
+          totalRevenue: 0,
+          upcoming
+        });
+      }
+    } catch (err) {
+      console.error("Failed to load merchant dashboard:", err);
+      // Fallback to just events
+      try {
+        const { data } = await axios.get(`${API_BASE}/merchant/events`, { headers: authHeaders(token) });
+        const eventsData = data.events || [];
+        setEvents(eventsData);
+        const upcoming = eventsData.filter(e => e.date && new Date(e.date) >= new Date()).length;
+        setStats({ totalEvents: eventsData.length, totalBookings: 0, totalRevenue: 0, upcoming });
+      } catch {}
+    }
   }, [token]);
+
   useEffect(() => {
-    loadEvents();
-  }, [loadEvents]);
+    loadDashboard();
+  }, [loadDashboard]);
 
   const createEvent = async (e) => {
     e.preventDefault();
-    // Redirect to the dedicated create event page
     navigate("/dashboard/merchant/create");
   };
 
@@ -35,19 +73,11 @@ const MerchantDashboard = () => {
     setEvents((prev) => prev.map((ev) => (ev._id === id ? data.event : ev)));
   };
 
-  const viewParticipants = async (id) => {
-    const { data } = await axios.get(`${API_BASE}/merchant/events/${id}/participants`, { headers: authHeaders(token) });
-    setParticipants(data.participants || []);
-  };
-
-  const totalEvents = events.length;
-  const totalBookings = events.reduce((s, e) => s + (e.bookingsCount || e.participantsCount || 0), 0);
-  const totalRevenue = events.reduce((s, e) => s + (e.revenue || 0), 0);
-  const upcoming = events.filter((e) => e.date && new Date(e.date) >= new Date()).length;
-
   const removeEvent = async (id) => {
     await axios.delete(`${API_BASE}/merchant/events/${id}`, { headers: authHeaders(token) });
     setEvents((prev) => prev.filter((e) => e._id !== id));
+    // Refresh stats after deletion
+    loadDashboard();
   };
 
   return (
@@ -68,10 +98,10 @@ const MerchantDashboard = () => {
       </section>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }}>
-        <SummaryCard title="Total Events" value={totalEvents} icon={BsCalendar2Event} color="bg-indigo-600" />
-        <SummaryCard title="Total Bookings" value={totalBookings} icon={FaListAlt} color="bg-emerald-600" />
-        <SummaryCard title="Total Revenue" value={`$${totalRevenue}`} icon={FaDollarSign} color="bg-amber-600" />
-        <SummaryCard title="Upcoming Events" value={upcoming} icon={LuCalendarClock} color="bg-blue-600" />
+        <SummaryCard title="Total Events" value={stats.totalEvents} icon={BsCalendar2Event} color="bg-indigo-600" />
+        <SummaryCard title="Total Bookings" value={stats.totalBookings} icon={FaListAlt} color="bg-emerald-600" />
+        <SummaryCard title="Total Revenue" value={`₹${stats.totalRevenue.toLocaleString()}`} icon={FaDollarSign} color="bg-amber-600" />
+        <SummaryCard title="Upcoming Events" value={stats.upcoming} icon={LuCalendarClock} color="bg-blue-600" />
       </div>
 
       <div className="mt-8 rounded-xl bg-white shadow-sm ring-1 ring-gray-200 overflow-hidden">

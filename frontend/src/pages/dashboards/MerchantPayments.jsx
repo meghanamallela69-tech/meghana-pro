@@ -100,14 +100,23 @@ const MerchantPayments = () => {
                 {payments.map((payment) => (
                   <tr key={payment._id} className="hover:bg-gray-50 transition">
                     <td className="px-6 py-4 whitespace-nowrap font-medium">
-                      {payment.event?.title || payment.bookingId?.serviceTitle || payment.description || "N/A"}
+                      {payment.eventName || payment.event?.title || payment.description || "N/A"}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">{payment.customerName || "-"}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="font-medium text-gray-900">{payment.customerName || "-"}</div>
+                      {payment.customerEmail && (
+                        <div className="text-xs text-gray-500">{payment.customerEmail}</div>
+                      )}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap font-medium">{formatCurrency(payment.amount)}</td>
                     <td className="px-6 py-4 whitespace-nowrap">{formatDate(payment.createdAt)}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="px-2 py-1 rounded text-xs bg-green-100 text-green-700">
-                        Completed
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        payment.status === 'success' ? 'bg-green-100 text-green-700' :
+                        payment.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-gray-100 text-gray-600'
+                      }`}>
+                        {payment.status === 'success' ? 'Completed' : payment.status || 'Completed'}
                       </span>
                     </td>
                   </tr>

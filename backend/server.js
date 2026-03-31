@@ -1,13 +1,14 @@
 import app from "./app.js";
 import { Server } from "socket.io";
+import { startScheduledTasks } from "./services/scheduledTasks.js";
 
 const PORT = process.env.PORT || 5000;
 
 const server = app.listen(PORT, () => {
-  console.log(`Server listening at port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
 
-// Setup Socket.IO
+// Socket.IO
 const io = new Server(server, {
   cors: {
     origin: [
@@ -24,59 +25,14 @@ const io = new Server(server, {
   pingInterval: 25000
 });
 
-console.log('🔌 Socket.IO initialized');
-
-// Socket.IO connection handling
 io.on('connection', (socket) => {
-  console.log(`🔌 User connected: ${socket.id}`);
-  
-  // Join user's personal room for notifications
-  socket.on('joinUserRoom', (userId) => {
-    socket.join(`user_${userId}`);
-    console.log(`User ${userId} joined personal room: user_${userId}`);
-  });
-  
-  // Leave user's personal room
-  socket.on('leaveUserRoom', (userId) => {
-    socket.leave(`user_${userId}`);
-    console.log(`User ${userId} left personal room: user_${userId}`);
-  });
-  
-  // Join a chat room
-  socket.on('joinChat', (chatId) => {
-    socket.join(chatId);
-    console.log(`User ${socket.id} joined chat room: ${chatId}`);
-  });
-  
-  // Leave a chat room
-  socket.on('leaveChat', (chatId) => {
-    socket.leave(chatId);
-    console.log(`User ${socket.id} left chat room: ${chatId}`);
-  });
-  
-  // Typing indicator
-  socket.on('typing', (data) => {
-    socket.to(data.chatId).emit('userTyping', {
-      chatId: data.chatId,
-      userId: data.userId
-    });
-  });
-  
-  // Stop typing
-  socket.on('stopTyping', (data) => {
-    socket.to(data.chatId).emit('userStoppedTyping', {
-      chatId: data.chatId,
-      userId: data.userId
-    });
-  });
-  
-  // Disconnect
-  socket.on('disconnect', () => {
-    console.log(`🔌 User disconnected: ${socket.id}`);
-  });
+  socket.on('joinUserRoom', (userId) => socket.join(`user_${userId}`));
+  socket.on('leaveUserRoom', (userId) => socket.leave(`user_${userId}`));
+  socket.on('joinChat', (chatId) => socket.join(chatId));
+  socket.on('leaveChat', (chatId) => socket.leave(chatId));
+  socket.on('typing', (data) => socket.to(data.chatId).emit('userTyping', data));
+  socket.on('stopTyping', (data) => socket.to(data.chatId).emit('userStoppedTyping', data));
 });
 
-// Make io accessible to routes
 app.set('io', io);
-
-// ... existing error handling code ...
+startScheduledTasks();

@@ -6,6 +6,7 @@ import { Coupon } from "../models/couponSchema.js";
 import { v4 as uuidv4 } from "uuid";
 import { processPaymentDistribution } from "../services/paymentDistributionService.js";
 import { Event } from "../models/eventSchema.js";
+import NotificationService from "../services/notificationService.js";
 
 const hasRazorpay = () =>
   Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET);
@@ -115,12 +116,6 @@ export const payForService = async (req, res) => {
   try {
     const { bookingId, paymentMethod, paymentAmount } = req.body;
     const userId = req.user.userId;
-
-    console.log(`=== PAY FOR SERVICE ===`);
-    console.log(`Booking ID: ${bookingId}`);
-    console.log(`User ID: ${userId}`);
-    console.log(`Payment Amount: ${paymentAmount}`);
-
     // Find the booking
     const booking = await Booking.findById(bookingId);
     if (!booking) {
@@ -170,8 +165,46 @@ export const payForService = async (req, res) => {
     booking.paymentMethod = paymentMethod;
 
     await booking.save();
+    // Notify USER — payment confirmed
+    try {
+      await NotificationService.notifyPaymentReceived(
+        booking.user,
+        booking._id,
+        paymentAmount,
+        booking.serviceTitle || "Service"
+      );
+    } catch (notifErr) {
+      console.error("Failed to notify user of service payment:", notifErr);
+    }
 
-    console.log(`✅ Service payment updated in booking: ${paymentId}`);
+    // Notify MERCHANT — payment received for their event
+    try {
+      const event = await Event.findById(booking.serviceId);
+      const merchantId = event ? event.createdBy : booking.merchant;
+      if (merchantId) {
+        await NotificationService.notifyMerchantPaymentReceived(
+          merchantId,
+          booking._id,
+          paymentAmount,
+          booking.serviceTitle || "Service"
+        );
+      }
+    } catch (notifErr) {
+      console.error("Failed to notify merchant of service payment:", notifErr);
+    }
+
+    // Notify admin about service payment
+    try {
+      await NotificationService.notifyAllAdmins(
+        `Payment of ₹${paymentAmount} received for service booking "${booking.serviceTitle || 'Service'}"`,
+        "payment",
+        "medium",
+        null,
+        booking._id
+      );
+    } catch (notifErr) {
+      console.error("Failed to notify admin of service payment:", notifErr);
+    }
 
     // Process payment distribution to merchant and admin
     try {
@@ -187,15 +220,11 @@ export const payForService = async (req, res) => {
         paymentGateway: "manual",
         description: `Payment for service: ${booking.serviceTitle}`
       });
-      console.log(`✅ Payment distribution completed for service booking`);
     } catch (distError) {
       console.error("❌ Payment distribution failed:", distError);
       // We don't fail the overall payment if distribution recording fails,
       // but the data might be inconsistent. In a real app, this should be transactional.
     }
-
-    console.log(`✅ Service payment completed: ${paymentId}`);
-
     // Record coupon usage if coupon was applied
     if (booking.couponCode) {
       try {
@@ -227,8 +256,6 @@ export const payForService = async (req, res) => {
               };
               await booking.save();
             }
-            
-            console.log(`Coupon usage recorded for user ${userId}`);
           }
         }
       } catch (error) {
@@ -259,12 +286,6 @@ export const payForTicket = async (req, res) => {
     const { bookingId } = req.params; // Get from URL parameters
     const { paymentMethod, paymentAmount } = req.body;
     const userId = req.user.userId || req.user._id;
-
-    console.log(`=== PAY FOR TICKET ===`);
-    console.log(`Booking ID: ${bookingId}`);
-    console.log(`User ID: ${userId}`);
-    console.log(`Payment Amount: ${paymentAmount}`);
-
     // Find the booking
     const booking = await Booking.findById(bookingId);
     if (!booking) {
@@ -327,8 +348,46 @@ export const payForTicket = async (req, res) => {
     booking.status = "completed";
 
     await booking.save();
+    // Notify USER — tickets confirmed
+    try {
+      await NotificationService.notifyPaymentReceived(
+        booking.user,
+        booking._id,
+        booking.finalAmount || booking.totalPrice,
+        booking.eventTitle || booking.serviceTitle || "Event"
+      );
+    } catch (notifErr) {
+      console.error("Failed to notify user of ticket payment:", notifErr);
+    }
 
-    console.log(`✅ Ticket payment updated in booking: ${paymentId}`);
+    // Notify MERCHANT — ticket payment received
+    try {
+      const event = await Event.findById(booking.serviceId || booking.eventId);
+      const merchantId = event ? event.createdBy : booking.merchant;
+      if (merchantId) {
+        await NotificationService.notifyMerchantPaymentReceived(
+          merchantId,
+          booking._id,
+          booking.finalAmount || booking.totalPrice,
+          booking.eventTitle || booking.serviceTitle || "Event"
+        );
+      }
+    } catch (notifErr) {
+      console.error("Failed to notify merchant of ticket payment:", notifErr);
+    }
+
+    // Notify admin about ticket payment
+    try {
+      await NotificationService.notifyAllAdmins(
+        `Ticket payment of ₹${booking.finalAmount || booking.totalPrice} received for "${booking.eventTitle || 'Event'}"`,
+        "payment",
+        "medium",
+        null,
+        booking._id
+      );
+    } catch (notifErr) {
+      console.error("Failed to notify admin of ticket payment:", notifErr);
+    }
 
     // Process payment distribution to merchant and admin
     try {
@@ -344,13 +403,9 @@ export const payForTicket = async (req, res) => {
         paymentGateway: "manual",
         description: `Payment for ticketed event: ${booking.serviceTitle}`
       });
-      console.log(`✅ Payment distribution completed for ticket booking`);
     } catch (distError) {
       console.error("❌ Payment distribution failed:", distError);
     }
-
-    console.log(`✅ Ticket payment completed and booking auto-completed: ${booking.paymentId}`);
-
     // Record coupon usage if coupon was applied
     if (booking.couponCode) {
       try {
@@ -382,8 +437,6 @@ export const payForTicket = async (req, res) => {
               };
               await booking.save();
             }
-            
-            console.log(`Coupon usage recorded for user ${userId}`);
           }
         }
       } catch (error) {

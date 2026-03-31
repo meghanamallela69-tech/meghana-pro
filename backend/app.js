@@ -93,30 +93,18 @@ app.get("/api/v1/config-check", (req, res) => {
   });
 });
 
-// Initialize database connection and admin
 const initializeApp = async () => {
   try {
-    console.log("🚀 Starting application initialization...");
-    
-    // Connect to database first
     const connection = await dbConnection();
-    console.log("✅ Database connection established");
-    
-    // Only initialize admin after successful database connection
     if (connection) {
-      console.log("👤 Initializing admin user...");
       await ensureAdmin();
-      console.log("✅ Admin initialization completed");
     }
   } catch (error) {
-    console.error("❌ Application initialization failed:", error.message);
-    if (process.env.NODE_ENV === 'production') {
-      process.exit(1);
-    }
+    console.error("❌ Initialization failed:", error.message);
+    if (process.env.NODE_ENV === 'production') process.exit(1);
   }
 };
 
-// Start initialization
 initializeApp();
 
 export default app;
