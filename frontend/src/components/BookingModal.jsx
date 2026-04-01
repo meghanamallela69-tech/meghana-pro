@@ -5,6 +5,7 @@ import { FaTimes, FaCalendarAlt, FaClock, FaMapMarkerAlt, FaPercent, FaCheckSqua
 import { API_BASE } from "../lib/http";
 import useAuth from "../context/useAuth";
 import PaymentModal from "./PaymentModal";
+import FullServiceBookingModal from "./FullServiceBookingModal";
 
 const BookingModal = ({ service, isOpen, onClose, onSuccess, coupons = [] }) => {
   const { token } = useAuth();
@@ -23,6 +24,18 @@ const BookingModal = ({ service, isOpen, onClose, onSuccess, coupons = [] }) => 
   const eventType = service?.eventType || "full-service";
   const isFullService = eventType === "full-service";
   const isTicketed = eventType === "ticketed";
+
+  // ── Route full-service events to the new FullServiceBookingModal ──────────
+  if (isFullService && isOpen) {
+    return (
+      <FullServiceBookingModal
+        isOpen={isOpen}
+        onClose={onClose}
+        event={service}
+        onSuccess={onSuccess}
+      />
+    );
+  }
 
   // Full Service States
   const [eventDate, setEventDate] = useState("");

@@ -48,6 +48,9 @@ import MerchantCategories from "./pages/dashboards/MerchantCategories";
 import UserPayments from "./pages/dashboards/UserPayments";
 import UserMessages from "./pages/dashboards/UserMessages";
 import MerchantMessages from "./pages/dashboards/MerchantMessages";
+import MerchantWithdrawal from "./pages/dashboards/MerchantWithdrawal";
+import MerchantQRCodes from "./pages/dashboards/MerchantQRCodes";
+import EventPublicPage from "./pages/EventPublicPage";
 
 import AdminMerchants from "./pages/dashboards/AdminMerchants";
 import AdminUsers from "./pages/dashboards/AdminUsers";
@@ -560,6 +563,31 @@ const AppContent = () => {
               </PrivateRoute>
             }
           />
+
+          <Route
+            path="/dashboard/merchant/qr-codes"
+            element={
+              <PrivateRoute>
+                <RoleRoute role="merchant">
+                  <MerchantQRCodes />
+                </RoleRoute>
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/dashboard/merchant/withdrawal"
+            element={
+              <PrivateRoute>
+                <RoleRoute role="merchant">
+                  <MerchantWithdrawal />
+                </RoleRoute>
+              </PrivateRoute>
+            }
+          />
+
+          {/* PUBLIC EVENT PAGE — no auth required */}
+          <Route path="/event/:eventId" element={<EventPublicPage />} />
 
         </Routes>
 

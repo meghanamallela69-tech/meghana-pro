@@ -30,11 +30,29 @@ const Login = () => {
         toast.success(res.data.message);
         login(res.data.token, res.data.user);
         
-        // Check for booking redirect first (highest priority)
+        // Check for QR event booking redirect (highest priority)
+        const qrRedirect = localStorage.getItem("qr_booking_redirect");
+        if (qrRedirect) {
+          // Don't remove it here — EventPublicPage will handle it and auto-open booking modal
+          navigate(`/event/${qrRedirect}`);
+          setEmail("");
+          setPassword("");
+          return;
+        }
+
+        // Check for home page booking redirect
+        const homeRedirect = localStorage.getItem("home_booking_redirect");
+        if (homeRedirect) {
+          // Don't remove — UpcomingEvents will handle it
+          navigate("/");
+          setEmail("");
+          setPassword("");
+          return;
+        }
+
+        // Check for booking redirect (browse events flow)
         const bookingRedirect = localStorage.getItem('bookingRedirect');
         if (bookingRedirect) {
-          console.log("Booking redirect found, redirecting to browse events...");
-          // Don't clear it here - let the UserBrowseEvents page handle it
           navigate('/dashboard/user/browse');
           setEmail("");
           setPassword("");
@@ -44,12 +62,8 @@ const Login = () => {
         // Check for redirect from location state
         const from = location.state?.from;
         
-        console.log("User role:", res.data.user.role);
-        console.log("Redirect from:", from);
-        
         // Handle redirect from service details page or services page for booking
-        if (from && (from === "/services" || from.startsWith("/service/"))) {
-          // Redirect back to the original page to complete booking
+        if (from && (from === "/services" || from.startsWith("/service/") || from.startsWith("/event/"))) {
           navigate(from);
         } else {
           // Default redirect based on role

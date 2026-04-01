@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import useAuth from "../../context/useAuth";
 import useNotificationBadges from "../../context/useNotificationBadges";
 import NotificationDropdown from "../shared/NotificationDropdown";
+import LanguageSwitcher from "../shared/LanguageSwitcher";
 
 const AdminTopbar = ({ onToggleSidebar, profileName = "Admin", onLogout }) => {
   const [open, setOpen] = useState(false);
@@ -46,6 +47,9 @@ const AdminTopbar = ({ onToggleSidebar, profileName = "Admin", onLogout }) => {
 
           {/* Notification Bell */}
           <NotificationDropdown viewAllPath="/dashboard/admin/notifications" />
+
+          {/* Language */}
+          <LanguageSwitcher />
 
           {/* Profile Dropdown */}
           <div className="relative" ref={profileRef}>

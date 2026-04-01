@@ -84,7 +84,10 @@ const bookingSchema = new mongoose.Schema(
     },
     addons: [{
       name: { type: String },
-      price: { type: Number }
+      price: { type: Number },
+      type: { type: String, enum: ["fixed", "per_person"], default: "fixed" },
+      quantity: { type: Number, default: 1 },
+      total: { type: Number, default: 0 }
     }],
     // Payment details
     payment: {

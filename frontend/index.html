@@ -6,9 +6,75 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>EventHub</title>
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Translate -->
+    <script type="text/javascript">
+      function googleTranslateElementInit() {
+        new google.translate.TranslateElement(
+          {
+            pageLanguage: 'en',
+            includedLanguages: 'en,hi,te,ta,kn,ml,mr,bn,gu,pa,ur,fr,de,es,zh-CN,ja,ko,ar,ru,pt',
+            layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+            autoDisplay: false
+          },
+          'google_translate_element'
+        );
+      }
+
+      // Continuously suppress the Google Translate banner
+      function suppressGoogleBanner() {
+        // Remove body top offset Google sets
+        document.body.style.top = '0px';
+        document.body.style.position = 'static';
+
+        // Hide the banner iframe
+        var banner = document.querySelector('.goog-te-banner-frame');
+        if (banner) banner.style.display = 'none';
+
+        // Hide any injected iframes from Google Translate
+        var iframes = document.querySelectorAll('iframe.skiptranslate');
+        iframes.forEach(function(f) { f.style.display = 'none'; f.style.height = '0'; });
+      }
+
+      // Run on DOM ready and watch for changes
+      document.addEventListener('DOMContentLoaded', function() {
+        suppressGoogleBanner();
+        var observer = new MutationObserver(suppressGoogleBanner);
+        observer.observe(document.body, { childList: true, subtree: true, attributes: true });
+      });
+    </script>
+    <script type="text/javascript"
+      src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit">
+    </script>
+
+    <style>
+      /* ── Completely hide Google Translate banner & branding ── */
+      .goog-te-banner-frame,
+      .goog-te-banner-frame.skiptranslate,
+      #goog-gt-tt,
+      .goog-te-balloon-frame,
+      .goog-tooltip,
+      .goog-tooltip:hover,
+      .goog-text-highlight { display: none !important; }
+
+      /* Force body back to top — Google Translate shifts it down */
+      body { top: 0 !important; position: static !important; }
+      html body { margin-top: 0 !important; }
+
+      /* Hide the iframe Google injects */
+      iframe.skiptranslate { display: none !important; height: 0 !important; }
+
+      /* Hide gadget branding text */
+      .goog-te-gadget { font-size: 0 !important; color: transparent !important; }
+      .goog-te-gadget img,
+      .goog-te-gadget > span,
+      .goog-logo-link { display: none !important; }
+    </style>
   </head>
   <body>
     <div id="root"></div>
+    <!-- Hidden Google Translate widget container -->
+    <div id="google_translate_element" style="display:none;"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

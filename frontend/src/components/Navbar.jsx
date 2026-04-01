@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { BsCalendarEvent } from "react-icons/bs";
+import LanguageSwitcher from "./shared/LanguageSwitcher";
 
 const Navbar = () => {
   return (
@@ -33,13 +34,13 @@ const Navbar = () => {
 
           {/* Auth Buttons */}
           <div className="flex items-center gap-3 ml-4">
+            <LanguageSwitcher />
             <Link 
               className="px-5 py-2 border-2 border-blue-600 text-blue-600 rounded-lg font-medium hover:bg-blue-50 transition" 
               to="/login"
             >
               Login
             </Link>
-
             <Link 
               className="px-5 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition" 
               to="/register"

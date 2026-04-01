@@ -1,7 +1,7 @@
 import { NavLink } from "react-router-dom";
 import { RxDashboard } from "react-icons/rx";
 import { BsCalendar2Event, BsBell, BsGraphUp, BsTicket, BsMegaphone } from "react-icons/bs";
-import { FaListAlt, FaCreditCard, FaUser, FaSignOutAlt, FaPlusCircle, FaRegCalendarCheck, FaCog, FaDollarSign, FaTags, FaEnvelope } from "react-icons/fa";
+import { FaListAlt, FaCreditCard, FaUser, FaSignOutAlt, FaPlusCircle, FaRegCalendarCheck, FaCog, FaDollarSign, FaTags, FaEnvelope, FaQrcode } from "react-icons/fa";
 import PropTypes from "prop-types";
 import useNotificationBadges from "../../context/useNotificationBadges";
 
@@ -53,6 +53,7 @@ const MerchantSidebar = ({ onLogout }) => {
         <Item icon={FaEnvelope} label="Messages" to="/dashboard/merchant/messages" />
         <Item icon={BsGraphUp} label="Event Analytics" to="/dashboard/merchant/analytics" />
         <Item icon={BsTicket} label="Ticket Validation" to="/dashboard/merchant/ticket-validation" />
+        <Item icon={FaQrcode} label="QR Codes" to="/dashboard/merchant/qr-codes" />
         <Item icon={BsMegaphone} label="Marketing Tools" to="/dashboard/merchant/marketing" />
         <Item 
           icon={BsBell} 

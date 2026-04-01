@@ -118,9 +118,11 @@ const MerchantEvents = () => {
                     <span className="text-sm font-semibold text-blue-600">
                       {ev.price ? new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(ev.price) : "Free"}
                     </span>
-                    <span className="text-xs text-gray-500">
-                      {ev.features?.length || 0} features
-                    </span>
+                    {ev.features?.length > 0 && (
+                      <span className="text-xs text-gray-500">
+                        {ev.features.length} feature{ev.features.length !== 1 ? "s" : ""}
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     <button 
@@ -128,6 +130,25 @@ const MerchantEvents = () => {
                       className="flex-1 px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition text-sm"
                     >
                       Edit
+                    </button>
+                    <button
+                      onClick={() => {
+                        const url = `${window.location.origin}/dashboard/user/events/${ev._id}`;
+                        if (navigator.share) {
+                          navigator.share({ title: ev.title, url }).catch(() => {});
+                        } else {
+                          navigator.clipboard.writeText(url);
+                          toast.success("Link copied!");
+                        }
+                      }}
+                      className="p-2 rounded-md bg-gray-100 text-gray-600 hover:bg-blue-50 hover:text-blue-600 transition"
+                      title="Share event"
+                    >
+                      <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                      </svg>
                     </button>
                     <button 
                       onClick={() => removeEvent(ev._id)}

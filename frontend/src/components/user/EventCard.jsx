@@ -1,4 +1,5 @@
 import PropTypes from "prop-types";
+import toast from "react-hot-toast";
 
 const statusClass = (s) => {
   if (s === "Upcoming") return "bg-green-100 text-green-700";
@@ -7,7 +8,28 @@ const statusClass = (s) => {
   return "bg-gray-100 text-gray-700";
 };
 
-const EventCard = ({ image, title, date, location, status, actionText = "View", onAction }) => {
+const ShareIcon = () => (
+  <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+    <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+  </svg>
+);
+
+const EventCard = ({ image, title, date, location, status, actionText = "View", onAction, eventId }) => {
+  const handleShare = (e) => {
+    e.stopPropagation();
+    const url = eventId
+      ? `${window.location.origin}/dashboard/user/events/${eventId}`
+      : window.location.href;
+    if (navigator.share) {
+      navigator.share({ title, url }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(url);
+      toast.success("Link copied!");
+    }
+  };
+
   return (
     <div className="bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-md transition">
       <div className="h-36 w-full overflow-hidden">
@@ -15,8 +37,17 @@ const EventCard = ({ image, title, date, location, status, actionText = "View", 
       </div>
       <div className="p-4 space-y-2">
         <div className="flex items-center justify-between">
-          <h4 className="font-semibold">{title}</h4>
-          <span className={`text-xs px-2 py-1 rounded ${statusClass(status)}`}>{status}</span>
+          <h4 className="font-semibold truncate flex-1 mr-2">{title}</h4>
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <span className={`text-xs px-2 py-1 rounded ${statusClass(status)}`}>{status}</span>
+            <button
+              onClick={handleShare}
+              className="p-1.5 rounded-full text-gray-400 hover:text-blue-500 hover:bg-blue-50 transition"
+              title="Share event"
+            >
+              <ShareIcon />
+            </button>
+          </div>
         </div>
         <div className="text-sm text-gray-600">{date}</div>
         <div className="text-sm text-gray-600">{location}</div>
@@ -39,6 +70,7 @@ EventCard.propTypes = {
   status: PropTypes.string,
   actionText: PropTypes.string,
   onAction: PropTypes.func,
+  eventId: PropTypes.string,
 };
 
 export default EventCard;

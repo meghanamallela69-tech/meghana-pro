@@ -485,19 +485,19 @@ const UserBrowseEvents = () => {
                     onClick={() => handleViewDetails(event)}
                     style={{
                       flex: 1,
-                      padding: '14px 18px', // Increased padding
+                      padding: '14px 18px',
                       backgroundColor: 'white',
                       color: '#a2783a',
                       textAlign: 'center',
-                      borderRadius: '10px', // Increased border radius
-                      fontWeight: '700', // Increased font weight
-                      fontSize: '15px', // Increased font size
+                      borderRadius: '10px',
+                      fontWeight: '700',
+                      fontSize: '15px',
                       transition: 'all 0.3s',
                       border: '2px solid #a2783a',
                       cursor: 'pointer',
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)', // Added shadow
-                      textTransform: 'uppercase', // Make text uppercase
-                      letterSpacing: '0.5px' // Add letter spacing
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px'
                     }}
                     onMouseEnter={(e) => {
                       e.target.style.backgroundColor = '#a2783a';
@@ -518,19 +518,19 @@ const UserBrowseEvents = () => {
                     onClick={() => handleBookNow(event)}
                     style={{
                       flex: 1,
-                      padding: '14px 18px', // Increased padding
+                      padding: '14px 18px',
                       backgroundColor: '#a2783a',
                       color: 'white',
                       textAlign: 'center',
-                      borderRadius: '10px', // Increased border radius
-                      fontWeight: '700', // Increased font weight
-                      fontSize: '15px', // Increased font size
+                      borderRadius: '10px',
+                      fontWeight: '700',
+                      fontSize: '15px',
                       transition: 'all 0.3s',
                       border: '2px solid #a2783a',
                       cursor: 'pointer',
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)', // Added shadow
-                      textTransform: 'uppercase', // Make text uppercase
-                      letterSpacing: '0.5px' // Add letter spacing
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px'
                     }}
                     onMouseEnter={(e) => {
                       e.target.style.backgroundColor = '#8b6a30';
@@ -546,6 +546,40 @@ const UserBrowseEvents = () => {
                     }}
                   >
                     Book Now
+                  </button>
+                  {/* Share Button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const url = `${window.location.origin}/dashboard/user/events/${event._id}`;
+                      if (navigator.share) {
+                        navigator.share({ title: event.title, text: event.description || event.title, url });
+                      } else {
+                        navigator.clipboard.writeText(url);
+                        toast.success("Link copied!");
+                      }
+                    }}
+                    title="Share event"
+                    style={{
+                      padding: '14px 14px',
+                      backgroundColor: 'white',
+                      color: '#6b7280',
+                      borderRadius: '10px',
+                      border: '2px solid #e5e7eb',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s',
+                      flexShrink: 0,
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.color = '#3b82f6'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.color = '#6b7280'; }}
+                  >
+                    <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                    </svg>
                   </button>
                 </div>
               </div>

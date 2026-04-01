@@ -123,6 +123,23 @@ const LiveEventCard = ({ event, onViewDetails, onManageEvent }) => {
             <FaBroadcastTower />
             Manage Live
           </button>
+          <button
+            onClick={() => {
+              const url = `${window.location.origin}/dashboard/user/events/${event._id}`;
+              if (navigator.share) {
+                navigator.share({ title: event.title, url }).catch(() => {});
+              } else {
+                navigator.clipboard.writeText(url);
+              }
+            }}
+            className="px-3 py-2 bg-gray-50 text-gray-500 rounded-lg hover:bg-gray-100 hover:text-blue-600 transition-colors"
+            title="Share event"
+          >
+            <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+            </svg>
+          </button>
         </div>
       </div>
     </div>

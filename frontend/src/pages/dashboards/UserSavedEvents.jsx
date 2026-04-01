@@ -126,8 +126,26 @@ const UserSavedEvents = () => {
                     Book Now
                   </button>
                   <button
+                    onClick={() => {
+                      const url = `${window.location.origin}/dashboard/user/events/${event._id}`;
+                      if (navigator.share) {
+                        navigator.share({ title: event.title, url });
+                      } else {
+                        navigator.clipboard.writeText(url);
+                        toast.success("Link copied!");
+                      }
+                    }}
+                    className="px-3 py-2 border border-gray-300 text-gray-500 rounded-lg hover:border-blue-400 hover:text-blue-500 transition"
+                    title="Share event"
+                  >
+                    <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                    </svg>
+                  </button>
+                  <button
                     onClick={() => removeEvent(event._id)}
-                    className="px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition"
+                    className="px-3 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition"
                     title="Remove from saved"
                   >
                     <BsBookmarkHeartFill />

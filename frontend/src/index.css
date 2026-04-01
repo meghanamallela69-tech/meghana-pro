@@ -2,6 +2,23 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Google Translate banner suppression ── */
+.goog-te-banner-frame,
+.goog-te-banner-frame.skiptranslate,
+iframe.skiptranslate,
+#goog-gt-tt,
+.goog-te-balloon-frame,
+.goog-tooltip,
+.goog-text-highlight { display: none !important; }
+
+body { top: 0 !important; position: static !important; }
+html body { margin-top: 0 !important; }
+
+.goog-te-gadget { font-size: 0 !important; color: transparent !important; }
+.goog-te-gadget img,
+.goog-te-gadget > span,
+.goog-logo-link { display: none !important; }
+
 /* Dark mode global styles */
 .dark {
   color-scheme: dark;

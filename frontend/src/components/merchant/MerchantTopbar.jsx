@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import PropTypes from "prop-types";
 import useNotificationBadges from "../../context/useNotificationBadges";
 import NotificationDropdown from "../shared/NotificationDropdown";
+import LanguageSwitcher from "../shared/LanguageSwitcher";
 
 const MerchantTopbar = ({ onToggleSidebar }) => {
   const [open, setOpen] = useState(false);
@@ -52,6 +53,9 @@ const MerchantTopbar = ({ onToggleSidebar }) => {
 
           {/* Notification Bell */}
           <NotificationDropdown viewAllPath="/dashboard/merchant/notifications" />
+
+          {/* Language */}
+          <LanguageSwitcher />
 
           {/* Profile Dropdown */}
           <div className="relative" ref={profileRef}>

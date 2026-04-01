@@ -133,6 +133,24 @@ export const listEvents = async (req, res) => {
   }
 };
 
+// Get single event by ID (public — no auth required)
+export const getEventById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(404).json({ success: false, message: "Event not found" });
+    }
+    const event = await Event.findById(id)
+      .populate('createdBy', 'name email profileImage');
+    if (!event) {
+      return res.status(404).json({ success: false, message: "Event not found" });
+    }
+    return res.status(200).json({ success: true, event });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Failed to fetch event" });
+  }
+};
+
 export const registerForEvent = async (req, res) => {
   try {
     const eventId = req.params.id;

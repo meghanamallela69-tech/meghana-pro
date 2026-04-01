@@ -517,12 +517,6 @@ const Services = () => {
                             color: '#1f2937'
                           }}>{s.title}</h3>
                           <p style={{ 
-                            fontSize: '14px', 
-                            color: '#6b7280', 
-                            marginBottom: '8px',
-                            flex: 1
-                          }}>{s.description}</p>
-                          <p style={{ 
                             fontSize: '16px', 
                             fontWeight: '600', 
                             color: '#a2783a',
@@ -579,6 +573,41 @@ const Services = () => {
                             }}
                           >
                             View Details
+                          </button>
+                          <button
+                            onClick={() => {
+                              const url = `${window.location.origin}/service/${s._id}`;
+                              if (navigator.share) {
+                                navigator.share({ title: s.title, url }).catch(() => {});
+                              } else {
+                                navigator.clipboard.writeText(url);
+                              }
+                            }}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px',
+                              width: '100%',
+                              padding: '8px 0',
+                              marginTop: '8px',
+                              backgroundColor: 'white',
+                              color: '#6b7280',
+                              borderRadius: '8px',
+                              fontWeight: '500',
+                              fontSize: '14px',
+                              transition: 'all 0.2s',
+                              border: '1px solid #e5e7eb',
+                              cursor: 'pointer',
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.color = '#3b82f6'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.color = '#6b7280'; }}
+                          >
+                            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                              <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                            </svg>
+                            Share
                           </button>
                         </div>
                       </div>

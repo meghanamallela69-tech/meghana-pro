@@ -136,18 +136,34 @@ const MerchantCreateEvent = () => {
   };
 
   // Add-on features state (full-service only)
-  const ADDON_PRESETS = ["Photography", "Decoration", "Catering", "DJ / Music", "Lighting", "Videography", "Stage Setup", "Valet Parking"];
-  const [addons, setAddons] = useState([{ name: "", price: "" }]);
+  const ADDON_PRESETS = [
+    { name: "Veg Catering", type: "per_person", price: "220" },
+    { name: "Non-Veg Catering", type: "per_person", price: "350" },
+    { name: "DJ Music", type: "fixed", price: "8000" },
+    { name: "Decoration", type: "fixed", price: "5000" },
+    { name: "Photography", type: "fixed", price: "10000" },
+    { name: "Videography", type: "fixed", price: "12000" },
+    { name: "Lighting", type: "fixed", price: "6000" },
+    { name: "Stage Setup", type: "fixed", price: "15000" },
+    { name: "Valet Parking", type: "fixed", price: "3000" },
+  ];
+  const [addons, setAddons] = useState([{ name: "", price: "", type: "fixed", unit: "person" }]);
 
-  const handleAddAddon = () => setAddons((p) => [...p, { name: "", price: "" }]);
+  const handleAddAddon = () => setAddons((p) => [...p, { name: "", price: "", type: "fixed", unit: "person" }]);
   const handleRemoveAddon = (i) => {
-    if (addons.length <= 1) { setAddons([{ name: "", price: "" }]); return; }
+    if (addons.length <= 1) { setAddons([{ name: "", price: "", type: "fixed", unit: "person" }]); return; }
     setAddons((p) => p.filter((_, idx) => idx !== i));
   };
   const handleAddonChange = (i, field, value) =>
     setAddons((p) => p.map((a, idx) => idx === i ? { ...a, [field]: value } : a));
-  const handleAddonPreset = (i, name) =>
-    setAddons((p) => p.map((a, idx) => idx === i ? { ...a, name } : a));
+  const handleAddonPreset = (i, presetName) => {
+    const preset = ADDON_PRESETS.find(p => p.name === presetName);
+    if (preset) {
+      setAddons((p) => p.map((a, idx) => idx === i ? { ...a, name: preset.name, price: preset.price, type: preset.type } : a));
+    } else {
+      setAddons((p) => p.map((a, idx) => idx === i ? { ...a, name: presetName } : a));
+    }
+  };
 
   // Fetch merchant categories
   useEffect(() => {
@@ -267,7 +283,7 @@ const MerchantCreateEvent = () => {
         formData.append("addons", JSON.stringify(
           addons
             .filter(a => a.name.trim())
-            .map(a => ({ name: a.name.trim(), price: Number(a.price) || 0 }))
+            .map(a => ({ name: a.name.trim(), price: Number(a.price) || 0, type: a.type || "fixed", unit: a.unit || "person" }))
         ));
       }
 
@@ -685,62 +701,82 @@ const MerchantCreateEvent = () => {
 
                 <div className="space-y-3">
                   {addons.map((addon, i) => (
-                    <div key={i} className="flex items-center gap-2 bg-white border border-blue-200 rounded-lg px-3 py-2.5 shadow-sm">
-                      {/* Preset dropdown */}
-                      <select
-                        value={ADDON_PRESETS.includes(addon.name) ? addon.name : ""}
-                        onChange={(e) => handleAddonPreset(i, e.target.value)}
-                        className="flex-shrink-0 w-28 border-0 outline-none text-sm text-gray-600 bg-gray-100 rounded px-2 py-1"
-                      >
-                        <option value="">Custom</option>
-                        {ADDON_PRESETS.map((p) => (
-                          <option key={p} value={p}>{p}</option>
-                        ))}
-                      </select>
+                    <div key={i} className="bg-white border border-blue-200 rounded-lg p-3 shadow-sm space-y-2">
+                      <div className="flex items-center gap-2">
+                        {/* Preset dropdown */}
+                        <select
+                          value={ADDON_PRESETS.find(p => p.name === addon.name) ? addon.name : ""}
+                          onChange={(e) => handleAddonPreset(i, e.target.value)}
+                          className="flex-shrink-0 w-36 border rounded text-sm text-gray-600 bg-gray-50 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                        >
+                          <option value="">Custom</option>
+                          {ADDON_PRESETS.map((p) => (
+                            <option key={p.name} value={p.name}>{p.name}</option>
+                          ))}
+                        </select>
 
-                      {/* Name input */}
-                      <input
-                        type="text"
-                        value={addon.name}
-                        onChange={(e) => handleAddonChange(i, "name", e.target.value)}
-                        placeholder="Feature name (e.g. Photography)"
-                        className="flex-1 min-w-0 border-0 outline-none text-sm font-medium text-gray-800 bg-transparent placeholder-gray-400"
-                      />
-
-                      {/* Price input */}
-                      <div className="flex items-center gap-1 border-l pl-2">
-                        <span className="text-gray-500 text-xs">₹</span>
+                        {/* Name input */}
                         <input
-                          type="number"
-                          value={addon.price}
-                          onChange={(e) => handleAddonChange(i, "price", e.target.value)}
-                          placeholder="Price"
-                          min="0"
-                          className="w-20 border-0 outline-none text-sm text-gray-700 bg-transparent"
+                          type="text"
+                          value={addon.name}
+                          onChange={(e) => handleAddonChange(i, "name", e.target.value)}
+                          placeholder="Add-on name"
+                          className="flex-1 border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
                         />
+
+                        {/* Remove */}
+                        <button type="button" onClick={() => handleRemoveAddon(i)}
+                          className="p-1.5 text-red-400 hover:text-red-600 transition flex-shrink-0">
+                          <FiTrash2 size={14} />
+                        </button>
                       </div>
 
-                      {/* Remove */}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveAddon(i)}
-                        className="flex-shrink-0 p-1 text-red-400 hover:text-red-600 transition"
-                      >
-                        <FiTrash2 size={14} />
-                      </button>
+                      <div className="flex items-center gap-3">
+                        {/* Type toggle */}
+                        <div className="flex rounded-lg overflow-hidden border border-gray-200 flex-shrink-0">
+                          <button type="button"
+                            onClick={() => handleAddonChange(i, "type", "fixed")}
+                            className={`px-3 py-1.5 text-xs font-semibold transition ${addon.type === "fixed" ? "bg-blue-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}>
+                            Fixed
+                          </button>
+                          <button type="button"
+                            onClick={() => handleAddonChange(i, "type", "per_person")}
+                            className={`px-3 py-1.5 text-xs font-semibold transition ${addon.type === "per_person" ? "bg-blue-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}>
+                            Per Person
+                          </button>
+                        </div>
+
+                        {/* Price */}
+                        <div className="flex items-center gap-1 border rounded px-3 py-1.5 bg-white flex-1">
+                          <span className="text-gray-400 text-sm">₹</span>
+                          <input
+                            type="number"
+                            value={addon.price}
+                            onChange={(e) => handleAddonChange(i, "price", e.target.value)}
+                            placeholder="Price"
+                            min="0"
+                            className="flex-1 border-0 outline-none text-sm text-gray-700"
+                          />
+                          {addon.type === "per_person" && (
+                            <span className="text-xs text-gray-400 whitespace-nowrap">/ person</span>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
 
                 {/* Summary */}
                 {addons.filter(a => a.name.trim()).length > 0 && (
-                  <div className="text-xs text-gray-500">
-                    Total add-ons value: <strong className="text-blue-700">
-                      ₹{addons.reduce((s, a) => s + (Number(a.price) || 0), 0).toLocaleString('en-IN')}
-                    </strong>
-                    {addons.filter(a => a.name.trim()).length > 0 && (
-                      <span className="ml-2">({addons.filter(a => a.name.trim()).length} items)</span>
-                    )}
+                  <div className="text-xs text-gray-500 space-y-1">
+                    {addons.filter(a => a.name.trim()).map((a, i) => (
+                      <div key={i} className="flex justify-between">
+                        <span>{a.name}</span>
+                        <span className="font-medium text-blue-700">
+                          ₹{Number(a.price || 0).toLocaleString('en-IN')} {a.type === "per_person" ? "/ person" : "(fixed)"}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>

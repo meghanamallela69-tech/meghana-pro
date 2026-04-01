@@ -43,8 +43,10 @@ const eventSchema = new mongoose.Schema(
     // Add-on features for full-service events (e.g. Photography, Decoration)
     addons: [
       {
-        name: { type: String, required: true },   // e.g. "Photography"
-        price: { type: Number, required: true, min: 0 }, // extra charge
+        name: { type: String, required: true },
+        price: { type: Number, required: true, min: 0 },
+        type: { type: String, enum: ["fixed", "per_person"], default: "fixed" },
+        unit: { type: String, default: "person" }, // label for per_person (e.g. "person", "plate")
       }
     ],
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },

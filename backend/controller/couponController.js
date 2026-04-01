@@ -10,24 +10,15 @@ export const validateCoupon = async (req, res) => {
     const { couponCode, eventId, amount } = req.body;
     const userId = req.user.userId || req.user._id;
 
-    console.log(`=== VALIDATE COUPON ===`);
-    console.log(`Code: ${couponCode}`);
-    console.log(`Amount: ${amount}`);
-    console.log(`User ID: ${userId}`);
+    // Validate input — coerce amount to number
+    const numAmount = parseFloat(amount);
 
-    // Validate input
-    if (!couponCode || !amount) {
-      return res.status(400).json({
-        success: false,
-        message: "Coupon code and amount are required"
-      });
+    if (!couponCode || couponCode.trim() === "") {
+      return res.status(400).json({ success: false, message: "Coupon code is required" });
     }
 
-    if (amount <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid amount"
-      });
+    if (isNaN(numAmount) || numAmount <= 0) {
+      return res.status(400).json({ success: false, message: "Invalid amount" });
     }
 
     // Find coupon by code
@@ -60,7 +51,7 @@ export const validateCoupon = async (req, res) => {
     }
 
     // Check minimum amount
-    if (amount < coupon.minAmount) {
+    if (numAmount < coupon.minAmount) {
       return res.status(400).json({
         success: false,
         message: `Minimum order amount of ₹${coupon.minAmount} required`

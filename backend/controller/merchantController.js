@@ -213,97 +213,106 @@ export const updateEvent = async (req, res) => {
     if (String(event.createdBy) !== String(req.user.userId)) {
       return res.status(403).json({ success: false, message: "Forbidden" });
     }
-    
-    const { title, description, category, price, rating, features } = req.body;
-    
-    if (title !== undefined) event.title = title;
+
+    const {
+      title, description, category, price, features,
+      location, date, time, duration,
+      addons, ticketTypes, totalTickets, ticketPrice
+    } = req.body;
+
+    if (title !== undefined) event.title = title.trim();
     if (description !== undefined) event.description = description;
     if (category !== undefined) event.category = category;
-    if (price !== undefined) event.price = price;
-    if (rating !== undefined) event.rating = rating;
+    if (location !== undefined) event.location = location;
+    if (date !== undefined) event.date = date ? new Date(date) : null;
+    if (time !== undefined) event.time = time;
+    if (duration !== undefined) event.duration = Number(duration) || 1;
+
+    // Features
     if (features !== undefined) {
-      let parsedFeatures = features;
+      let parsed = features;
       if (typeof features === 'string') {
-        try {
-          parsedFeatures = JSON.parse(features);
-        } catch (e) {
-          parsedFeatures = features.split(',').map(f => f.trim()).filter(f => f);
-        }
+        try { parsed = JSON.parse(features); }
+        catch { parsed = features.split(',').map(f => f.trim()).filter(Boolean); }
       }
-      event.features = parsedFeatures;
+      event.features = parsed;
     }
 
-    // Handle image upload if new images are provided
-    
-    let newImages = [];
-    
-    // Check if new files were uploaded
-    if (req.files && typeof req.files === 'object' && !Array.isArray(req.files)) {
-      // Handle multer.fields() which returns an object with arrays
-      
-      // Get banner image
-      const bannerFiles = req.files.bannerImage || [];
-      if (bannerFiles && bannerFiles.length > 0) {
-        const bannerFile = bannerFiles[0];
-        try {
-          const uploadedBanner = await uploadMultipleImages([bannerFile.path]);
-          if (uploadedBanner && uploadedBanner.length > 0) {
-            newImages.push(uploadedBanner[0]);
-          }
-        } catch (uploadError) {
-          console.error('Failed to upload new banner:', uploadError.message);
+    const isTicketed = event.eventType === "ticketed";
+
+    if (isTicketed) {
+      // Ticketed event fields
+      if (ticketTypes !== undefined) {
+        let parsed = ticketTypes;
+        if (typeof ticketTypes === 'string') {
+          try { parsed = JSON.parse(ticketTypes); } catch { parsed = []; }
+        }
+        event.ticketTypes = parsed.map(t => ({
+          name: t.name || "General",
+          price: Number(t.price) || 0,
+          quantityTotal: Number(t.quantityTotal || t.quantity) || 0,
+          quantitySold: Number(t.quantitySold) || 0,
+          quantityReserved: Number(t.quantityReserved) || 0,
+        }));
+        // Recalculate totals
+        const total = event.ticketTypes.reduce((s, t) => s + (t.quantityTotal || 0), 0);
+        const sold = event.ticketTypes.reduce((s, t) => s + (t.quantitySold || 0), 0);
+        event.totalTickets = total;
+        event.availableTickets = Math.max(0, total - sold);
+        if (event.ticketTypes.length > 0) {
+          event.ticketPrice = Math.min(...event.ticketTypes.map(t => t.price));
+          event.price = event.ticketPrice;
         }
       }
-      
-      // Get gallery images
-      const galleryFiles = req.files.galleryImages || [];
-      if (galleryFiles && galleryFiles.length > 0) {
-        try {
-          const galleryPaths = galleryFiles.map(f => f.path);
-          const uploadedGallery = await uploadMultipleImages(galleryPaths);
-          newImages = [...newImages, ...uploadedGallery];
-        } catch (uploadError) {
-          console.error('Failed to upload gallery images:', uploadError.message);
+    } else {
+      // Full-service event fields
+      if (price !== undefined) event.price = Number(price) || 0;
+      if (addons !== undefined) {
+        let parsed = addons;
+        if (typeof addons === 'string') {
+          try { parsed = JSON.parse(addons); } catch { parsed = []; }
         }
+        event.addons = (Array.isArray(parsed) ? parsed : [])
+          .filter(a => a.name && a.name.trim())
+          .map(a => ({ name: a.name.trim(), price: Number(a.price) || 0 }));
+      }
+    }
+
+    // Handle image uploads
+    let newImages = [];
+    if (req.files && typeof req.files === 'object' && !Array.isArray(req.files)) {
+      const bannerFiles = req.files.bannerImage || [];
+      if (bannerFiles.length > 0) {
+        try {
+          const uploaded = await uploadMultipleImages([bannerFiles[0].path]);
+          if (uploaded.length > 0) newImages.push(uploaded[0]);
+        } catch {}
+      }
+      const galleryFiles = req.files.galleryImages || [];
+      if (galleryFiles.length > 0) {
+        try {
+          const uploaded = await uploadMultipleImages(galleryFiles.map(f => f.path));
+          newImages = [...newImages, ...uploaded];
+        } catch {}
       }
     } else if (req.files && Array.isArray(req.files) && req.files.length > 0) {
-      // Fallback: handle if files come as array
       try {
-        const imagePaths = req.files.map(file => file.path);
-        const uploadedImages = await uploadMultipleImages(imagePaths);
-        newImages = uploadedImages;
-      } catch (uploadError) {
-        console.error('Failed to upload images:', uploadError.message);
-      }
-    } else if (req.file) {
-      // Fallback: handle single file
-      try {
-        const uploadedImage = await uploadMultipleImages([req.file.path]);
-        if (uploadedImage && uploadedImage.length > 0) {
-          newImages.push(uploadedImage[0]);
-        }
-      } catch (uploadError) {
-        console.error('Failed to upload image:', uploadError.message);
-      }
+        const uploaded = await uploadMultipleImages(req.files.map(f => f.path));
+        newImages = uploaded;
+      } catch {}
     }
-    
-    // If new images were uploaded, replace old ones
-    if (newImages && newImages.length > 0) {
-      // Delete old images from Cloudinary
+
+    if (newImages.length > 0) {
       if (event.images && event.images.length > 0) {
-        const oldPublicIds = event.images.map(img => img.public_id);
-        await deleteMultipleImages(oldPublicIds);
+        await deleteMultipleImages(event.images.map(img => img.public_id));
       }
-      
-      // Replace with new images
       event.images = newImages;
-    } else {
     }
-    
+
     await event.save();
     return res.status(200).json({ success: true, event });
-  } catch {
-    return res.status(500).json({ success: false, message: "Unknown Error" });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message || "Unknown Error" });
   }
 };
 
