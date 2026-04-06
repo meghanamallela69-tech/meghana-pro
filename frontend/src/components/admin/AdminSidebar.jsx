@@ -1,13 +1,10 @@
-import { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import { RxDashboard } from "react-icons/rx";
-import { BsCalendar2Event, BsBell, BsGraphUp } from "react-icons/bs";
+import { BsCalendar2Event, BsBell } from "react-icons/bs";
 import { FaUsers, FaListAlt, FaStore, FaCreditCard, FaUser, FaClipboardCheck, FaExclamationTriangle } from "react-icons/fa";
 import { FiSettings, FiLogOut } from "react-icons/fi";
-import axios from "axios";
-import useAuth from "../../context/useAuth";
-import { API_BASE, authHeaders } from "../../lib/http";
 import PropTypes from "prop-types";
+import useNotificationBadges from "../../context/useNotificationBadges";
 
 const Item = ({ icon: Icon, label, to, badge }) => (
   <NavLink
@@ -30,35 +27,18 @@ const Item = ({ icon: Icon, label, to, badge }) => (
   </NavLink>
 );
 
-const AdminSidebar = ({ onLogout }) => {
-  const { token } = useAuth();
-  const [unreadCount, setUnreadCount] = useState(0);
-
-  useEffect(() => {
-    loadUnreadCount();
-    // Poll every 30 seconds for real-time updates
-    const interval = setInterval(loadUnreadCount, 30000);
-    return () => clearInterval(interval);
-  }, [token]);
-
-  const loadUnreadCount = async () => {
-    try {
-      const response = await axios.get(`${API_BASE}/admin-profile/notifications/unread-count`, { 
-        headers: authHeaders(token) 
-      });
-      
-      if (response.data.success) {
-        setUnreadCount(response.data.count || 0);
-      }
-    } catch (error) {
-      console.error("Error loading unread count:", error);
-    }
-  };
+const AdminSidebar = ({ onLogout, onClose }) => {
+  const { badgeCounts } = useNotificationBadges();
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 bg-white text-gray-800 flex flex-col shadow-xl z-50 border-r border-gray-200">
-      <div className="px-4 py-4 text-lg font-semibold border-b border-gray-200 text-blue-600">
-        Event Admin Panel
+    <div className="h-full w-64 bg-white text-gray-800 flex flex-col border-r border-gray-200">
+      <div className="px-4 py-4 text-lg font-semibold border-b border-gray-200 text-blue-600 flex items-center justify-between">
+        <span>Event Admin Panel</span>
+        <button onClick={onClose} className="lg:hidden p-1 rounded hover:bg-gray-100 text-gray-500">
+          <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
       </div>
       <div role="navigation" className="flex-1 px-2 py-2 space-y-1 overflow-y-auto">
         <Item icon={RxDashboard} label="Dashboard" to="/dashboard/admin" />
@@ -70,7 +50,7 @@ const AdminSidebar = ({ onLogout }) => {
         <Item icon={FaClipboardCheck} label="Audit Logs" to="/dashboard/admin/audit-logs" />
         <Item icon={FaExclamationTriangle} label="Complaints" to="/dashboard/admin/complaints" />
         <Item icon={FaUser} label="Profile" to="/dashboard/admin/profile" />
-        <Item icon={BsBell} label="Notifications" to="/dashboard/admin/notifications" badge={unreadCount} />
+        <Item icon={BsBell} label="Notifications" to="/dashboard/admin/notifications" badge={badgeCounts.total} />
         <Item icon={FiSettings} label="Settings" to="/dashboard/admin/settings" />
       </div>
       <div className="p-2 border-t border-gray-200">
@@ -82,7 +62,7 @@ const AdminSidebar = ({ onLogout }) => {
           <span className="text-sm font-medium">Logout</span>
         </button>
       </div>
-    </aside>
+    </div>
   );
 };
 
@@ -94,4 +74,5 @@ Item.propTypes = {
 };
 AdminSidebar.propTypes = {
   onLogout: PropTypes.func,
+  onClose: PropTypes.func,
 };

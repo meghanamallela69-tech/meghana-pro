@@ -413,7 +413,7 @@ const UserEventDetails = () => {
             ticketTypes: event.ticketTypes
           }}
           coupons={event.coupons || []}
-          onBookingSuccess={handleBookingSuccess}
+          onSuccess={handleBookingSuccess}
         />
       )}
     </UserLayout>

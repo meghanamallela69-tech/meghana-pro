@@ -116,9 +116,9 @@ const MerchantSettings = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+              className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 responsive-btn"
             >
-              {loading ? "Updating..." : "Update Password"}
+              <span className="btn-label">{loading ? "Updating..." : "Update Password"}</span>
             </button>
           </form>
         </div>
@@ -233,6 +233,17 @@ const MerchantSettings = () => {
           </div>
         </div>
       </div>
+
+      {/* Mobile Responsive Styles */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media (max-width: 767px) {
+          .responsive-btn { 
+            padding: 8px 12px !important; 
+            font-size: 14px !important; 
+          }
+          .btn-label { display: none; }
+        }
+      ` }} />
     </MerchantLayout>
   );
 };

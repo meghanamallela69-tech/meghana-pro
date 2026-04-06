@@ -5,6 +5,7 @@ import {
   getUserReviews,
   deleteReview,
   getLatestReviews,
+  seedReviews,
 } from "../controller/reviewController.js";
 import { auth } from "../middleware/authMiddleware.js";
 
@@ -15,5 +16,6 @@ router.post("/", auth, createReview);
 router.get("/event/:eventId", getEventReviews);
 router.get("/my-reviews", auth, getUserReviews);
 router.delete("/:reviewId", auth, deleteReview);
+router.post("/seed/sample", seedReviews);
 
 export default router;

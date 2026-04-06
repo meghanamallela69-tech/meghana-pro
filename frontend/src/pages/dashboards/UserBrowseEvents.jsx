@@ -62,8 +62,41 @@ const UserBrowseEvents = () => {
     filterEvents();
   }, [searchTerm, categoryFilter, dateFilter, events]);
 
-  // Check for booking redirect on mount
+  // Check for booking redirect on mount (both old and new format)
   useEffect(() => {
+    console.log('🔍 UserBrowseEvents - Checking for pending booking...');
+    
+    // New format: pendingBooking
+    const pendingBooking = localStorage.getItem('pendingBooking');
+    console.log('   pendingBooking:', pendingBooking);
+    console.log('   events.length:', events.length);
+    
+    if (pendingBooking && events.length > 0) {
+      try {
+        const { id, type } = JSON.parse(pendingBooking);
+        console.log('✅ Found pendingBooking - ID:', id, 'Type:', type);
+        localStorage.removeItem('pendingBooking');
+        
+        // Find the event
+        const eventToBook = events.find(e => e._id === id);
+        console.log('   Event found:', !!eventToBook, eventToBook?.title);
+        
+        if (eventToBook) {
+          toast.success(`Welcome back! Continue booking: ${eventToBook.title}`);
+          setSelectedEvent(eventToBook);
+          setBookingModalOpen(true);
+          console.log('✅ Booking modal opened for:', eventToBook.title);
+        } else {
+          console.warn('⚠️ Event not found in events list');
+        }
+      } catch (error) {
+        console.error('❌ Error parsing pending booking:', error);
+        localStorage.removeItem('pendingBooking');
+      }
+      return;
+    }
+    
+    // Old format: bookingRedirect
     const bookingRedirect = localStorage.getItem('bookingRedirect');
     if (bookingRedirect) {
       try {
@@ -162,18 +195,17 @@ const UserBrowseEvents = () => {
   };
 
   const handleBookNow = (event) => {
-    // Check if user is logged in
-    const user = localStorage.getItem('user');
+    console.log('🔵 Book Now clicked on Browse Events - Event:', event.title, 'ID:', event._id, 'Type:', event.eventType);
     
-    if (!user) {
+    // Check if user is logged in using auth context
+    if (!token) {
       // User not logged in - redirect to login with event ID for redirect
       toast.success("Please login to book this event");
       
-      // Store event ID for redirect after login
-      localStorage.setItem('bookingRedirect', JSON.stringify({
-        eventId: event._id,
-        eventTitle: event.title
-      }));
+      // Store event ID and type for redirect after login
+      localStorage.setItem('bookingEventId', event._id);
+      localStorage.setItem('bookingEventType', event.eventType || "full-service");
+      console.log('💾 Saved bookingEventId:', event._id, 'bookingEventType:', event.eventType || "full-service");
       
       // Redirect to login page
       navigate('/login');
@@ -181,6 +213,7 @@ const UserBrowseEvents = () => {
     }
     
     // User is logged in - open booking modal directly
+    console.log('✅ User logged in - opening booking modal');
     setSelectedEvent(event);
     setBookingModalOpen(true);
   };
@@ -434,70 +467,26 @@ const UserBrowseEvents = () => {
                   {event.location || "Location TBD"}
                 </div>
                 
-                {/* Show ticket availability for ticketed events */}
-                {event.eventType === 'ticketed' && event.ticketTypes && event.ticketTypes.length > 0 && (
-                  <div style={{ 
-                    marginBottom: '16px',
-                    padding: '12px',
-                    backgroundColor: '#f0fdf4',
-                    borderRadius: '8px',
-                    border: '1px solid #bbf7d0'
-                  }}>
-                    <div style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '6px',
-                      color: '#16a34a',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      marginBottom: '8px'
-                    }}>
-                      <svg style={{ width: '16px', height: '16px' }} fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z"/>
-                        <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z"/>
-                      </svg>
-                      Available Tickets: {event.availableTickets || 0}
-                    </div>
-                    <div style={{ 
-                      display: 'flex', 
-                      gap: '8px',
-                      flexWrap: 'wrap'
-                    }}>
-                      {event.ticketTypes.map((ticket, idx) => (
-                        <span key={idx} style={{
-                          display: 'inline-block',
-                          padding: '4px 10px',
-                          backgroundColor: 'white',
-                          borderRadius: '6px',
-                          fontSize: '12px',
-                          fontWeight: '500',
-                          color: '#374151',
-                          border: '1px solid #86efac'
-                        }}>
-                          {ticket.name}: {ticket.quantityAvailable || 0}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                {/* Show ticket availability for ticketed events — moved to View Details modal */}
+
                 <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
                   <button 
                     onClick={() => handleViewDetails(event)}
                     style={{
                       flex: 1,
-                      padding: '14px 18px',
+                      padding: '14px 18px', // Increased padding
                       backgroundColor: 'white',
                       color: '#a2783a',
                       textAlign: 'center',
-                      borderRadius: '10px',
-                      fontWeight: '700',
-                      fontSize: '15px',
+                      borderRadius: '10px', // Increased border radius
+                      fontWeight: '700', // Increased font weight
+                      fontSize: '15px', // Increased font size
                       transition: 'all 0.3s',
                       border: '2px solid #a2783a',
                       cursor: 'pointer',
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)', // Added shadow
+                      textTransform: 'uppercase', // Make text uppercase
+                      letterSpacing: '0.5px' // Add letter spacing
                     }}
                     onMouseEnter={(e) => {
                       e.target.style.backgroundColor = '#a2783a';
@@ -518,19 +507,19 @@ const UserBrowseEvents = () => {
                     onClick={() => handleBookNow(event)}
                     style={{
                       flex: 1,
-                      padding: '14px 18px',
+                      padding: '14px 18px', // Increased padding
                       backgroundColor: '#a2783a',
                       color: 'white',
                       textAlign: 'center',
-                      borderRadius: '10px',
-                      fontWeight: '700',
-                      fontSize: '15px',
+                      borderRadius: '10px', // Increased border radius
+                      fontWeight: '700', // Increased font weight
+                      fontSize: '15px', // Increased font size
                       transition: 'all 0.3s',
                       border: '2px solid #a2783a',
                       cursor: 'pointer',
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)', // Added shadow
+                      textTransform: 'uppercase', // Make text uppercase
+                      letterSpacing: '0.5px' // Add letter spacing
                     }}
                     onMouseEnter={(e) => {
                       e.target.style.backgroundColor = '#8b6a30';
@@ -546,40 +535,6 @@ const UserBrowseEvents = () => {
                     }}
                   >
                     Book Now
-                  </button>
-                  {/* Share Button */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const url = `${window.location.origin}/dashboard/user/events/${event._id}`;
-                      if (navigator.share) {
-                        navigator.share({ title: event.title, text: event.description || event.title, url });
-                      } else {
-                        navigator.clipboard.writeText(url);
-                        toast.success("Link copied!");
-                      }
-                    }}
-                    title="Share event"
-                    style={{
-                      padding: '14px 14px',
-                      backgroundColor: 'white',
-                      color: '#6b7280',
-                      borderRadius: '10px',
-                      border: '2px solid #e5e7eb',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      transition: 'all 0.2s',
-                      flexShrink: 0,
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.color = '#3b82f6'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.color = '#6b7280'; }}
-                  >
-                    <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-                      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-                    </svg>
                   </button>
                 </div>
               </div>
@@ -608,7 +563,7 @@ const UserBrowseEvents = () => {
             addons: selectedEvent.addons
           }}
           coupons={selectedEvent.coupons || []}
-          onBookingSuccess={handleBookingSuccess}
+          onSuccess={handleBookingSuccess}
         />
       )}
 

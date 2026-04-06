@@ -24,6 +24,19 @@ const Register = () => {
       .then((res) => {
         toast.success(res.data.message);
         login(res.data.token, res.data.user);
+        
+        // Check for home page booking redirect (highest priority)
+        const homeRedirect = localStorage.getItem("home_booking_redirect");
+        if (homeRedirect) {
+          // Don't remove — UpcomingEvents will handle it and auto-open booking modal
+          navigate("/");
+          setName("");
+          setEmail("");
+          setPassword("");
+          return;
+        }
+        
+        // Default redirect based on role
         const r = res.data.user.role;
         if (r === "admin") navigate("/dashboard/admin");
         else if (r === "merchant") navigate("/dashboard/merchant");
@@ -67,17 +80,6 @@ const Register = () => {
             className="border rounded-lg px-4 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
           />
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">I want to register as:</label>
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              className="border rounded-lg px-4 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="user">User (Browse and book events)</option>
-              <option value="merchant">Merchant (Create and manage events)</option>
-            </select>
-          </div>
           <button
             type="submit"
             className="bg-blue-600 text-white py-2 rounded-lg w-full hover:bg-blue-700 transition"

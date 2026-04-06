@@ -30,10 +30,38 @@ const Login = () => {
         toast.success(res.data.message);
         login(res.data.token, res.data.user);
         
-        // Check for QR event booking redirect (highest priority)
+        // Check for booking redirect (highest priority)
+        const bookingEventId = localStorage.getItem("bookingEventId");
+        const bookingEventType = localStorage.getItem("bookingEventType");
+        
+        console.log('🔵 Login successful - Checking booking redirect...');
+        console.log('   bookingEventId:', bookingEventId);
+        console.log('   bookingEventType:', bookingEventType);
+        
+        if (bookingEventId) {
+          console.log('✅ Found booking redirect - creating pendingBooking');
+          localStorage.removeItem("bookingEventId");
+          localStorage.removeItem("bookingEventType");
+          
+          // Store event info for the dashboard to open booking modal
+          const pendingData = {
+            id: bookingEventId,
+            type: bookingEventType || "full-service"
+          };
+          localStorage.setItem("pendingBooking", JSON.stringify(pendingData));
+          console.log('💾 Created pendingBooking:', pendingData);
+          
+          // Redirect to browse events page where the booking modal will auto-open
+          console.log('➡️  Redirecting to /dashboard/user/browse');
+          navigate('/dashboard/user/browse');
+          setEmail("");
+          setPassword("");
+          return;
+        }
+
+        // Check for QR event booking redirect
         const qrRedirect = localStorage.getItem("qr_booking_redirect");
         if (qrRedirect) {
-          // Don't remove it here — EventPublicPage will handle it and auto-open booking modal
           navigate(`/event/${qrRedirect}`);
           setEmail("");
           setPassword("");
@@ -43,7 +71,6 @@ const Login = () => {
         // Check for home page booking redirect
         const homeRedirect = localStorage.getItem("home_booking_redirect");
         if (homeRedirect) {
-          // Don't remove — UpcomingEvents will handle it
           navigate("/");
           setEmail("");
           setPassword("");

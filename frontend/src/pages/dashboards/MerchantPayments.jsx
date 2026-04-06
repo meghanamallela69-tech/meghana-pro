@@ -56,7 +56,7 @@ const MerchantPayments = () => {
               <p className="text-3xl font-bold text-gray-900">{formatCurrency(stats.total)}</p>
             </div>
             <div className="h-12 w-12 bg-green-600 text-white flex items-center justify-center rounded-lg">
-              <FaRupeeSign />
+              <FaRupeeSign className="responsive-icon" />
             </div>
           </div>
         </div>
@@ -67,7 +67,7 @@ const MerchantPayments = () => {
               <p className="text-3xl font-bold text-gray-900">{stats.count}</p>
             </div>
             <div className="h-12 w-12 bg-blue-600 text-white flex items-center justify-center rounded-lg">
-              <FaCreditCard />
+              <FaCreditCard className="responsive-icon" />
             </div>
           </div>
         </div>
@@ -79,7 +79,7 @@ const MerchantPayments = () => {
         </div>
       ) : payments.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-xl">
-          <FaCreditCard className="mx-auto text-4xl text-gray-400 mb-4" />
+          <FaCreditCard className="mx-auto text-4xl text-gray-400 mb-4 responsive-icon" />
           <p className="text-gray-500 text-lg">No payments found</p>
           <p className="text-gray-400 mt-2">Payments will appear here when customers book</p>
         </div>
@@ -126,6 +126,15 @@ const MerchantPayments = () => {
           </div>
         </div>
       )}
+
+      {/* Mobile Responsive Styles */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media (max-width: 767px) {
+          .responsive-icon { 
+            font-size: 18px !important; 
+          }
+        }
+      ` }} />
     </MerchantLayout>
   );
 };

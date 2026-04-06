@@ -27,6 +27,16 @@ const EventPublicPage = () => {
   // After login redirect: auto-open booking modal
   useEffect(() => {
     if (!event || !token) return;
+    
+    // Check for booking redirect from login
+    const bookingEventId = localStorage.getItem("bookingEventId");
+    if (bookingEventId === eventId) {
+      localStorage.removeItem("bookingEventId");
+      setBookingOpen(true);
+      return;
+    }
+    
+    // Check for QR booking redirect
     const redirect = localStorage.getItem("qr_booking_redirect");
     if (redirect === eventId) {
       localStorage.removeItem("qr_booking_redirect");
@@ -36,7 +46,7 @@ const EventPublicPage = () => {
 
   const handleBookNow = () => {
     if (!token || !user) {
-      localStorage.setItem("qr_booking_redirect", eventId);
+      localStorage.setItem("bookingEventId", eventId);
       navigate("/login", { state: { from: `/event/${eventId}` } });
       return;
     }
@@ -259,7 +269,7 @@ const EventPublicPage = () => {
             addons: event.addons,
           }}
           coupons={event.coupons || []}
-          onBookingSuccess={() => {
+          onSuccess={() => {
             setBookingOpen(false);
             toast.success("Booking successful!");
           }}

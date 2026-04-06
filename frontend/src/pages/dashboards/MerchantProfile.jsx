@@ -194,10 +194,10 @@ const MerchantProfile = () => {
               {!isEditing ? (
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2 responsive-btn"
                 >
                   <FaUser className="text-sm" />
-                  Edit Profile
+                  <span className="btn-label">Edit Profile</span>
                 </button>
               ) : (
                 <div className="flex gap-2">
@@ -209,18 +209,18 @@ const MerchantProfile = () => {
                       setPreviewImage(null);
                       fetchProfile();
                     }}
-                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition responsive-btn"
                   >
-                    Cancel
+                    <span className="btn-label">Cancel</span>
                   </button>
                   <button
                     type="submit"
                     form="profile-form"
                     disabled={loading}
-                    className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50 flex items-center gap-2"
+                    className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50 flex items-center gap-2 responsive-btn"
                   >
-                    <AiOutlineUpload className="text-lg" />
-                    {loading ? "Saving..." : "Save Changes"}
+                    <AiOutlineUpload className="text-lg responsive-icon" />
+                    <span className="btn-label">{loading ? "Saving..." : "Save Changes"}</span>
                   </button>
                 </div>
               )}
@@ -325,6 +325,20 @@ const MerchantProfile = () => {
           </div>
         </div>
       </div>
+
+      {/* Mobile Responsive Styles */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media (max-width: 767px) {
+          .responsive-btn { 
+            padding: 8px 12px !important; 
+            font-size: 14px !important; 
+          }
+          .btn-label { display: none; }
+          .responsive-icon { 
+            font-size: 16px !important; 
+          }
+        }
+      ` }} />
     </MerchantLayout>
   );
 };

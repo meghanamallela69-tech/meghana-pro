@@ -134,10 +134,10 @@ const UserProfile = () => {
               {!isEditing ? (
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition responsive-btn"
                 >
                   <FiEdit2 />
-                  Edit Profile
+                  <span className="btn-label">Edit Profile</span>
                 </button>
               ) : (
                 <div className="flex gap-2">
@@ -261,6 +261,17 @@ const UserProfile = () => {
           </div>
         </section>
       </div>
+
+      {/* Mobile Responsive Styles */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media (max-width: 767px) {
+          .responsive-btn { 
+            padding: 6px 10px !important; 
+            font-size: 12px !important; 
+          }
+          .btn-label { display: none; }
+        }
+      ` }} />
     </UserLayout>
   );
 };

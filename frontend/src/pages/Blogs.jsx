@@ -25,7 +25,7 @@ const Blogs = () => {
       </section>
 
       <section className="max-w-7xl mx-auto px-6 py-16" style={{ backgroundColor: '#fff7ea' }}>
-        <div style={{ 
+        <div className="blogs-grid" style={{ 
           display: 'grid', 
           gridTemplateColumns: 'repeat(4, 1fr)', 
           gap: '24px' 
@@ -115,6 +115,18 @@ const Blogs = () => {
           ))}
         </div>
       </section>
+
+      <style>{`
+        @media (max-width: 767px) {
+          .blogs-grid { grid-template-columns: 1fr !important; gap: 16px !important; }
+        }
+        @media (min-width: 768px) and (max-width: 1023px) {
+          .blogs-grid { grid-template-columns: repeat(2, 1fr) !important; }
+        }
+        @media (min-width: 1024px) {
+          .blogs-grid { grid-template-columns: repeat(4, 1fr) !important; }
+        }
+      `}</style>
     </>
   );
 };

@@ -58,7 +58,7 @@ const BookingRatingModal = ({ isOpen, booking, onClose, onSuccess, token }) => {
         </div>
 
         <p className="text-sm text-gray-600 mb-4">
-          Event: <strong>{booking.eventTitle}</strong>
+          Event: <strong>{booking.serviceTitle}</strong>
         </p>
 
         {/* Star Rating */}

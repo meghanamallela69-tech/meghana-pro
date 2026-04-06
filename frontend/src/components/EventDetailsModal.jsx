@@ -1,15 +1,33 @@
-import React from "react";
+import React, { useState } from "react";
 import PropTypes from "prop-types";
-import { FaTimes, FaMapMarkerAlt, FaCalendarAlt, FaUser, FaCheck, FaClock } from "react-icons/fa";
+import { FaTimes, FaMapMarkerAlt, FaUser, FaCheck } from "react-icons/fa";
 import { getEventStatus } from "../lib/utils";
 
 const EventDetailsModal = ({ isOpen, onClose, event, onBookNow }) => {
+
   if (!isOpen || !event) return null;
 
   const status = getEventStatus(event);
   const eventImages = event.images && event.images.length > 0 
     ? event.images.map(img => img.url) 
     : ["/party.jpg"]; // Fallback image
+
+  // Handle Book Now click
+  const handleBookNowClick = () => {
+    const token = localStorage.getItem("token");
+    console.log('🔵 Book Now clicked - Token:', !!token, 'Event ID:', event._id, 'Event Type:', event.eventType);
+    
+    if (!token) {
+      // Save event ID and type, then redirect to login
+      localStorage.setItem("bookingEventId", event._id);
+      localStorage.setItem("bookingEventType", event.eventType || "full-service");
+      console.log('💾 Saved to localStorage - bookingEventId:', event._id, 'bookingEventType:', event.eventType || "full-service");
+      window.location.href = `/login?redirect=booking`;
+    } else {
+      console.log('✅ User logged in - calling onBookNow');
+      onBookNow(event);
+    }
+  };
 
   // Default features if not provided
   const defaultFeatures = [
@@ -150,72 +168,6 @@ const EventDetailsModal = ({ isOpen, onClose, event, onBookNow }) => {
               }}>
                 {event.category} • {event.location}
               </p>
-              <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                  <FaCalendarAlt />
-                  <span>
-                    {(() => {
-                      // Try multiple date sources
-                      let dateToUse = event.date || event.eventDate || event.createdAt;
-                      
-                      if (dateToUse) {
-                        try {
-                          const date = new Date(dateToUse);
-                          // Check if date is valid
-                          if (!isNaN(date.getTime())) {
-                            return date.toLocaleDateString("en-US", {
-                              weekday: "short",
-                              month: "short", 
-                              day: "numeric",
-                              year: "numeric"
-                            });
-                          }
-                        } catch (e) {
-                          console.error('Date parsing error:', e);
-                        }
-                      }
-                      
-                      // Fallback to a default future date
-                      const futureDate = new Date();
-                      futureDate.setDate(futureDate.getDate() + 7); // 7 days from now
-                      return futureDate.toLocaleDateString("en-US", {
-                        weekday: "short",
-                        month: "short", 
-                        day: "numeric",
-                        year: "numeric"
-                      });
-                    })()}
-                  </span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                  <FaClock />
-                  <span>
-                    {(() => {
-                      // Try multiple time sources
-                      let timeToUse = event.time || event.eventTime;
-                      
-                      if (timeToUse && timeToUse !== "TBD") {
-                        try {
-                          // Convert 24-hour format to 12-hour format if needed
-                          if (timeToUse.includes(':') && !timeToUse.includes('M')) {
-                            const [hours, minutes] = timeToUse.split(':');
-                            const hour = parseInt(hours);
-                            const ampm = hour >= 12 ? 'PM' : 'AM';
-                            const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-                            return `${displayHour}:${minutes} ${ampm}`;
-                          }
-                          return timeToUse;
-                        } catch (e) {
-                          console.error('Time parsing error:', e);
-                        }
-                      }
-                      
-                      // Default time
-                      return "6:00 PM";
-                    })()}
-                  </span>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -324,203 +276,106 @@ const EventDetailsModal = ({ isOpen, onClose, event, onBookNow }) => {
           }}>
             {/* Description */}
             <div style={{ marginBottom: "32px" }}>
-              <h3 style={{ 
-                fontSize: "18px", 
-                fontWeight: "600", 
-                marginBottom: "12px",
-                color: "#374151"
-              }}>
+              <h3 style={{ fontSize: "18px", fontWeight: "600", marginBottom: "12px", color: "#374151" }}>
                 About This Event
               </h3>
-              <p style={{ 
-                color: "#6b7280", 
-                lineHeight: "1.6",
-                fontSize: "14px"
-              }}>
+              <p style={{ color: "#6b7280", lineHeight: "1.6", fontSize: "14px" }}>
                 {event.description || "Join us for an amazing event experience!"}
               </p>
             </div>
 
-            {/* What's Included - REMOVED */}
-
-            {/* Event Details */}
+            {/* Event Information */}
             <div style={{ marginBottom: "32px" }}>
-              <h3 style={{ 
-                fontSize: "18px", 
-                fontWeight: "600", 
-                marginBottom: "16px",
-                color: "#374151"
-              }}>
+              <h3 style={{ fontSize: "18px", fontWeight: "600", marginBottom: "16px", color: "#374151" }}>
                 Event Information
               </h3>
-              <div style={{
-                backgroundColor: "#f9fafb",
-                padding: "20px",
-                borderRadius: "12px",
-                border: "1px solid #e5e7eb"
-              }}>
-                <div style={{ 
-                  display: "flex", 
-                  alignItems: "center",
-                  marginBottom: "16px"
-                }}>
-                  <FaCalendarAlt style={{ 
-                    color: "#3b82f6", 
-                    marginRight: "12px",
-                    fontSize: "16px"
-                  }} />
+              <div style={{ backgroundColor: "#f9fafb", padding: "20px", borderRadius: "12px", border: "1px solid #e5e7eb" }}>
+                <div style={{ display: "flex", alignItems: "center" }}>
+                  <FaMapMarkerAlt style={{ color: "#ef4444", marginRight: "12px", fontSize: "16px" }} />
                   <div>
-                    <p style={{ 
-                      fontWeight: "600",
-                      color: "#374151",
-                      fontSize: "14px",
-                      marginBottom: "2px"
-                    }}>
-                      Date & Time
-                    </p>
-                    <p style={{ 
-                      color: "#6b7280",
-                      fontSize: "14px"
-                    }}>
-                      {(() => {
-                        // Try multiple date sources
-                        let dateToUse = event.date || event.eventDate || event.createdAt;
-                        
-                        if (dateToUse) {
-                          try {
-                            const date = new Date(dateToUse);
-                            // Check if date is valid
-                            if (!isNaN(date.getTime())) {
-                              return date.toLocaleDateString('en-US', { 
-                                weekday: 'long', 
-                                year: 'numeric', 
-                                month: 'long', 
-                                day: 'numeric' 
-                              });
-                            }
-                          } catch (e) {
-                            console.error('Date parsing error:', e);
-                          }
-                        }
-                        
-                        // Fallback to a default future date
-                        const futureDate = new Date();
-                        futureDate.setDate(futureDate.getDate() + 7); // 7 days from now
-                        return futureDate.toLocaleDateString('en-US', { 
-                          weekday: 'long', 
-                          year: 'numeric', 
-                          month: 'long', 
-                          day: 'numeric' 
-                        });
-                      })()}
-                    </p>
-                    <p style={{ 
-                      color: "#6b7280",
-                      fontSize: "12px"
-                    }}>
-                      {(() => {
-                        // Try multiple time sources
-                        let timeToUse = event.time || event.eventTime;
-                        
-                        if (timeToUse && timeToUse !== "TBD") {
-                          try {
-                            // Convert 24-hour format to 12-hour format if needed
-                            if (timeToUse.includes(':') && !timeToUse.includes('M')) {
-                              const [hours, minutes] = timeToUse.split(':');
-                              const hour = parseInt(hours);
-                              const ampm = hour >= 12 ? 'PM' : 'AM';
-                              const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-                              return `${displayHour}:${minutes} ${ampm}`;
-                            }
-                            return timeToUse;
-                          } catch (e) {
-                            console.error('Time parsing error:', e);
-                          }
-                        }
-                        
-                        // Default time
-                        return "6:00 PM";
-                      })()}
-                    </p>
-                  </div>
-                </div>
-                <div style={{ 
-                  display: "flex", 
-                  alignItems: "center"
-                }}>
-                  <FaMapMarkerAlt style={{ 
-                    color: "#ef4444", 
-                    marginRight: "12px",
-                    fontSize: "16px"
-                  }} />
-                  <div>
-                    <p style={{ 
-                      fontWeight: "600",
-                      color: "#374151",
-                      fontSize: "14px",
-                      marginBottom: "2px"
-                    }}>
-                      Location
-                    </p>
-                    <p style={{ 
-                      color: "#6b7280",
-                      fontSize: "14px"
-                    }}>
-                      {event.location || "Location TBD"}
-                    </p>
+                    <p style={{ fontWeight: "600", color: "#374151", fontSize: "14px", marginBottom: "2px" }}>Location</p>
+                    <p style={{ color: "#6b7280", fontSize: "14px" }}>{event.location || "Location TBD"}</p>
                   </div>
                 </div>
               </div>
             </div>
 
+            {/* Ticket Availability — ticketed events only */}
+            {event.eventType === "ticketed" && event.ticketTypes && event.ticketTypes.length > 0 && (
+              <div style={{ marginBottom: "32px" }}>
+                <h3 style={{ fontSize: "18px", fontWeight: "600", marginBottom: "16px", color: "#374151" }}>
+                  Ticket Availability
+                </h3>
+                {(() => {
+                  const ticketsWithAvail = event.ticketTypes.map(t => ({
+                    ...t,
+                    available: Math.max(0,
+                      (t.quantityTotal || t.quantity || 0) -
+                      (t.quantitySold || 0) -
+                      (t.quantityReserved || 0)
+                    )
+                  }));
+                  const totalAvailable = ticketsWithAvail.reduce((s, t) => s + t.available, 0);
+                  return (
+                    <div style={{
+                      backgroundColor: totalAvailable > 0 ? "#f0fdf4" : "#fef2f2",
+                      border: `1px solid ${totalAvailable > 0 ? "#bbf7d0" : "#fecaca"}`,
+                      borderRadius: "12px",
+                      padding: "16px"
+                    }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
+                        <span style={{
+                          width: "10px", height: "10px", borderRadius: "50%",
+                          backgroundColor: totalAvailable > 0 ? "#16a34a" : "#dc2626",
+                          display: "inline-block", flexShrink: 0
+                        }} />
+                        <span style={{ fontSize: "15px", fontWeight: "700", color: totalAvailable > 0 ? "#15803d" : "#dc2626" }}>
+                          {totalAvailable > 0 ? `${totalAvailable} tickets available` : "Sold Out"}
+                        </span>
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                        {ticketsWithAvail.map((ticket, idx) => (
+                          <div key={idx} style={{
+                            backgroundColor: "white",
+                            border: `1px solid ${ticket.available > 0 ? "#86efac" : "#fca5a5"}`,
+                            borderRadius: "8px",
+                            padding: "8px 14px",
+                            minWidth: "100px"
+                          }}>
+                            <p style={{ fontSize: "12px", color: "#6b7280", marginBottom: "2px" }}>{ticket.name}</p>
+                            <p style={{ fontSize: "16px", fontWeight: "700", color: ticket.available > 0 ? "#15803d" : "#dc2626" }}>
+                              {ticket.available}
+                              <span style={{ fontSize: "11px", fontWeight: "400", color: "#9ca3af", marginLeft: "4px" }}>
+                                / {ticket.quantityTotal || ticket.quantity || 0}
+                              </span>
+                            </p>
+                            <p style={{ fontSize: "11px", color: "#6b7280" }}>₹{ticket.price?.toLocaleString()}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
             {/* Organizer Section */}
             {event.createdBy?.name && (
               <div style={{ marginBottom: "32px" }}>
-                <h3 style={{ 
-                  fontSize: "18px", 
-                  fontWeight: "600", 
-                  marginBottom: "16px",
-                  color: "#374151"
-                }}>
+                <h3 style={{ fontSize: "18px", fontWeight: "600", marginBottom: "16px", color: "#374151" }}>
                   Organizer
                 </h3>
-                <div style={{
-                  display: "flex",
-                  alignItems: "center",
-                  backgroundColor: "#f3f4f6",
-                  padding: "20px",
-                  borderRadius: "12px"
-                }}>
-                  <div style={{
-                    backgroundColor: "#a2783a",
-                    padding: "12px",
-                    borderRadius: "50%",
-                    marginRight: "16px"
-                  }}>
+                <div style={{ display: "flex", alignItems: "center", backgroundColor: "#f3f4f6", padding: "20px", borderRadius: "12px" }}>
+                  <div style={{ backgroundColor: "#a2783a", padding: "12px", borderRadius: "50%", marginRight: "16px" }}>
                     <FaUser style={{ color: "white", fontSize: "16px" }} />
                   </div>
                   <div>
-                    <p style={{ 
-                      fontWeight: "600",
-                      color: "#374151",
-                      fontSize: "16px",
-                      marginBottom: "2px"
-                    }}>
+                    <p style={{ fontWeight: "600", color: "#374151", fontSize: "16px", marginBottom: "2px" }}>
                       {event.createdBy.name}
                     </p>
-                    <p style={{ 
-                      color: "#6b7280",
-                      fontSize: "14px"
-                    }}>
-                      Event Organizer
-                    </p>
+                    <p style={{ color: "#6b7280", fontSize: "14px" }}>Event Organizer</p>
                     {event.createdBy.email && (
-                      <p style={{ 
-                        color: "#9ca3af",
-                        fontSize: "12px"
-                      }}>
-                        {event.createdBy.email}
-                      </p>
+                      <p style={{ color: "#9ca3af", fontSize: "12px" }}>{event.createdBy.email}</p>
                     )}
                   </div>
                 </div>
@@ -570,7 +425,7 @@ const EventDetailsModal = ({ isOpen, onClose, event, onBookNow }) => {
                 gap: "12px"
               }}>
                 <button
-                  onClick={() => onBookNow(event)}
+                  onClick={handleBookNowClick}
                   disabled={status.label === 'Past' || status.label === 'Sold Out'}
                   style={{
                     padding: "16px 32px",
@@ -656,6 +511,8 @@ const EventDetailsModal = ({ isOpen, onClose, event, onBookNow }) => {
         </div>
       </div>
       </div>
+
+      {/* Login Modal */}
     </>
   );
 };

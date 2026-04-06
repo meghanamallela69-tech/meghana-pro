@@ -20,6 +20,7 @@ import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Blogs from "./pages/Blogs";
 import FAQ from "./pages/FAQ";
+import Reviews from "./pages/Reviews";
 
 import UserDashboard from "./pages/dashboards/UserDashboard";
 import UserBrowseEvents from "./pages/dashboards/UserBrowseEvents";
@@ -47,6 +48,7 @@ import MerchantSettings from "./pages/dashboards/MerchantSettings";
 import MerchantCategories from "./pages/dashboards/MerchantCategories";
 import UserPayments from "./pages/dashboards/UserPayments";
 import UserMessages from "./pages/dashboards/UserMessages";
+import UserReviews from "./pages/dashboards/UserReviews";
 import MerchantMessages from "./pages/dashboards/MerchantMessages";
 import MerchantWithdrawal from "./pages/dashboards/MerchantWithdrawal";
 import MerchantQRCodes from "./pages/dashboards/MerchantQRCodes";
@@ -83,6 +85,7 @@ const AppContent = () => {
           <Route path="/services" element={<Services />} />
           <Route path="/service/:id" element={<ServiceDetails />} />
           <Route path="/about" element={<About />} />
+          <Route path="/reviews" element={<Reviews />} />
           <Route path="/blogs" element={<Blogs />} />
           <Route path="/faqs" element={<FAQ />} />
           <Route path="/contact" element={<Contact />} />
@@ -182,6 +185,18 @@ const AppContent = () => {
               <PrivateRoute>
                 <RoleRoute role="user">
                   <UserMessages />
+                </RoleRoute>
+              </PrivateRoute>
+            }
+          />
+
+          {/* USER DASHBOARD - REVIEWS */}
+          <Route
+            path="/dashboard/user/reviews"
+            element={
+              <PrivateRoute>
+                <RoleRoute role="user">
+                  <UserReviews />
                 </RoleRoute>
               </PrivateRoute>
             }

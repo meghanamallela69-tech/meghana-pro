@@ -873,21 +873,32 @@ const MerchantCreateEvent = () => {
               <button
                 type="button"
                 onClick={() => navigate("/dashboard/merchant/events")}
-                className="flex-1 px-6 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition font-medium"
+                className="flex-1 px-6 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition font-medium responsive-btn"
               >
-                Cancel
+                <span className="btn-label">Cancel</span>
               </button>
               <button
                 type="submit"
                 disabled={loading || !eventType}
-                className="flex-1 px-6 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition disabled:opacity-50 font-medium"
+                className="flex-1 px-6 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition disabled:opacity-50 font-medium responsive-btn"
               >
-                {loading ? "Creating..." : "Create Event"}
+                <span className="btn-label">{loading ? "Creating..." : "Create Event"}</span>
               </button>
             </div>
           </form>
         </div>
       </div>
+
+      {/* Mobile Responsive Styles */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media (max-width: 767px) {
+          .responsive-btn { 
+            padding: 8px 12px !important; 
+            font-size: 14px !important; 
+          }
+          .btn-label { display: none; }
+        }
+      ` }} />
     </MerchantLayout>
   );
 };

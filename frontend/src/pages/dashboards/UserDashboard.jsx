@@ -129,6 +129,29 @@ const UserDashboard = () => {
     loadSavedEvents();
   }, [loadData, loadSavedEvents]);
 
+  // Check for pending booking after login
+  useEffect(() => {
+    const pendingBooking = localStorage.getItem('pendingBooking');
+    if (pendingBooking && events.length > 0) {
+      try {
+        const { id, type } = JSON.parse(pendingBooking);
+        localStorage.removeItem('pendingBooking');
+        
+        // Find the event from recommended events or registrations
+        const eventToBook = recommendedEvents.find(e => e._id === id) || 
+                           events.find(e => e._id === id);
+        
+        if (eventToBook) {
+          toast.success(`Welcome back! Continue booking: ${eventToBook.title}`);
+          setBookingEvent(eventToBook);
+        }
+      } catch (error) {
+        console.error('Error parsing pending booking:', error);
+        localStorage.removeItem('pendingBooking');
+      }
+    }
+  }, [events, recommendedEvents]);
+
   const stats = {
     bookings: registrations.length,
     upcoming: registrations.filter(b => new Date(b.eventDate) >= new Date()).length,
@@ -333,7 +356,7 @@ const UserDashboard = () => {
             addons: bookingEvent.addons,
           }}
           coupons={bookingEvent.coupons || []}
-          onBookingSuccess={() => { setBookingEvent(null); toast.success("Booking successful!"); }}
+          onSuccess={() => { setBookingEvent(null); toast.success("Booking successful!"); }}
         />
       )}
 

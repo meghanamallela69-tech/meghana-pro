@@ -1,3 +1,4 @@
+import { useState } from "react";
 import PropTypes from "prop-types";
 import AdminSidebar from "./AdminSidebar";
 import AdminTopbar from "./AdminTopbar";
@@ -7,22 +8,58 @@ import { useNavigate } from "react-router-dom";
 const AdminLayout = ({ children }) => {
   const { logout } = useAuth();
   const navigate = useNavigate();
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
-  };
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const handleLogout = () => { logout(); navigate("/login"); };
+
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      <AdminSidebar onLogout={handleLogout} />
-      <div className="flex-1 ml-64 flex flex-col">
-        <AdminTopbar onToggleSidebar={() => {}} onLogout={handleLogout} />
-        <main className="p-6 flex-1">{children}</main>
+    <div style={{ minHeight: "100vh", background: "#f9fafb" }}>
+
+      <aside
+        className="app-sidebar"
+        style={{
+          position: "fixed", left: 0, top: 0,
+          height: "100%", width: 256,
+          background: "#fff", zIndex: 50,
+          boxShadow: "2px 0 8px rgba(0,0,0,0.08)",
+          transform: sidebarOpen ? "translateX(0)" : undefined,
+          transition: "transform 0.3s ease",
+          overflowY: "auto",
+        }}
+      >
+        <AdminSidebar onLogout={handleLogout} onClose={() => setSidebarOpen(false)} />
+      </aside>
+
+      {sidebarOpen && (
+        <div
+          className="sidebar-backdrop"
+          onClick={() => setSidebarOpen(false)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 40 }}
+        />
+      )}
+
+      <div className="app-main" style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+        <AdminTopbar
+          onToggleSidebar={() => setSidebarOpen(p => !p)}
+          onLogout={handleLogout}
+        />
+        <main style={{ padding: "24px", flex: 1 }}>{children}</main>
       </div>
+
+      <style>{`
+        @media (min-width: 1024px) {
+          .app-sidebar { transform: translateX(0) !important; }
+          .app-main { margin-left: 256px; }
+          .sidebar-backdrop { display: none !important; }
+        }
+        @media (max-width: 1023px) {
+          .app-sidebar { transform: translateX(-100%); }
+          .app-main { margin-left: 0; }
+        }
+      `}</style>
     </div>
   );
 };
 
+AdminLayout.propTypes = { children: PropTypes.node.isRequired };
 export default AdminLayout;
-AdminLayout.propTypes = {
-  children: PropTypes.node.isRequired,
-};

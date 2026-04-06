@@ -78,6 +78,14 @@ const FullServiceBookingModal = ({ isOpen, onClose, event, onSuccess }) => {
 
   if (!isOpen || !event) return null;
 
+  // Check if user is logged in
+  if (!token) {
+    // Save event ID and redirect to login
+    localStorage.setItem("bookingEventId", event._id);
+    window.location.href = `/login?redirect=booking`;
+    return null;
+  }
+
   const images = event.images?.map(i => i.url).filter(Boolean) || [];
   const mainImg = images[activeImg] || images[0] || "/party.jpg";
   const basePrice = event.price || 0;
@@ -200,12 +208,48 @@ const FullServiceBookingModal = ({ isOpen, onClose, event, onSuccess }) => {
   };
 
   const handleSubmit = async () => {
-    if (!date) return toast.error("Please select a service date");
-    if (!time) return toast.error("Please select a service time");
-    if (!guests || guests < 1) return toast.error("Please enter number of guests");
+    console.log("🔵 handleSubmit called");
+    
+    // Prevent double submission
+    if (submitting) {
+      console.warn("⚠️ Submission already in progress");
+      return;
+    }
+    
+    console.log("Event:", event);
+    console.log("Date:", date);
+    console.log("Time:", time);
+    console.log("Guests:", guests);
+    
+    // Defensive checks
+    if (!event) {
+      console.error("❌ Event data missing");
+      toast.error("Event data is missing. Please refresh and try again.");
+      return;
+    }
+
+    if (!event._id) {
+      console.error("❌ Event ID missing");
+      toast.error("Event ID is missing. Please refresh and try again.");
+      return;
+    }
+
+    if (!date) {
+      console.error("❌ Date not selected");
+      return toast.error("Please select a service date");
+    }
+    if (!time) {
+      console.error("❌ Time not selected");
+      return toast.error("Please select a service time");
+    }
+    if (!guests || guests < 1) {
+      console.error("❌ Invalid guest count");
+      return toast.error("Please enter number of guests");
+    }
 
     // Validate per_person addons don't exceed guests
     if (perPersonTotal > guests) {
+      console.error("❌ Per-person addons exceed guests");
       return toast.error(`Total persons in add-ons (${perPersonTotal}) cannot exceed guests (${guests})`);
     }
 
@@ -217,31 +261,80 @@ const FullServiceBookingModal = ({ isOpen, onClose, event, onSuccess }) => {
         total: a.type === "per_person" ? a.price * (selectedAddons[a.name] || 0) : a.price,
       }));
 
+    console.log("✅ All validations passed");
+    console.log("Selected addons:", selectedAddonsList);
+    console.log("Total amount:", total);
+    console.log("onSuccess callback:", onSuccess);
+
     setSubmitting(true);
     try {
-      const res = await axios.post(`${API_BASE}/bookings`, {
-        serviceId: event._id,
-        serviceTitle: event.title,
-        serviceCategory: event.category || "Event",
+      // Ensure onSuccess callback exists
+      if (!onSuccess) {
+        console.error("❌ onSuccess callback not provided");
+        toast.error("Booking callback error. Please try again.");
+        setSubmitting(false);
+        return;
+      }
+
+      console.log("📤 Sending booking request to API...");
+      console.log("API_BASE:", API_BASE);
+      console.log("Token:", token ? "✓ Present" : "✗ Missing");
+      console.log("Headers:", authHeaders(token));
+      
+      const bookingPayload = {
+        serviceId: event?._id,
+        serviceTitle: event?.title,
+        serviceCategory: event?.category || "Event",
         servicePrice: basePrice,
         eventType: "full-service",
         date, time,
         guestCount: guests,
-        location: location || event.location || "",
+        location: location || event?.location || "",
         notes,
         selectedAddOns: selectedAddonsList,
         totalAmount: total,
         discount,
         promoCode: appliedCoupon?.code || "",
         status: "pending",
-      }, { headers: authHeaders(token) });
+      };
+      
+      console.log("Booking payload:", bookingPayload);
+      
+      const res = await axios.post(`${API_BASE}/bookings`, bookingPayload, { 
+        headers: authHeaders(token) 
+      });
+
+      console.log("✅ API Response:", res.data);
 
       if (res.data.success) {
+        console.log("✅ Booking created successfully!");
         toast.success("Booking request sent! Awaiting merchant confirmation.");
-        onSuccess?.();
+        // Pass booking data to parent component
+        const bookingData = {
+          serviceId: event?._id,
+          date,
+          time,
+          guests,
+          location,
+          totalAmount: total,
+          discount,
+          promoCode: appliedCoupon?.code || "",
+          selectedAddOns: selectedAddonsList,
+        };
+        console.log("📤 Calling onSuccess with booking data:", bookingData);
+        onSuccess?.(bookingData);
+        console.log("✅ onSuccess called");
+        console.log("Calling onClose...");
         onClose();
+        console.log("✅ onClose called");
+      } else {
+        console.error("❌ API returned success: false");
+        console.error("Response:", res.data);
+        toast.error(res.data.message || "Booking failed");
       }
     } catch (err) {
+      console.error("❌ Booking error:", err);
+      console.error("Error response:", err.response?.data);
       toast.error(err.response?.data?.message || "Booking failed. Please try again.");
     } finally {
       setSubmitting(false);
@@ -251,7 +344,7 @@ const FullServiceBookingModal = ({ isOpen, onClose, event, onSuccess }) => {
   const modal = (
     <div style={{ position: "fixed", inset: 0, zIndex: 99999, display: "flex", alignItems: "stretch" }}>
       {/* Backdrop */}
-      <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(6px)" }} />
+      <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(6px)", zIndex: 0 }} />
 
       {/* Full-page modal */}
       <div style={{
@@ -595,6 +688,7 @@ const FullServiceBookingModal = ({ isOpen, onClose, event, onSuccess }) => {
                       {availableCoupons.slice(0, 4).map(c => {
                         const isApplied = appliedCoupon?.code === c.code;
                         const isLoading = couponLoading && couponCode === c.code;
+                        const isAlreadyUsed = c.alreadyUsed || !c.canUse;
                         const discountLabel = c.discountType === "percentage"
                           ? `${c.discountValue}% OFF`
                           : `₹${c.discountValue} OFF`;
@@ -603,32 +697,42 @@ const FullServiceBookingModal = ({ isOpen, onClose, event, onSuccess }) => {
                           <button
                             key={c._id}
                             type="button"
-                            onClick={() => !couponLoading && (isApplied ? removeCoupon() : applyCouponCode(c.code))}
-                            disabled={couponLoading}
+                            onClick={() => {
+                              if (isAlreadyUsed) {
+                                toast.error("You have already used this promo code once. Each customer can only use it once across all bookings.");
+                                return;
+                              }
+                              if (!couponLoading && (isApplied ? removeCoupon() : applyCouponCode(c.code)));
+                            }}
+                            disabled={couponLoading || isAlreadyUsed}
                             style={{
                               display: "flex", flexDirection: "column", alignItems: "flex-start",
                               padding: "12px 14px", borderRadius: 12, textAlign: "left",
-                              cursor: couponLoading ? "not-allowed" : "pointer",
+                              cursor: couponLoading || isAlreadyUsed ? "not-allowed" : "pointer",
                               transition: "all 0.2s",
-                              opacity: couponLoading && !isLoading ? 0.5 : 1,
-                              // Applied = solid green; unapplied = dashed gray
+                              opacity: (couponLoading && !isLoading) || isAlreadyUsed ? 0.6 : 1,
+                              // Applied = solid green; used = gray; available = dashed blue
                               background: isApplied
                                 ? "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)"
+                                : isAlreadyUsed
+                                ? "linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)"
                                 : "#f8fafc",
                               border: isApplied
                                 ? "2px solid #16a34a"
+                                : isAlreadyUsed
+                                ? "1.5px solid #d1d5db"
                                 : "1.5px dashed #cbd5e1",
-                              boxShadow: isApplied ? "0 2px 8px rgba(22,163,74,0.15)" : "none",
+                              boxShadow: isApplied ? "0 2px 8px rgba(22,163,74,0.15)" : isAlreadyUsed ? "none" : "none",
                             }}
                             onMouseEnter={e => {
-                              if (!couponLoading && !isApplied) {
+                              if (!couponLoading && !isApplied && !isAlreadyUsed) {
                                 e.currentTarget.style.borderColor = "#2563eb";
                                 e.currentTarget.style.background = "linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)";
                                 e.currentTarget.style.boxShadow = "0 2px 8px rgba(37,99,235,0.12)";
                               }
                             }}
                             onMouseLeave={e => {
-                              if (!couponLoading && !isApplied) {
+                              if (!couponLoading && !isApplied && !isAlreadyUsed) {
                                 e.currentTarget.style.borderColor = "#cbd5e1";
                                 e.currentTarget.style.background = "#f8fafc";
                                 e.currentTarget.style.boxShadow = "none";
@@ -640,20 +744,23 @@ const FullServiceBookingModal = ({ isOpen, onClose, event, onSuccess }) => {
                               <span style={{
                                 fontSize: 12, fontWeight: 800, letterSpacing: "0.04em",
                                 padding: "3px 10px", borderRadius: 20,
-                                background: isApplied ? "#16a34a" : "#2563eb",
+                                background: isApplied ? "#16a34a" : isAlreadyUsed ? "#9ca3af" : "#2563eb",
                                 color: "#fff",
                               }}>
-                                {isLoading ? "..." : discountLabel}
+                                {isLoading ? "..." : isAlreadyUsed ? "USED" : discountLabel}
                               </span>
                               {isApplied && (
                                 <span style={{ fontSize: 16, color: "#16a34a", lineHeight: 1 }}>✓</span>
+                              )}
+                              {isAlreadyUsed && !isApplied && (
+                                <span style={{ fontSize: 12, color: "#9ca3af", lineHeight: 1 }}>✗</span>
                               )}
                             </div>
 
                             {/* Code */}
                             <span style={{
                               fontSize: 13, fontWeight: 800,
-                              color: isApplied ? "#15803d" : "#0f172a",
+                              color: isApplied ? "#15803d" : isAlreadyUsed ? "#6b7280" : "#0f172a",
                               fontFamily: "monospace", letterSpacing: "0.1em",
                             }}>
                               {c.code}
@@ -661,7 +768,7 @@ const FullServiceBookingModal = ({ isOpen, onClose, event, onSuccess }) => {
 
                             {/* Description */}
                             {c.description && (
-                              <span style={{ fontSize: 10, color: isApplied ? "#16a34a" : "#64748b", marginTop: 3, lineHeight: 1.4 }}>
+                              <span style={{ fontSize: 10, color: isApplied ? "#16a34a" : isAlreadyUsed ? "#9ca3af" : "#64748b", marginTop: 3, lineHeight: 1.4 }}>
                                 {c.description}
                               </span>
                             )}
@@ -677,6 +784,13 @@ const FullServiceBookingModal = ({ isOpen, onClose, event, onSuccess }) => {
                             {isApplied && (
                               <span style={{ fontSize: 10, fontWeight: 700, color: "#16a34a", marginTop: 4 }}>
                                 Tap to remove
+                              </span>
+                            )}
+
+                            {/* Already used label */}
+                            {isAlreadyUsed && !isApplied && (
+                              <span style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", marginTop: 4 }}>
+                                Already used
                               </span>
                             )}
                           </button>

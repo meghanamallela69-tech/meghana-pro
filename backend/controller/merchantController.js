@@ -625,35 +625,50 @@ export const getMerchantBookings = async (req, res) => {
     const merchantEvents = await Event.find({ createdBy: merchantId }).select('_id title eventType location date time');
     const eventIds = merchantEvents.map(ev => ev._id);
     
-    // Get all bookings for these events
+    // Query bookings by serviceId OR by merchant field (covers both booking creation paths)
     const bookings = await Booking.find({ 
-      serviceId: { $in: eventIds.map(id => id.toString()) }
+      $or: [
+        { serviceId: { $in: eventIds.map(id => id.toString()) } },
+        { merchant: merchantId }
+      ]
     })
     .populate('user', 'name email phone')
     .sort({ createdAt: -1 });
     
     // Format bookings with event information
     const formattedBookings = bookings.map(booking => {
-      const event = merchantEvents.find(ev => ev._id.toString() === booking.serviceId);
+      const event = merchantEvents.find(ev => 
+        ev._id.toString() === booking.serviceId ||
+        ev._id.toString() === booking.eventId?.toString()
+      );
       
       return {
         _id: booking._id,
         bookingId: booking._id,
         user: booking.user,
-        userName: booking.user?.name || 'Unknown',
-        userEmail: booking.user?.email || '',
-        eventName: event?.title || booking.serviceTitle || 'Unknown Event',
+        userName: booking.attendeeName || booking.user?.name || 'Unknown',
+        userEmail: booking.attendeeEmail || booking.user?.email || '',
+        eventName: event?.title || booking.serviceTitle || booking.eventTitle || 'Unknown Event',
         eventType: booking.eventType || 'full-service',
         ticketType: booking.ticket?.ticketType || (booking.selectedTickets ? 'Multiple' : 'N/A'),
-        quantity: booking.ticket?.quantity || 1,
+        quantity: booking.eventType === 'ticketed'
+          ? (booking.ticketCount || booking.ticket?.quantity || (booking.selectedTickets ? Object.values(Object.fromEntries(booking.selectedTickets instanceof Map ? booking.selectedTickets : Object.entries(booking.selectedTickets || {}))).reduce((s, v) => s + v, 0) : 1))
+          : (booking.guestCount || booking.quantity || 1),
         selectedTickets: booking.selectedTickets || {},
         date: booking.eventDate || event?.date || booking.bookingDate,
         time: booking.eventTime || event?.time || 'TBD',
-        location: booking.location || event?.location || 'TBD',
+        location: booking.location || booking.eventLocation || event?.location || 'TBD',
         addons: booking.addons || [],
-        totalAmount: booking.totalPrice || booking.servicePrice || 0,
-        paymentStatus: booking.payment?.paid ? 'paid' : 'pending',
-        bookingStatus: booking.status || 'pending',
+        totalAmount: booking.totalPrice || booking.finalAmount || booking.servicePrice || 0,
+        paymentStatus: booking.paymentStatus || (booking.payment?.paid ? 'paid' : 'pending'),
+        bookingStatus: booking.bookingStatus || booking.status || 'pending',
+        status: booking.status || 'pending',
+        advanceRequired: booking.advanceRequired || false,
+        advanceAmount: booking.advanceAmount || 0,
+        advancePaid: booking.advancePaid || false,
+        remainingAmount: booking.remainingAmount || 0,
+        // Always include rating — { score, review, createdAt } or null
+        rating: booking.rating?.score ? booking.rating : null,
         createdAt: booking.createdAt,
         notes: booking.notes || ''
       };
@@ -711,6 +726,7 @@ export const updateBookingStatus = async (req, res) => {
     // Update booking status
     if (status) {
       booking.status = status;
+      booking.bookingStatus = status; // keep both in sync
     }
     
     // Update merchant response
@@ -723,7 +739,21 @@ export const updateBookingStatus = async (req, res) => {
     }
     
     await booking.save();
-    
+
+    // Notify user when merchant marks completed — they need to pay remaining
+    if (status === "completed" && booking.advancePaid && booking.remainingAmount > 0) {
+      try {
+        await Notification.create({
+          user: booking.user,
+          type: "booking_status_update",
+          message: `Your event "${booking.serviceTitle}" is complete! Please pay the remaining ₹${booking.remainingAmount} to finalise.`,
+          bookingId: booking._id
+        });
+      } catch (notifError) {
+        console.error("Failed to create completion notification:", notifError);
+      }
+    }
+
     return res.status(200).json({ 
       success: true, 
       message: `Booking status updated to ${status} successfully`,

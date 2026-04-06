@@ -41,7 +41,7 @@ const About = () => {
       {/* Features - 4 cards side by side */}
       <section className="max-w-7xl mx-auto px-6 py-16">
         <h3 className="text-2xl md:text-3xl font-semibold mb-8">Why Choose EventHub</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }}>
+        <div className="about-features-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }}>
           {[
             { title: "Easy Event Planning", icon: FaBolt, color: "bg-emerald-50 text-emerald-600", desc: "Create and manage events with intuitive tools." },
             { title: "Trusted Vendors", icon: FaShieldAlt, color: "bg-indigo-50 text-indigo-600", desc: "Vetted partners with great reviews." },
@@ -62,7 +62,7 @@ const About = () => {
       {/* Statistics - 3 cards side by side */}
       <section className="max-w-7xl mx-auto px-6 py-16">
         <h3 className="text-2xl md:text-3xl font-semibold mb-8">EventHub in Numbers</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' }}>
+        <div className="about-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' }}>
           {[
             { label: "Events Managed", value: "500+" },
             { label: "Vendors", value: "200+" },
@@ -75,6 +75,21 @@ const About = () => {
           ))}
         </div>
       </section>
+
+      <style>{`
+        @media (max-width: 767px) {
+          .about-features-grid { grid-template-columns: 1fr !important; }
+          .about-stats-grid    { grid-template-columns: 1fr !important; }
+        }
+        @media (min-width: 768px) and (max-width: 1023px) {
+          .about-features-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .about-stats-grid    { grid-template-columns: repeat(2, 1fr) !important; }
+        }
+        @media (min-width: 1024px) {
+          .about-features-grid { grid-template-columns: repeat(4, 1fr) !important; }
+          .about-stats-grid    { grid-template-columns: repeat(3, 1fr) !important; }
+        }
+      `}</style>
     </>
   );
 };

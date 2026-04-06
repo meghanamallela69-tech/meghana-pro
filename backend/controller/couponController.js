@@ -332,73 +332,80 @@ export const getAvailableCoupons = async (req, res) => {
     const userId = req.user.userId || req.user._id;
     const { eventId, totalAmount, category, serviceId } = req.query;
 
-    console.log(`=== GET AVAILABLE COUPONS (PERMANENT FIX) ===`);
+    console.log(`=== GET AVAILABLE COUPONS (FIXED) ===`);
     console.log(`User ID: ${userId} | Event ID: ${eventId} | Category: ${category} | Amount: ${totalAmount}`);
 
     if (!userId) {
       return res.status(401).json({ success: false, message: "User authentication required" });
     }
 
-    // 1. Build the base query for all active, non-expired coupons within usage limits
+    // Build the base query for all active, non-expired coupons within usage limits
     const baseQuery = {
       isActive: true,
       expiryDate: { $gt: new Date() },
       $expr: { $lt: ["$usedCount", "$usageLimit"] }
     };
 
-    // 2. Filter by minimum amount if provided
-    if (totalAmount) {
+    // Only filter by minAmount if a real amount is provided (not the 999999 sentinel)
+    if (totalAmount && !isNaN(parseFloat(totalAmount)) && parseFloat(totalAmount) < 999999) {
       baseQuery.minAmount = { $lte: parseFloat(totalAmount) };
     }
 
-    // 3. Get Merchant Context if possible
-    let merchantId = null;
+    // Build query to include all applicable coupons
+    // Include: ALL coupons, EVENT-specific coupons, merchant coupons for this event
+    const orConditions = [
+      { applyTo: "ALL" }, // Admin coupons that apply to all events
+      { applyTo: "EVENT", eventId: eventId || serviceId }, // Coupons for this specific event
+      { applyTo: { $exists: false } }, // Legacy coupons without applyTo field
+      { merchantId: { $exists: true }, applyTo: "ALL" } // Merchant-created coupons with no event restriction
+    ];
+
+    // Only add eventId filter if eventId/serviceId is provided
     if (eventId || serviceId) {
-      const event = await Event.findById(eventId || serviceId);
-      if (event) merchantId = event.createdBy;
+      orConditions.push({ eventId: eventId || serviceId }); // Any coupon linked to this event
     }
 
-    // 4. Construct the complex "Available" logic
-    // A coupon is available if:
-    // 1. It applies to ALL events (Platform-wide or Merchant-wide)
-    // 2. OR It applies specifically to THIS event
-    
+    // Build the final query with proper $and/$or structure
     const finalQuery = {
       ...baseQuery,
-      $or: [
-        { applyTo: "ALL" },
-        { applyTo: "EVENT", eventId: eventId || serviceId }
-      ]
+      $or: orConditions
     };
 
-    // 5. Category check (Case-insensitive Regex + null/empty/N/A check)
-    if (category) {
-      const categoryRegex = new RegExp(`^${category}$`, 'i');
-      finalQuery.$and = finalQuery.$and || [];
-      finalQuery.$and.push({
-        $or: [
-          { category: categoryRegex },
-          { category: null },
-          { category: "" },
-          { category: "N/A" },
-          { category: "n/a" },
-          { category: { $exists: false } }
-        ]
-      });
+    // Category check (more permissive - include coupons without category restrictions)
+    if (category && category.trim()) {
+      const categoryRegex = new RegExp(category.trim(), 'i');
+      // Add category filter as an $and condition to the base query
+      finalQuery.$and = [
+        {
+          $or: [
+            { category: categoryRegex }, // Matches the category
+            { category: null }, // No category restriction
+            { category: "" }, // Empty category
+            { category: { $exists: false } } // No category field
+          ]
+        }
+      ];
     }
 
     console.log("🎫 Executing Final Query:", JSON.stringify(finalQuery, null, 2));
 
     const coupons = await Coupon.find(finalQuery)
       .select('code discountType discountValue maxDiscount minAmount expiryDate description usedCount usageLimit usageHistory category applyTo eventId merchantId')
-      .populate('merchantId', 'name email')
-      .sort({ discountValue: -1 });
+      .sort({ discountValue: -1 })
+      .limit(20); // Limit to prevent large responses
 
-    // 6. Final Filter: Identify coupons the user has already used
+    console.log(`Found ${coupons.length} coupons before user filter`);
+    
+    // Log details about found coupons
+    coupons.forEach((coupon, idx) => {
+      console.log(`  [${idx}] Code: ${coupon.code} | applyTo: ${coupon.applyTo} | eventId: ${coupon.eventId} | merchantId: ${coupon.merchantId}`);
+    });
+
+    // Final Filter: Identify coupons the user has already used
     const usedCouponIds = await CouponUsage.find({ userId }).distinct('couponId');
     const usedCouponIdsStrings = usedCouponIds.map(id => id.toString());
 
-    // Instead of filtering them OUT, we mark them as used so frontend can display them with a message
+    // Mark coupons as used but KEEP them in the list for display
     const processedCoupons = coupons.map(coupon => {
       const couponObj = coupon.toObject();
       const hasUsedInUsageCollection = usedCouponIdsStrings.includes(coupon._id.toString());
@@ -407,10 +414,11 @@ export const getAvailableCoupons = async (req, res) => {
       );
       
       couponObj.alreadyUsed = hasUsedInUsageCollection || hasUsedInHistory;
+      couponObj.canUse = !couponObj.alreadyUsed; // Flag for frontend to check
       return couponObj;
     });
 
-    console.log(`✅ Found ${coupons.length} total coupons. Marked ${processedCoupons.filter(c => c.alreadyUsed).length} as already used.`);
+    console.log(`✅ Found ${processedCoupons.length} total coupons (${processedCoupons.filter(c => c.canUse).length} available, ${processedCoupons.filter(c => !c.canUse).length} already used)`);
 
     return res.status(200).json({
       success: true,

@@ -27,7 +27,10 @@ const RatingModal = ({ booking, isOpen, onClose, onSuccess }) => {
     try {
       await axios.post(
         `${API_BASE}/bookings/${booking._id}/rate`,
-        { score: rating, review },
+        { 
+          score: rating, 
+          review: review || "" 
+        },
         {
           headers: {
             "Content-Type": "application/json",
@@ -40,6 +43,7 @@ const RatingModal = ({ booking, isOpen, onClose, onSuccess }) => {
       onSuccess && onSuccess();
       onClose();
     } catch (error) {
+      console.error("Rating submission error:", error);
       toast.error(error.response?.data?.message || "Failed to submit rating");
     } finally {
       setLoading(false);

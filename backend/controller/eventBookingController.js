@@ -1112,7 +1112,7 @@ export const addRating = async (req, res) => {
     // For ticketed events: just need to be paid (auto-completed after payment)
     // For full-service events: need to be completed by merchant AND paid
     const canRate = booking.paymentStatus === "paid" && 
-      (booking.eventType === "ticketed" || booking.bookingStatus === "completed");
+      (booking.eventType === "ticketed" || booking.status === "completed");
     
     if (!canRate) {
       return res.status(400).json({
@@ -1124,16 +1124,17 @@ export const addRating = async (req, res) => {
     }
 
     // Check if already rated
-    if (booking.isRated) {
+    if (booking.rating && booking.rating.score) {
       return res.status(400).json({
         success: false,
         message: "This booking has already been rated"
       });
     }
 
-    booking.rating = rating;
-    booking.review = review || null;
-    booking.isRated = true;
+    booking.rating = {
+      score: rating,
+      review: review || null
+    };
     await booking.save();
 
     // Update event average rating

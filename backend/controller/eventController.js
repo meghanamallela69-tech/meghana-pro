@@ -133,24 +133,6 @@ export const listEvents = async (req, res) => {
   }
 };
 
-// Get single event by ID (public — no auth required)
-export const getEventById = async (req, res) => {
-  try {
-    const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(404).json({ success: false, message: "Event not found" });
-    }
-    const event = await Event.findById(id)
-      .populate('createdBy', 'name email profileImage');
-    if (!event) {
-      return res.status(404).json({ success: false, message: "Event not found" });
-    }
-    return res.status(200).json({ success: true, event });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: "Failed to fetch event" });
-  }
-};
-
 export const registerForEvent = async (req, res) => {
   try {
     const eventId = req.params.id;
@@ -298,5 +280,92 @@ export const getRecentBookings = async (req, res) => {
   } catch (error) {
     console.error('Error fetching recent bookings:', error);
     return res.status(500).json({ success: false, message: "Error fetching recent bookings" });
+  }
+};
+
+// Get single event by ID
+export const getEventById = async (req, res) => {
+  try {
+    const eventId = req.params.id;
+    
+    const event = await Event.findById(eventId)
+      .select('title description price category date time location eventType addons ticketTypes availableTickets totalTickets images createdBy status')
+      .populate('createdBy', 'name email profileImage');
+    
+    if (!event) {
+      return res.status(404).json({ success: false, message: "Event not found" });
+    }
+    
+    const eventObj = event.toObject();
+    
+    // If no date, set a default future date
+    if (!eventObj.date) {
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 7);
+      eventObj.date = futureDate;
+    }
+    
+    // If no time, set a default time
+    if (!eventObj.time || eventObj.time === "") {
+      eventObj.time = "18:00";
+    }
+    
+    // DYNAMICALLY calculate ticket availability for ticketed events
+    if (eventObj.eventType === 'ticketed' && eventObj.ticketTypes && eventObj.ticketTypes.length > 0) {
+      let totalAvailable = 0;
+      
+      eventObj.ticketTypes.forEach(ticket => {
+        // Calculate available quantity dynamically - handle both field names
+        const quantityTotal = ticket.quantityTotal || ticket.quantity || 0;
+        const quantitySold = ticket.quantitySold || 0;
+        const calculated = quantityTotal - quantitySold;
+        
+        // Update the ticket object with calculated availability
+        ticket.quantityAvailable = calculated;
+        
+        // Ensure sold count doesn't exceed total
+        if (quantitySold > quantityTotal) {
+          ticket.quantitySold = quantityTotal;
+        }
+        
+        totalAvailable += calculated;
+      });
+      
+      // Update event-level available tickets
+      eventObj.availableTickets = totalAvailable;
+    }
+    
+    // Fetch valid coupons for this event
+    const validCoupons = await Coupon.find({
+      merchantId: event.createdBy,
+      isActive: true,
+      expiryDate: { $gt: new Date() },
+      $or: [
+        { applyTo: "ALL" },
+        { applyTo: "EVENT", eventId: event._id }
+      ]
+    })
+    .select('code discountType discountValue maxDiscount minAmount expiryDate description usedCount usageLimit')
+    .populate('createdBy', 'name');
+    
+    // Filter coupons that haven't reached usage limit
+    const filteredCoupons = validCoupons.filter(coupon => coupon.usedCount < coupon.usageLimit);
+    
+    eventObj.coupons = filteredCoupons.map(coupon => ({
+      _id: coupon._id,
+      code: coupon.code,
+      discountType: coupon.discountType,
+      discountValue: coupon.discountValue,
+      maxDiscount: coupon.maxDiscount,
+      minAmount: coupon.minAmount,
+      expiryDate: coupon.expiryDate,
+      description: coupon.description,
+      createdBy: coupon.createdBy
+    }));
+    
+    return res.status(200).json({ success: true, event: eventObj });
+  } catch (error) {
+    console.error('Error fetching event:', error);
+    return res.status(500).json({ success: false, message: "Error fetching event" });
   }
 };

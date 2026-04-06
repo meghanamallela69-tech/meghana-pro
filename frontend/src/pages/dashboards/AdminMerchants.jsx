@@ -186,9 +186,9 @@ const AdminMerchants = () => {
           </div>
           <button
             onClick={openCreateModal}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2 responsive-btn"
           >
-            <FaPlus /> Add Merchant
+            <FaPlus /> <span className="btn-label">Add Merchant</span>
           </button>
         </div>
       </div>
@@ -431,6 +431,15 @@ const AdminMerchants = () => {
           </div>
         </div>
       )}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media (max-width: 767px) {
+          .responsive-btn { 
+            padding: 6px 10px !important; 
+            font-size: 12px !important; 
+          }
+          .btn-label { display: none; }
+        }
+      ` }} />
     </AdminLayout>
   );
 };

@@ -19,6 +19,23 @@ html body { margin-top: 0 !important; }
 .goog-te-gadget > span,
 .goog-logo-link { display: none !important; }
 
+/* ── Dashboard sidebar responsive ── */
+/* Mobile: sidebar hidden off-screen by default */
+.sidebar-drawer {
+  transform: translateX(-100%);
+  transition: transform 0.3s ease-in-out;
+}
+/* Mobile: sidebar open */
+.sidebar-drawer.open {
+  transform: translateX(0);
+}
+/* Desktop: sidebar always visible */
+@media (min-width: 1024px) {
+  .sidebar-drawer {
+    transform: translateX(0) !important;
+  }
+}
+
 /* Dark mode global styles */
 .dark {
   color-scheme: dark;
@@ -93,4 +110,34 @@ input[type="radio"]:checked {
 
 input[type="radio"]:hover {
   border-color: #a2783a;
+}
+
+/* ── Dashboard grid responsive — mobile: 1 col, tablet: 2 col, desktop: unchanged ── */
+@media (max-width: 767px) {
+  /* All inline-style grids with 4 or 3 columns → 1 column on mobile */
+  [style*="repeat(4, 1fr)"],
+  [style*="repeat(3, 1fr)"] {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  /* 2-col grids → 1 col on mobile */
+  [style*="repeat(2, 1fr)"] {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  /* Dashboard main padding */
+  .app-main main {
+    padding: 16px !important;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  /* Tablet: 4-col → 2 col */
+  [style*="repeat(4, 1fr)"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  /* 3-col → 2 col */
+  [style*="repeat(3, 1fr)"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
 }

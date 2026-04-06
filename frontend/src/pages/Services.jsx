@@ -117,10 +117,9 @@ const Services = () => {
     const isLoggedIn = storedToken || token;
     
     if (!isLoggedIn) {
-      // User is not logged in - save intended service and redirect to login
-      localStorage.setItem("pendingBooking", JSON.stringify(service));
+      // Save service ID and redirect to login
+      localStorage.setItem("bookingEventId", service._id);
       navigate("/login", { state: { from: "/services" } });
-      toast.error("Please login to book this service");
       return;
     }
     
@@ -137,7 +136,19 @@ const Services = () => {
 
   // Handle successful booking
   const handleBookingSuccess = (booking) => {
-    setBookedServiceId(booking.serviceId || booking._id);
+    // Safely handle booking data with optional chaining
+    if (!booking) {
+      console.warn("No booking data received");
+      return;
+    }
+    
+    const serviceId = booking?.serviceId || booking?._id;
+    if (!serviceId) {
+      console.warn("serviceId missing from booking data");
+      return;
+    }
+    
+    setBookedServiceId(serviceId);
     toast.success("Booking confirmed! Check your dashboard for details.");
   };
 
@@ -209,10 +220,11 @@ const Services = () => {
 
       {/* Main Content with Filters and Services Grid */}
       <section className="max-w-7xl mx-auto px-6 py-8" style={{ backgroundColor: '#f3f4f6' }}>
-        <div style={{ display: 'flex', gap: '32px' }}>
+        {/* Responsive layout: side-by-side on desktop, stacked on mobile */}
+        <div className="services-layout" style={{ display: 'flex', gap: '32px' }}>
           
           {/* Filters Sidebar */}
-          <div style={{
+          <div className="services-sidebar" style={{
             width: '280px',
             flexShrink: 0,
             backgroundColor: 'white',
@@ -411,7 +423,7 @@ const Services = () => {
                 <p style={{ fontSize: '16px' }}>Loading events...</p>
               </div>
             ) : (
-              <div style={{ 
+              <div className="services-grid" style={{ 
                 display: 'grid', 
                 gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
                 gap: '24px' 
@@ -661,6 +673,48 @@ const Services = () => {
         </div>
       </section>
 
+      {/* ── Responsive styles for Services page ── */}
+      <style>{`
+        /* Mobile: stack sidebar above grid, full-width cards */
+        @media (max-width: 767px) {
+          .services-layout {
+            flex-direction: column !important;
+            gap: 16px !important;
+          }
+          .services-sidebar {
+            width: 100% !important;
+            position: static !important;
+          }
+          .services-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+        /* Tablet: 2 columns */
+        @media (min-width: 768px) and (max-width: 1023px) {
+          .services-layout {
+            flex-direction: column !important;
+            gap: 20px !important;
+          }
+          .services-sidebar {
+            width: 100% !important;
+            position: static !important;
+          }
+          .services-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+          }
+        }
+        /* Desktop: unchanged — sidebar left, 3-4 col grid */
+        @media (min-width: 1024px) {
+          .services-sidebar {
+            width: 280px !important;
+            position: sticky !important;
+          }
+          .services-grid {
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
+          }
+        }
+      `}</style>
+
       <section className="py-16 bg-gray-900 text-white">
         <div className="max-w-7xl mx-auto px-6 text-center">
           <h3 className="text-2xl md:text-3xl font-semibold">
@@ -700,8 +754,21 @@ const Services = () => {
           setSelectedService(null);
         }}
         onBookNow={(event) => {
-          setIsDetailsModalOpen(false);
-          handleBookClick(event);
+          // Check if user is logged in
+          const storedToken = localStorage.getItem("token");
+          const isLoggedIn = storedToken || token;
+          
+          if (isLoggedIn) {
+            // User is logged in - close details modal and open booking modal
+            setIsDetailsModalOpen(false);
+            setSelectedService(event);
+            setIsBookingModalOpen(true);
+          } else {
+            // Not logged in - redirect to login
+            localStorage.setItem("bookingEventId", event._id);
+            navigate("/login", { state: { from: "/services" } });
+            setIsDetailsModalOpen(false);
+          }
         }}
       />
     </>

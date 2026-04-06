@@ -57,10 +57,10 @@ const MerchantEvents = () => {
       <div className="mb-6">
         <button
           onClick={() => navigate("/dashboard/merchant/create")}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition responsive-btn"
         >
-          <FaPlus />
-          Create New Event
+          <FaPlus className="responsive-icon" />
+          <span className="btn-label">Create New Event</span>
         </button>
       </div>
 
@@ -75,9 +75,9 @@ const MerchantEvents = () => {
           <p className="text-gray-400 mt-2">Create your first event to get started</p>
           <button
             onClick={() => navigate("/dashboard/merchant/create")}
-            className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+            className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition responsive-btn"
           >
-            Create Event
+            <span className="btn-label">Create Event</span>
           </button>
         </div>
       ) : (
@@ -127,9 +127,9 @@ const MerchantEvents = () => {
                   <div className="flex items-center gap-2">
                     <button 
                       onClick={() => navigate(`/dashboard/merchant/events/edit/${ev._id}`)}
-                      className="flex-1 px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition text-sm"
+                      className="flex-1 px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition text-sm responsive-btn"
                     >
-                      Edit
+                      <span className="btn-label">Edit</span>
                     </button>
                     <button
                       onClick={() => {
@@ -152,9 +152,9 @@ const MerchantEvents = () => {
                     </button>
                     <button 
                       onClick={() => removeEvent(ev._id)}
-                      className="p-2 rounded-md bg-red-600 text-white hover:bg-red-700 transition"
+                      className="p-2 rounded-md bg-red-600 text-white hover:bg-red-700 transition responsive-btn"
                     >
-                      <FaTrash className="text-sm" />
+                      <FaTrash className="text-sm responsive-icon" />
                     </button>
                   </div>
                 </div>
@@ -163,6 +163,20 @@ const MerchantEvents = () => {
           })}
         </div>
       )}
+
+      {/* Mobile Responsive Styles */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media (max-width: 767px) {
+          .responsive-btn { 
+            padding: 8px 12px !important; 
+            font-size: 14px !important; 
+          }
+          .btn-label { display: none; }
+          .responsive-icon { 
+            font-size: 16px !important; 
+          }
+        }
+      ` }} />
     </MerchantLayout>
   );
 };

@@ -116,7 +116,7 @@ const bookingSchema = new mongoose.Schema(
     // Payment Status and Commission details
     paymentStatus: {
       type: String,
-      enum: ["pending", "paid", "refunded", "failed"],
+      enum: ["pending", "partial_paid", "paid", "refunded", "failed"],
       default: "pending"
     },
     adminCommission: {

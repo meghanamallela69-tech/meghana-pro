@@ -22,16 +22,36 @@ const EventBookingModal = ({ event, isOpen, onClose, onConfirm }) => {
   const [eventLocation, setEventLocation] = useState("");
   const [guestCount, setGuestCount] = useState(1);
   
+  // Create safeEvent to handle different data structures
+  const safeEvent = useMemo(() => {
+    if (!event) return null;
+    return {
+      _id: event._id || event.id || "",
+      title: event.title || event.name || "Event",
+      category: event.category || event.serviceCategory || "Event",
+      price: parseFloat(event.price || event.servicePrice || 0),
+      description: event.description || event.desc || "",
+      images: Array.isArray(event.images) ? event.images : [],
+      addons: Array.isArray(event.addons) ? event.addons : [],
+      location: event.location || "",
+      features: Array.isArray(event.features) ? event.features : [],
+      eventType: event.eventType || "full-service",
+      ticketTypes: Array.isArray(event.ticketTypes) ? event.ticketTypes : [],
+      date: event.date || "",
+      time: event.time || "",
+    };
+  }, [event]);
+  
   // Get ticket types for ticketed events
-  const ticketTypes = event?.ticketTypes || [];
+  const ticketTypes = safeEvent?.ticketTypes || [];
   const selectedType = ticketTypes.find(t => t.name === selectedTicketType) || ticketTypes[0];
-  const price = selectedType?.price || event?.price || 0;
+  const price = selectedType?.price || safeEvent?.price || 0;
   const originalTotal = useMemo(() => {
-    if (event?.eventType === "full-service") {
-      return event?.price || 0;
+    if (safeEvent?.eventType === "full-service") {
+      return safeEvent?.price || 0;
     }
     return Math.max(1, Number(quantity || 1)) * price;
-  }, [quantity, price, event]);
+  }, [quantity, price, safeEvent]);
   
   const finalTotal = couponData ? couponData.finalAmount : originalTotal;
   
@@ -45,24 +65,30 @@ const EventBookingModal = ({ event, isOpen, onClose, onConfirm }) => {
 
   // Fetch available coupons when modal opens or total changes
   useEffect(() => {
-    if (isOpen && event && event._id) {
-      console.log('🔍 FETCHING COUPONS - Event:', event.title, '| ID:', event._id, '| Amount:', originalTotal);
+    if (isOpen && safeEvent && safeEvent._id) {
+      console.log('🔍 FETCHING COUPONS - Event:', safeEvent.title, '| ID:', safeEvent._id, '| Amount:', originalTotal);
       fetchAvailableCoupons();
     } else {
-      console.log('⚠️ Modal not ready - isOpen:', isOpen, '| has event:', !!event, '| has eventId:', event?._id);
+      console.log('⚠️ Modal not ready - isOpen:', isOpen, '| has event:', !!safeEvent, '| has eventId:', safeEvent?._id);
     }
-  }, [isOpen, event, originalTotal]);
+  }, [isOpen, safeEvent, originalTotal]);
 
   const fetchAvailableCoupons = async () => {
     try {
+      if (!safeEvent?._id) {
+        console.log('⚠️ No event ID available for coupon fetch');
+        setAvailableCoupons([]);
+        return;
+      }
+      
       const amount = originalTotal || 1000;
-      const url = `${API_BASE}/coupons/available?eventId=${event._id}&totalAmount=${amount}`;
+      const url = `${API_BASE}/coupons/available?eventId=${safeEvent._id}&totalAmount=${amount}`;
       
       console.log('🎫 API Call Details:');
       console.log('   URL:', url);
       console.log('   Amount:', amount);
       console.log('   Token present:', !!token);
-      console.log('   Event ID:', event._id);
+      console.log('   Event ID:', safeEvent._id);
       
       const response = await axios.get(url, { headers: authHeaders(token) });
       
@@ -100,7 +126,7 @@ const EventBookingModal = ({ event, isOpen, onClose, onConfirm }) => {
         `${API_BASE}/coupons/validate`,
         { 
           couponCode: coupon.code,
-          eventId: event._id,
+          eventId: safeEvent._id,
           amount: originalTotal
         },
         { headers: authHeaders(token) }
@@ -135,7 +161,7 @@ const EventBookingModal = ({ event, isOpen, onClose, onConfirm }) => {
         `${API_BASE}/coupons/validate`,
         { 
           couponCode: couponCode.trim().toUpperCase(),
-          eventId: event._id,
+          eventId: safeEvent._id,
           amount: originalTotal
         },
         { headers: authHeaders(token) }
@@ -166,7 +192,7 @@ const EventBookingModal = ({ event, isOpen, onClose, onConfirm }) => {
   const handleConfirm = () => {
     const bookingData = {
       customerName,
-      eventId: event._id
+      eventId: safeEvent._id
     };
 
     if (event?.eventType === "full-service") {
@@ -192,9 +218,9 @@ const EventBookingModal = ({ event, isOpen, onClose, onConfirm }) => {
     onConfirm(bookingData);
   };
 
-  if (!isOpen || !event) return null;
+  if (!isOpen || !event || !safeEvent) return null;
 
-  const isFullService = event?.eventType === "full-service";
+  const isFullService = safeEvent?.eventType === "full-service";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -210,7 +236,7 @@ const EventBookingModal = ({ event, isOpen, onClose, onConfirm }) => {
           {/* Event Info */}
           <div>
             <div className="text-sm text-gray-500">Service/Event</div>
-            <div className="font-medium">{event.title}</div>
+            <div className="font-medium">{safeEvent.title}</div>
           </div>
 
           {/* Customer Name */}
@@ -283,7 +309,7 @@ const EventBookingModal = ({ event, isOpen, onClose, onConfirm }) => {
                 <div>
                   <div className="text-sm text-gray-500">Date</div>
                   <div className="font-medium">
-                    {event.date ? new Date(event.date).toLocaleDateString('en-US', {
+                    {safeEvent.date ? new Date(safeEvent.date).toLocaleDateString('en-US', {
                       weekday: 'short',
                       year: 'numeric',
                       month: 'short',
@@ -293,13 +319,13 @@ const EventBookingModal = ({ event, isOpen, onClose, onConfirm }) => {
                 </div>
                 <div>
                   <div className="text-sm text-gray-500">Time</div>
-                  <div className="font-medium">{event.time || "-"}</div>
+                  <div className="font-medium">{safeEvent.time || "-"}</div>
                 </div>
               </div>
 
               <div>
                 <div className="text-sm text-gray-500">Location</div>
-                <div className="font-medium">{event.location || "-"}</div>
+                <div className="font-medium">{safeEvent.location || "-"}</div>
               </div>
 
               {/* Ticket Type Selection */}
@@ -354,8 +380,8 @@ const EventBookingModal = ({ event, isOpen, onClose, onConfirm }) => {
               <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-xs">
                 <div className="font-semibold text-yellow-800 mb-1">🔍 Debug Info:</div>
                 <div className="text-yellow-700 space-y-1">
-                  <div>Event: {event.title}</div>
-                  <div>Event ID: {event._id}</div>
+                  <div>Event: {safeEvent.title}</div>
+                  <div>Event ID: {safeEvent._id}</div>
                   <div>Available Coupons: {availableCoupons.length}</div>
                   <div>Coupon Dropdown Open: {showCouponDropdown ? 'Yes' : 'No'}</div>
                   {availableCoupons.length > 0 && (

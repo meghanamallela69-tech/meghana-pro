@@ -90,9 +90,9 @@ const MerchantDashboard = () => {
           </div>
           <button
             onClick={createEvent}
-            className="px-4 py-2 rounded-lg bg-gray-900 text-white hover:bg-black transition"
+            className="px-4 py-2 rounded-lg bg-gray-900 text-white hover:bg-black transition responsive-btn"
           >
-            Create Event
+            <span className="btn-label">Create Event</span>
           </button>
         </div>
       </section>
@@ -171,6 +171,17 @@ const MerchantDashboard = () => {
           </table>
         </div>
       </div>
+
+      {/* Mobile Responsive Styles */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media (max-width: 767px) {
+          .responsive-btn { 
+            padding: 8px 12px !important; 
+            font-size: 14px !important; 
+          }
+          .btn-label { display: none; }
+        }
+      ` }} />
     </MerchantLayout>
   );
 };

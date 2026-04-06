@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { RxDashboard } from "react-icons/rx";
 import { BsCalendarEvent, BsBookmarkHeart, BsSearch } from "react-icons/bs";
-import { FaUser, FaTicketAlt, FaHome, FaCreditCard, FaEnvelope } from "react-icons/fa";
+import { FaUser, FaTicketAlt, FaHome, FaCreditCard, FaEnvelope, FaStar } from "react-icons/fa";
 import { FiBell, FiLogOut } from "react-icons/fi";
 import PropTypes from "prop-types";
 import axios from "axios";
@@ -36,45 +36,41 @@ Item.propTypes = {
   to: PropTypes.string.isRequired,
 };
 
-const UserSidebar = ({ onLogout }) => {
+const UserSidebar = ({ onLogout, onClose }) => {
   const { token } = useAuth();
   const [messageCount, setMessageCount] = useState(0);
   const [notificationCount, setNotificationCount] = useState(0);
 
   useEffect(() => {
     loadUnreadCounts();
-    const interval = setInterval(loadUnreadCounts, 30000); // Poll every 30 seconds
+    const interval = setInterval(loadUnreadCounts, 30000);
     return () => clearInterval(interval);
   }, [token]);
 
   const loadUnreadCounts = async () => {
     try {
-      // Load message unread count
       const msgResponse = await axios.get(`${API_BASE}/message/unread-count`, { 
         headers: authHeaders(token) 
       });
+      if (msgResponse.data.success) setMessageCount(msgResponse.data.count || 0);
       
-      if (msgResponse.data.success) {
-        setMessageCount(msgResponse.data.count || 0);
-      }
-      
-      // Load notification unread count
       const notifResponse = await axios.get(`${API_BASE}/notifications/unread-counts`, { 
         headers: authHeaders(token) 
       });
-      
-      if (notifResponse.data.success) {
-        setNotificationCount(notifResponse.data.data?.totalUnread || 0);
-      }
-    } catch (error) {
-      console.error("Error loading unread counts:", error);
-    }
+      if (notifResponse.data.success) setNotificationCount(notifResponse.data.data?.totalUnread || 0);
+    } catch {}
   };
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 bg-white text-gray-800 flex flex-col shadow-xl z-40 border-r border-gray-200">
-      <div className="px-4 py-4 text-lg font-semibold border-b border-gray-200 text-blue-600">
-        User Dashboard
+    <div className="h-full w-64 bg-white text-gray-800 flex flex-col border-r border-gray-200">
+      {/* Header with close button on mobile */}
+      <div className="px-4 py-4 text-lg font-semibold border-b border-gray-200 text-blue-600 flex items-center justify-between">
+        <span>User Dashboard</span>
+        <button onClick={onClose} className="lg:hidden p-1 rounded hover:bg-gray-100 text-gray-500">
+          <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
       </div>
       <div role="navigation" className="flex-1 px-2 py-2 space-y-1 overflow-y-auto">
         <Item icon={RxDashboard} label="Dashboard" to="/dashboard/user" />
@@ -88,6 +84,7 @@ const UserSidebar = ({ onLogout }) => {
           badge={messageCount} 
         />
         <Item icon={BsBookmarkHeart} label="Saved Events" to="/dashboard/user/saved" />
+        <Item icon={FaStar} label="My Reviews" to="/dashboard/user/reviews" />
         <Item 
           icon={FiBell} 
           label="Notifications" 
@@ -106,12 +103,13 @@ const UserSidebar = ({ onLogout }) => {
           <span className="text-sm font-medium">Logout</span>
         </button>
       </div>
-    </aside>
+    </div>
   );
 };
 
 UserSidebar.propTypes = {
   onLogout: PropTypes.func,
+  onClose: PropTypes.func,
 };
 
 export default UserSidebar;

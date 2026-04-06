@@ -134,8 +134,9 @@ const MerchantNotifications = () => {
         </div>
         <div className="flex gap-2">
           {unread > 0 && (
-            <button onClick={markAllRead} className="px-4 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 font-medium transition">
-              Mark All Read
+            <button onClick={markAllRead} className="px-4 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 font-medium transition responsive-btn flex items-center gap-2">
+              <FaCheck className="responsive-icon" />
+              <span className="btn-label">Mark All Read</span>
             </button>
           )}
           {notifications.length > 0 && (
@@ -271,6 +272,20 @@ const MerchantNotifications = () => {
           </div>
         )}
       </div>
+
+      {/* Mobile Responsive Styles */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media (max-width: 767px) {
+          .responsive-btn { 
+            padding: 8px 12px !important; 
+            font-size: 14px !important; 
+          }
+          .btn-label { display: none; }
+          .responsive-icon { 
+            font-size: 16px !important; 
+          }
+        }
+      ` }} />
     </MerchantLayout>
   );
 };

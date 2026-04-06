@@ -30,29 +30,25 @@ const UpcomingEvents = () => {
 
   // After login redirect: auto-open booking modal for the saved event
   useEffect(() => {
-    const redirect = localStorage.getItem("home_booking_redirect");
-    if (!redirect || !token || items.length === 0) return;
+    const pendingBooking = localStorage.getItem("pendingBooking");
+    if (!pendingBooking || !token || items.length === 0) return;
 
-    const ev = items.find(e => e._id === redirect);
-    if (ev) {
-      localStorage.removeItem("home_booking_redirect");
-      setBookingEvent(ev);
+    try {
+      const { id } = JSON.parse(pendingBooking);
+      const ev = items.find(e => e._id === id);
+      if (ev) {
+        localStorage.removeItem("pendingBooking");
+        setBookingEvent(ev);
+        toast.success(`Welcome back! Continue booking: ${ev.title}`);
+      }
+    } catch (error) {
+      console.error('Error parsing pending booking:', error);
+      localStorage.removeItem("pendingBooking");
     }
   }, [token, items]);
 
   const handleViewDetails = (ev) => {
     setDetailsEvent(ev);
-  };
-
-  const handleBookNow = (ev) => {
-    if (!token) {
-      // Save intent and redirect to login
-      localStorage.setItem("home_booking_redirect", ev._id);
-      navigate("/login", { state: { from: "/" } });
-      return;
-    }
-    setDetailsEvent(null);
-    setBookingEvent(ev);
   };
 
   if (items.length === 0) return null;
@@ -103,7 +99,15 @@ const UpcomingEvents = () => {
           isOpen={!!detailsEvent}
           onClose={() => setDetailsEvent(null)}
           event={detailsEvent}
-          onBookNow={(ev) => handleBookNow(ev || detailsEvent)}
+          onBookNow={(ev) => {
+            // Check if user is logged in
+            if (token) {
+              // User is logged in - close details modal and open booking modal
+              setDetailsEvent(null);
+              setBookingEvent(ev || detailsEvent);
+            }
+            // If not logged in, EventDetailsModal will handle showing login modal
+          }}
         />
       )}
 
@@ -124,7 +128,7 @@ const UpcomingEvents = () => {
             addons: bookingEvent.addons,
           }}
           coupons={bookingEvent.coupons || []}
-          onBookingSuccess={() => {
+          onSuccess={() => {
             setBookingEvent(null);
             toast.success("Booking successful!");
           }}

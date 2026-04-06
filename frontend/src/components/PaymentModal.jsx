@@ -20,8 +20,12 @@ const PaymentModal = ({ booking, isOpen, onClose, onSuccess }) => {
 
   // Determine payment type
   const isAdvancePayment = booking.status === "awaiting_advance" && booking.advanceRequired && !booking.advancePaid;
-  const isRemainingPayment = booking.advancePaid && booking.remainingAmount > 0 && 
-                             (booking.status === "advance_paid" || booking.status === "confirmed");
+  // Remaining payment: advance was paid, there's a remaining amount, and not yet fully paid
+  // This triggers when merchant marks status as "completed" (event done, pay remaining)
+  const isRemainingPayment = booking.advancePaid && booking.remainingAmount > 0 &&
+    booking.paymentStatus !== "paid" &&
+    (booking.status === "advance_paid" || booking.status === "confirmed" ||
+     booking.status === "completed" || booking.paymentType === "remaining");
   
   // Calculate payment amount based on type
   let paymentAmount;

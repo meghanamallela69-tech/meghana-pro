@@ -52,6 +52,9 @@ router.get("/admin/all", auth, ensureRole("admin"), getAllBookings);
 router.put("/admin/:id/status", auth, ensureRole("admin"), adminUpdateBookingStatus);
 
 // User routes (require authentication) - Generic :id routes come AFTER specific ones
+router.post("/test", auth, (req, res) => {
+  res.json({ success: true, message: "Booking API is working", user: req.user, body: req.body });
+});
 router.post("/", auth, createBooking);
 router.get("/my-bookings", auth, getUserBookings);
 router.get("/:id", auth, getBookingById);

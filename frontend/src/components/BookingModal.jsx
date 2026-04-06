@@ -25,7 +25,51 @@ const BookingModal = ({ service, isOpen, onClose, onSuccess, coupons = [] }) => 
   const isFullService = eventType === "full-service";
   const isTicketed = eventType === "ticketed";
 
+  // Full Service States — must be declared before any conditional return
+  const [eventDate, setEventDate] = useState("");
+  const [timeSlot, setTimeSlot] = useState("");
+  const [selectedAddons, setSelectedAddons] = useState([]);
+  const [useCurrentLocation, setUseCurrentLocation] = useState(false);
+  const [address, setAddress] = useState("");
+  const [locationLoading, setLocationLoading] = useState(false);
+
+  // Ticketed States
+  const [selectedTickets, setSelectedTickets] = useState({});
+
+  // Common States
+  const [promoCode, setPromoCode] = useState("");
+  const [discount, setDiscount] = useState(0);
+
+  // ── Effects — ALL must be before any conditional return ──────────────────
+  useEffect(() => {
+    if (isOpen) {
+      setEventDate(""); setTimeSlot(""); setSelectedAddons([]);
+      setUseCurrentLocation(false); setAddress("");
+      setSelectedTickets({}); setPromoCode(""); setDiscount(0);
+      setShowPayment(false); setCreatedBooking(null);
+      setAppliedCoupon(null); setCouponCode("");
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen && service && service._id) {
+      const fetchCoupons = async () => {
+        try {
+          const headers = token ? { Authorization: `Bearer ${token}` } : {};
+          // Pass a large amount so minAmount filter doesn't hide coupons before user selects tickets
+          const res = await axios.get(`${API_BASE}/coupons/available`, {
+            headers,
+            params: { eventId: service._id, serviceId: service._id, totalAmount: 999999, category: service.category || "" }
+          });
+          if (res.data.success) setAvailableCoupons(res.data.coupons || []);
+        } catch { setAvailableCoupons([]); }
+      };
+      fetchCoupons();
+    }
+  }, [isOpen, service?._id, token]);
+
   // ── Route full-service events to the new FullServiceBookingModal ──────────
+  // This return must come AFTER all hooks
   if (isFullService && isOpen) {
     return (
       <FullServiceBookingModal
@@ -36,21 +80,6 @@ const BookingModal = ({ service, isOpen, onClose, onSuccess, coupons = [] }) => 
       />
     );
   }
-
-  // Full Service States
-  const [eventDate, setEventDate] = useState("");
-  const [timeSlot, setTimeSlot] = useState("");
-  const [selectedAddons, setSelectedAddons] = useState([]);
-  const [useCurrentLocation, setUseCurrentLocation] = useState(false);
-  const [address, setAddress] = useState("");
-  const [locationLoading, setLocationLoading] = useState(false);
-
-  // Ticketed States
-  const [selectedTickets, setSelectedTickets] = useState({}); // { "Regular": 2, "VIP": 1 }
-
-  // Common States
-  const [promoCode, setPromoCode] = useState("");
-  const [discount, setDiscount] = useState(0);
 
   // --- DERIVED VARIABLES ---
 
@@ -64,15 +93,21 @@ const BookingModal = ({ service, isOpen, onClose, onSuccess, coupons = [] }) => 
   
   if (isTicketed) {
     if (service?.ticketTypes && Array.isArray(service.ticketTypes) && service.ticketTypes.length > 0) {
-      ticketTypes = service.ticketTypes.map(ticket => ({
-        name: ticket.name,
-        price: parseInt(ticket.price) || 0,
-        quantityTotal: parseInt(ticket.quantity) || 0,
-        quantitySold: Math.max(0, (parseInt(ticket.quantity) || 0) - (parseInt(ticket.available) || 0)),
-        quantityAvailable: parseInt(ticket.available) || 0
-      }));
-      totalTickets = ticketTypes.reduce((sum, t) => sum + (parseInt(t.quantityTotal) || 0), 0);
-      availableTickets = ticketTypes.reduce((sum, t) => sum + (parseInt(t.quantityAvailable) || 0), 0);
+      ticketTypes = service.ticketTypes.map(ticket => {
+        const total = parseInt(ticket.quantityTotal || ticket.quantity) || 0;
+        const sold  = parseInt(ticket.quantitySold) || 0;
+        const reserved = parseInt(ticket.quantityReserved) || 0;
+        const available = Math.max(0, total - sold - reserved);
+        return {
+          name: ticket.name,
+          price: parseInt(ticket.price) || 0,
+          quantityTotal: total,
+          quantitySold: sold,
+          quantityAvailable: available
+        };
+      });
+      totalTickets = ticketTypes.reduce((sum, t) => sum + t.quantityTotal, 0);
+      availableTickets = ticketTypes.reduce((sum, t) => sum + t.quantityAvailable, 0);
     } else {
       const basePriceFallback = parseInt(service?.price) || 2999;
       const totalAvailableFallback = parseInt(service?.availableTickets || service?.totalTickets || 15);
@@ -217,20 +252,7 @@ const BookingModal = ({ service, isOpen, onClose, onSuccess, coupons = [] }) => 
   };
 
   // --- EFFECTS ---
-
-  useEffect(() => {
-    if (isOpen) {
-      setEventDate(""); setTimeSlot(""); setSelectedAddons([]); setUseCurrentLocation(false); setAddress("");
-      setSelectedTickets({}); setPromoCode(""); setDiscount(0); setShowPayment(false); setCreatedBooking(null);
-      setAppliedCoupon(null); setCouponCode("");
-    }
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (isOpen && service && service._id) {
-      fetchAvailableCoupons();
-    }
-  }, [isOpen, service?._id, totalSelectedTickets, selectedAddons.length]);
+  // (Effects moved above the conditional return to comply with Rules of Hooks)
 
   // --- HANDLERS ---
 
@@ -352,6 +374,15 @@ const BookingModal = ({ service, isOpen, onClose, onSuccess, coupons = [] }) => 
   };
 
   if (!isOpen || !service) return null;
+
+  // Check if user is logged in
+  if (!token) {
+    // Save service ID and redirect to login
+    localStorage.setItem("bookingEventId", service._id);
+    window.location.href = `/login?redirect=booking`;
+    return null;
+  }
+
   const today = new Date().toISOString().split("T")[0];
 
   if (showPayment && createdBooking) {
@@ -423,15 +454,34 @@ const BookingModal = ({ service, isOpen, onClose, onSuccess, coupons = [] }) => 
                     </div>
                     <div style={{ marginBottom: "20px" }}>
                       <label style={{ display: "block", fontSize: "14px", fontWeight: "500", color: "#374151", marginBottom: "8px" }}>Have a promo code?</label>
-                      {availableCoupons.length > 0 && (
+                      {availableCoupons.length > 0 ? (
                         <div style={{ marginBottom: "12px" }}>
-                          <p style={{ fontSize: "13px", color: "#6b7280", marginBottom: "6px" }}>🏷️ Available offers ({availableCoupons.length}):</p>
+                          <p style={{ fontSize: "13px", color: "#6b7280", marginBottom: "6px" }}>🏷️ Available offers ({availableCoupons.filter(c => !c.alreadyUsed).length}):</p>
                           <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
                             {availableCoupons.map((coupon) => (
-                              <button key={coupon._id} type="button" onClick={() => { setPromoCode(coupon.code); toast.success(`Coupon "${coupon.code}" selected!`); }} style={{ padding: "6px 12px", backgroundColor: "#fef3c7", border: "1px solid #f59e0b", borderRadius: "6px", fontSize: "12px", fontWeight: "600", color: "#92400e", cursor: "pointer" }}>{coupon.code} - {coupon.discountType === 'percentage' ? `${coupon.discountValue}%` : `₹${coupon.discountValue}`} Off</button>
+                              <button key={coupon._id} type="button"
+                                onClick={() => {
+                                  if (coupon.alreadyUsed) { toast.error("You've already used this coupon"); return; }
+                                  setPromoCode(coupon.code);
+                                  toast.success(`Coupon "${coupon.code}" selected!`);
+                                }}
+                                style={{
+                                  padding: "6px 12px",
+                                  backgroundColor: coupon.alreadyUsed ? "#f3f4f6" : "#fef3c7",
+                                  border: `1px solid ${coupon.alreadyUsed ? "#d1d5db" : "#f59e0b"}`,
+                                  borderRadius: "6px", fontSize: "12px", fontWeight: "600",
+                                  color: coupon.alreadyUsed ? "#9ca3af" : "#92400e",
+                                  cursor: coupon.alreadyUsed ? "not-allowed" : "pointer",
+                                  textDecoration: coupon.alreadyUsed ? "line-through" : "none"
+                                }}>
+                                {coupon.code} — {coupon.discountType === 'percentage' ? `${coupon.discountValue}%` : `₹${coupon.discountValue}`} off
+                                {coupon.alreadyUsed && " (used)"}
+                              </button>
                             ))}
                           </div>
                         </div>
+                      ) : (
+                        <p style={{ fontSize: "12px", color: "#9ca3af", marginBottom: "8px" }}>No promo codes available for this event</p>
                       )}
                       <div style={{ display: "flex", gap: "8px" }}>
                         <input type="text" value={promoCode} onChange={(e) => setPromoCode(e.target.value.toUpperCase())} placeholder="Enter code" style={{ flex: 1, padding: "10px 12px", border: "1px solid #d1d5db", borderRadius: "6px", fontSize: "14px" }} />

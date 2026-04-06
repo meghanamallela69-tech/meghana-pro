@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { SITE_NAME } from "../../config/site";
 import { BsCalendarEvent } from "react-icons/bs";
-import { FiBell, FiSearch, FiChevronDown } from "react-icons/fi";
+import { FiChevronDown } from "react-icons/fi";
 import PropTypes from "prop-types";
 import { useNavigate } from "react-router-dom";
 import useAuth from "../../context/useAuth";
@@ -17,15 +17,11 @@ const UserTopbar = ({ onToggleSidebar, onLogout }) => {
   const profileName = user?.name || "User";
   const profileRef = useRef(null);
 
-  useEffect(() => {
-    refreshBadges();
-  }, [refreshBadges]);
+  useEffect(() => { refreshBadges(); }, [refreshBadges]);
 
   useEffect(() => {
     const handler = (e) => {
-      if (profileRef.current && !profileRef.current.contains(e.target)) {
-        setProfileOpen(false);
-      }
+      if (profileRef.current && !profileRef.current.contains(e.target)) setProfileOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -34,60 +30,64 @@ const UserTopbar = ({ onToggleSidebar, onLogout }) => {
   return (
     <header className="sticky top-0 z-50 bg-white border-b">
       <div className="flex items-center justify-between px-4 py-3">
-        <button className="md:hidden p-2 rounded hover:bg-gray-100" onClick={onToggleSidebar}>☰</button>
-        <div className="font-semibold flex items-center gap-2">
+
+        {/* Hamburger — mobile only */}
+        <button className="tb-hamburger" onClick={onToggleSidebar}
+          style={{ padding: 8, border: "none", background: "transparent", cursor: "pointer", fontSize: 20 }}>
+          ☰
+        </button>
+
+        {/* Logo — hidden on mobile */}
+        <div className="tb-logo font-semibold flex items-center gap-2">
           <BsCalendarEvent />
           <span>{SITE_NAME}</span>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="hidden md:flex items-center gap-2 bg-gray-100 rounded px-3 py-1.5">
-            <FiSearch className="text-gray-500" />
-            <input className="bg-transparent outline-none text-sm" placeholder="Search events..." />
-          </div>
-
-          {/* Notification Bell */}
+        {/* Right side icons */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <NotificationDropdown viewAllPath="/dashboard/user/notifications" />
-
-          {/* Language */}
           <LanguageSwitcher />
 
-          {/* Profile Dropdown */}
-          <div className="relative" ref={profileRef}>
-            <button
-              type="button"
-              className="flex items-center gap-2 p-1 rounded hover:bg-gray-100"
-              onClick={() => setProfileOpen(prev => !prev)}
-            >
-              <div className="h-8 w-8 rounded-full bg-blue-600 text-white flex items-center justify-center overflow-hidden">
+          {/* Profile — avatar always, name desktop only */}
+          <div style={{ position: "relative" }} ref={profileRef}>
+            <button type="button" onClick={() => setProfileOpen(p => !p)}
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: 4, border: "none", background: "transparent", cursor: "pointer", borderRadius: 6 }}>
+              <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#2563eb", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0, fontSize: 14, fontWeight: 700 }}>
                 {user?.profileImage
-                  ? <img src={user.profileImage} alt={user.name} className="w-full h-full object-cover" />
+                  ? <img src={user.profileImage} alt={user.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   : (user?.name?.[0] || profileName[0])}
               </div>
-              <span className="text-sm">{user?.name || profileName}</span>
-              <FiChevronDown className={`transition-transform ${profileOpen ? "rotate-180" : ""}`} />
+              <span className="tb-name" style={{ fontSize: 13 }}>{user?.name || profileName}</span>
+              <FiChevronDown className="tb-name" style={{ fontSize: 12, transition: "transform 0.2s", transform: profileOpen ? "rotate(180deg)" : "none" }} />
             </button>
 
             {profileOpen && (
-              <div className="absolute right-0 mt-2 w-44 bg-white rounded-md shadow-xl border border-gray-200 z-50">
+              <div style={{ position: "absolute", right: 0, top: "calc(100% + 8px)", width: 176, background: "#fff", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", border: "1px solid #e5e7eb", zIndex: 9999 }}>
                 <button className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
-                  onClick={() => { setProfileOpen(false); navigate("/dashboard/user/profile"); }}>
-                  Profile
-                </button>
+                  onClick={() => { setProfileOpen(false); navigate("/dashboard/user/profile"); }}>Profile</button>
                 <button className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
-                  onClick={() => { setProfileOpen(false); navigate("/dashboard/user/settings"); }}>
-                  Settings
-                </button>
-                <hr className="my-1" />
+                  onClick={() => { setProfileOpen(false); navigate("/dashboard/user/settings"); }}>Settings</button>
+                <hr style={{ margin: "4px 0" }} />
                 <button className="w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100 text-sm"
-                  onClick={() => { setProfileOpen(false); onLogout(); }}>
-                  Logout
-                </button>
+                  onClick={() => { setProfileOpen(false); onLogout(); }}>Logout</button>
               </div>
             )}
           </div>
         </div>
       </div>
+
+      <style>{`
+        @media (max-width: 1023px) {
+          .tb-hamburger { display: block !important; }
+          .tb-logo      { display: none !important; }
+          .tb-name      { display: none !important; }
+        }
+        @media (min-width: 1024px) {
+          .tb-hamburger { display: none !important; }
+          .tb-logo      { display: flex !important; }
+          .tb-name      { display: inline !important; }
+        }
+      `}</style>
     </header>
   );
 };

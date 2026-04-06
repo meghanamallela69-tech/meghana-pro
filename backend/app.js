@@ -20,6 +20,7 @@ import followRouter from "./router/followRouter.js";
 import marketingRouter from "./router/marketingRouter.js";
 import analyticsRouter from "./router/analyticsRouter.js";
 import categoryRouter from "./router/categoryRouter.js";
+import eventBookingRouter from "./router/eventBookingRouter.js";
 import cors from "cors";
 import { ensureAdmin } from "./util/ensureAdmin.js";
 
@@ -77,6 +78,7 @@ app.use("/api/v1/follow", followRouter);
 app.use("/api/v1/marketing", marketingRouter);
 app.use("/api/v1/analytics", analyticsRouter);
 app.use("/api/v1/categories", categoryRouter);
+app.use("/api/v1/event-bookings", eventBookingRouter);
 
 app.get("/api/v1/health", (req, res) => {
   res.status(200).json({ status: "ok" });

@@ -142,16 +142,16 @@ const MerchantEarnings = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-              <FaDollarSign className="text-green-500" />
+              <FaDollarSign className="text-green-500 responsive-icon" />
               Earnings & Withdrawals
             </h1>
             <p className="text-gray-600 mt-1">Track your earnings and manage withdrawals</p>
           </div>
           <button
             onClick={() => setShowWithdrawalForm(!showWithdrawalForm)}
-            className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium"
+            className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium responsive-btn"
           >
-            {showWithdrawalForm ? "Cancel" : "Request Withdrawal"}
+            <span className="btn-label">{showWithdrawalForm ? "Cancel" : "Request Withdrawal"}</span>
           </button>
         </div>
 
@@ -374,6 +374,20 @@ const MerchantEarnings = () => {
           </div>
         </div>
       </div>
+
+      {/* Mobile Responsive Styles */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media (max-width: 767px) {
+          .responsive-btn { 
+            padding: 8px 12px !important; 
+            font-size: 14px !important; 
+          }
+          .btn-label { display: none; }
+          .responsive-icon { 
+            font-size: 18px !important; 
+          }
+        }
+      ` }} />
     </MerchantLayout>
   );
 };

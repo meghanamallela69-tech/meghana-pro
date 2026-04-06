@@ -193,3 +193,74 @@ export const getLatestReviews = async (req, res) => {
     return res.status(500).json({ success: false, message: "Failed to get reviews" });
   }
 };
+
+
+// Seed sample reviews (for development only)
+export const seedReviews = async (req, res) => {
+  try {
+    // Get sample users and events
+    const { User } = await import("../models/userSchema.js");
+    const users = await User.find({ role: "user" }).limit(5);
+    const events = await Event.find().limit(5);
+
+    if (users.length === 0 || events.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Not enough data. Users: ${users.length}, Events: ${events.length}`
+      });
+    }
+
+    // Sample review texts
+    const reviewTexts = [
+      "Amazing event! The organization was perfect and everyone had a great time. Highly recommended!",
+      "Great experience overall. The venue was beautiful and the staff was very helpful.",
+      "Excellent event! Would definitely attend again. Everything was well planned.",
+      "Very well organized event. The food was delicious and the entertainment was top-notch.",
+      "Outstanding! One of the best events I've attended. Great atmosphere and wonderful people.",
+      "Good event with nice ambiance. Could have been better with more activities.",
+      "Fantastic! The event exceeded my expectations. Will definitely recommend to friends.",
+      "Wonderful experience! The team did an excellent job organizing everything.",
+      "Great event! Enjoyed every moment. Looking forward to the next one.",
+      "Perfect! Everything was organized beautifully. Great job to the team!",
+      "Excellent service and great atmosphere. Had a wonderful time!",
+      "Amazing! The event was well-executed and very enjoyable.",
+      "Very good event. The organizers did a fantastic job!",
+      "Loved it! Great event with wonderful people and amazing food.",
+      "Outstanding event! Highly recommend to everyone!"
+    ];
+
+    // Clear existing reviews
+    await Review.deleteMany({});
+
+    // Create sample reviews
+    const reviews = [];
+    for (let i = 0; i < Math.min(users.length * events.length, 15); i++) {
+      const userIndex = i % users.length;
+      const eventIndex = Math.floor(i / users.length) % events.length;
+      const rating = Math.floor(Math.random() * 2) + 4; // 4 or 5 stars mostly
+
+      reviews.push({
+        user: users[userIndex]._id,
+        event: events[eventIndex]._id,
+        rating: rating,
+        reviewText: reviewTexts[i % reviewTexts.length]
+      });
+    }
+
+    // Insert reviews
+    const createdReviews = await Review.insertMany(reviews);
+
+    return res.status(200).json({
+      success: true,
+      message: `Created ${createdReviews.length} sample reviews`,
+      count: createdReviews.length
+    });
+  } catch (error) {
+    console.error("Seed reviews error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to seed reviews",
+      error: error.message
+    });
+  }
+};

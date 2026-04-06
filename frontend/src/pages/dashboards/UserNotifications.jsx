@@ -128,8 +128,8 @@ const UserNotifications = () => {
         </div>
         <div className="flex gap-2">
           {unread > 0 && (
-            <button onClick={markAllRead} className="px-4 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 font-medium transition">
-              Mark All Read
+            <button onClick={markAllRead} className="px-4 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 font-medium transition responsive-btn">
+              <span className="btn-label">Mark All Read</span>
             </button>
           )}
           {notifications.length > 0 && (
@@ -269,6 +269,17 @@ const UserNotifications = () => {
           </div>
         )}
       </div>
+
+      {/* Mobile Responsive Styles */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media (max-width: 767px) {
+          .responsive-btn { 
+            padding: 6px 10px !important; 
+            font-size: 12px !important; 
+          }
+          .btn-label { display: none; }
+        }
+      ` }} />
     </UserLayout>
   );
 };

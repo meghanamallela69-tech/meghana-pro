@@ -6,6 +6,7 @@ import { FaStar, FaArrowLeft, FaCalendarAlt, FaMapMarkerAlt, FaCheckCircle } fro
 import { API_BASE } from "../lib/http";
 import useAuth from "../context/useAuth";
 import BookingModal from "../components/BookingModal";
+import FullServiceBookingModal from "../components/FullServiceBookingModal";
 
 const ServiceDetails = () => {
   const { id } = useParams();
@@ -252,21 +253,25 @@ const ServiceDetails = () => {
       </div>
 
       {/* Booking Modal */}
-      <BookingModal
-        service={{
-          id: service._id,
+      <FullServiceBookingModal
+        event={{
+          _id: service._id,
+          serviceId: service._id,
           title: service.title,
           category: service.category,
           price: service.price,
-          desc: service.description,
+          description: service.description,
+          images: service.images,
+          addons: service.addons || [],
+          location: service.location || "",
+          features: service.features || [],
         }}
         isOpen={isBookingModalOpen}
         onClose={() => setIsBookingModalOpen(false)}
         onSuccess={() => {
-          toast.success("Booking confirmed!");
+          toast.success("Booking request sent successfully!");
           setIsBookingModalOpen(false);
         }}
-        coupons={service.coupons || []}
       />
     </div>
   );
