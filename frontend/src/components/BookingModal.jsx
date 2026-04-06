@@ -262,6 +262,13 @@ const BookingModal = ({ service, isOpen, onClose, onSuccess, coupons = [] }) => 
       return;
     }
 
+    // Check locally first if user already used this coupon
+    const localCoupon = availableCoupons.find(c => c.code === promoCode.trim().toUpperCase());
+    if (localCoupon?.alreadyUsed) {
+      toast.error(`You have already used coupon "${localCoupon.code}". Each coupon can only be used once per account.`);
+      return;
+    }
+
     const subtotal = isTicketed ? ticketedSubtotal : fullServiceSubtotal;
     const serviceOrEventId = service.eventId || service._id;
 
@@ -456,26 +463,45 @@ const BookingModal = ({ service, isOpen, onClose, onSuccess, coupons = [] }) => 
                       <label style={{ display: "block", fontSize: "14px", fontWeight: "500", color: "#374151", marginBottom: "8px" }}>Have a promo code?</label>
                       {availableCoupons.length > 0 ? (
                         <div style={{ marginBottom: "12px" }}>
-                          <p style={{ fontSize: "13px", color: "#6b7280", marginBottom: "6px" }}>🏷️ Available offers ({availableCoupons.filter(c => !c.alreadyUsed).length}):</p>
+                          <p style={{ fontSize: "13px", color: "#6b7280", marginBottom: "6px" }}>🏷️ Available offers ({availableCoupons.length}):</p>
                           <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
                             {availableCoupons.map((coupon) => (
                               <button key={coupon._id} type="button"
-                                onClick={() => {
-                                  if (coupon.alreadyUsed) { toast.error("You've already used this coupon"); return; }
+                                onClick={async () => {
+                                  if (coupon.alreadyUsed) {
+                                    toast.error(`You have already used coupon "${coupon.code}". Each coupon can only be used once per account.`);
+                                    return;
+                                  }
                                   setPromoCode(coupon.code);
-                                  toast.success(`Coupon "${coupon.code}" selected!`);
+                                  // auto-apply
+                                  const subtotal = isTicketed ? ticketedSubtotal : fullServiceSubtotal;
+                                  try {
+                                    setLoading(true);
+                                    const response = await axios.post(
+                                      `${API_BASE}/coupons/apply`,
+                                      { code: coupon.code, totalAmount: subtotal, eventId: service.eventId || service._id },
+                                      { headers: { Authorization: `Bearer ${token}` } }
+                                    );
+                                    if (response.data.success) {
+                                      setDiscount(response.data.discountAmount);
+                                      setAppliedCoupon(response.data.coupon);
+                                      toast.success(`Coupon "${coupon.code}" applied! Saved ₹${response.data.discountAmount.toLocaleString("en-IN")}`);
+                                    }
+                                  } catch (err) {
+                                    toast.error(err.response?.data?.message || "Failed to apply coupon");
+                                  } finally {
+                                    setLoading(false);
+                                  }
                                 }}
                                 style={{
                                   padding: "6px 12px",
-                                  backgroundColor: coupon.alreadyUsed ? "#f3f4f6" : "#fef3c7",
-                                  border: `1px solid ${coupon.alreadyUsed ? "#d1d5db" : "#f59e0b"}`,
+                                  backgroundColor: "#fef3c7",
+                                  border: "1px solid #f59e0b",
                                   borderRadius: "6px", fontSize: "12px", fontWeight: "600",
-                                  color: coupon.alreadyUsed ? "#9ca3af" : "#92400e",
-                                  cursor: coupon.alreadyUsed ? "not-allowed" : "pointer",
-                                  textDecoration: coupon.alreadyUsed ? "line-through" : "none"
+                                  color: "#92400e",
+                                  cursor: "pointer"
                                 }}>
                                 {coupon.code} — {coupon.discountType === 'percentage' ? `${coupon.discountValue}%` : `₹${coupon.discountValue}`} off
-                                {coupon.alreadyUsed && " (used)"}
                               </button>
                             ))}
                           </div>

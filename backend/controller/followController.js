@@ -6,11 +6,6 @@ export const followMerchant = async (req, res) => {
   try {
     const { merchantId } = req.params;
     const userId = req.user.userId || req.user._id;
-
-    console.log(`=== FOLLOW MERCHANT ===`);
-    console.log(`User ID: ${userId}`);
-    console.log(`Merchant ID: ${merchantId}`);
-
     // Validate merchant exists and is a merchant
     const merchant = await User.findById(merchantId);
     if (!merchant) {
@@ -67,9 +62,6 @@ export const followMerchant = async (req, res) => {
     } catch (notifError) {
       console.error("Failed to create follow notification:", notifError);
     }
-
-    console.log(`✅ User ${userId} now following merchant ${merchantId}`);
-
     return res.status(200).json({
       success: true,
       message: "Successfully followed merchant",
@@ -90,11 +82,6 @@ export const unfollowMerchant = async (req, res) => {
   try {
     const { merchantId } = req.params;
     const userId = req.user.userId || req.user._id;
-
-    console.log(`=== UNFOLLOW MERCHANT ===`);
-    console.log(`User ID: ${userId}`);
-    console.log(`Merchant ID: ${merchantId}`);
-
     // Find the user
     const user = await User.findById(userId);
     if (!user) {
@@ -118,9 +105,6 @@ export const unfollowMerchant = async (req, res) => {
       id => String(id) !== String(merchantId)
     );
     await user.save();
-
-    console.log(`✅ User ${userId} unfollowed merchant ${merchantId}`);
-
     return res.status(200).json({
       success: true,
       message: "Successfully unfollowed merchant",
@@ -141,11 +125,6 @@ export const checkFollowStatus = async (req, res) => {
   try {
     const { merchantId } = req.params;
     const userId = req.user.userId || req.user._id;
-
-    console.log(`=== CHECK FOLLOW STATUS ===`);
-    console.log(`User ID: ${userId}`);
-    console.log(`Merchant ID: ${merchantId}`);
-
     // Find the user
     const user = await User.findById(userId);
     if (!user) {
@@ -175,10 +154,6 @@ export const checkFollowStatus = async (req, res) => {
 export const getFollowingMerchants = async (req, res) => {
   try {
     const userId = req.user.userId || req.user._id;
-
-    console.log(`=== GET FOLLOWING MERCHANTS ===`);
-    console.log(`User ID: ${userId}`);
-
     // Find user with populated following merchants
     const user = await User.findById(userId)
       .populate("followingMerchants", "name email businessName serviceType")
@@ -209,10 +184,6 @@ export const getFollowingMerchants = async (req, res) => {
 export const getMerchantFollowers = async (req, res) => {
   try {
     const merchantId = req.user.userId || req.user._id;
-
-    console.log(`=== GET MERCHANT FOLLOWERS ===`);
-    console.log(`Merchant ID: ${merchantId}`);
-
     // Find all users who are following this merchant
     const followers = await User.find({
       followingMerchants: merchantId

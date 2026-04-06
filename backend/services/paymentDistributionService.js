@@ -42,19 +42,9 @@ export const processPaymentDistribution = async (paymentData) => {
     paymentGateway = "manual",
     description = ""
   } = paymentData;
-
-  console.log("=== PROCESSING PAYMENT DISTRIBUTION ===");
-  console.log(`Total Amount: ₹${totalAmount}`);
-  console.log(`User ID: ${userId}`);
-  console.log(`Merchant ID: ${merchantId}`);
-  console.log(`Booking ID: ${bookingId}`);
-
   try {
     // Step 1: Calculate commission distribution
     const distribution = calculateCommission(totalAmount);
-    console.log(`Admin Commission (${distribution.adminCommissionPercent}%): ₹${distribution.adminCommission}`);
-    console.log(`Merchant Amount: ₹${distribution.merchantAmount}`);
-
     // Step 2: Check if payment already exists (prevent duplicates)
     const existingPayment = await Payment.findOne({ 
       bookingId,
@@ -62,7 +52,6 @@ export const processPaymentDistribution = async (paymentData) => {
     });
 
     if (existingPayment) {
-      console.log(`⚠️ Payment already exists for booking ${bookingId}, returning existing record`);
       // Return existing payment instead of throwing
       const merchant = await User.findById(merchantId);
       return {
@@ -92,9 +81,6 @@ export const processPaymentDistribution = async (paymentData) => {
       description,
       currency: "INR"
     });
-
-    console.log(`✅ Payment record created: ${payment._id}`);
-
     // Step 4: Update booking with commission details
     const booking = await Booking.findByIdAndUpdate(
       bookingId,
@@ -115,9 +101,6 @@ export const processPaymentDistribution = async (paymentData) => {
     if (!booking) {
       throw new Error("Booking not found");
     }
-
-    console.log(`✅ Booking updated with commission details`);
-
     // Step 5: Update merchant wallet
     const merchant = await User.findByIdAndUpdate(
       merchantId,
@@ -133,10 +116,6 @@ export const processPaymentDistribution = async (paymentData) => {
     if (!merchant) {
       throw new Error("Merchant not found");
     }
-
-    console.log(`✅ Merchant wallet updated: +₹${distribution.merchantAmount}`);
-    console.log(`   New wallet balance: ₹${merchant.walletBalance}`);
-
     // Step 6: Update admin commission tracking
     const admin = await User.findOneAndUpdate(
       { role: "admin" },
@@ -149,8 +128,6 @@ export const processPaymentDistribution = async (paymentData) => {
     );
 
     if (admin) {
-      console.log(`✅ Admin commission updated: +₹${distribution.adminCommission}`);
-      console.log(`   Total admin commission: ₹${admin.totalCommissionEarned}`);
     }
 
     // Step 7: Return success result
@@ -175,9 +152,6 @@ export const processPaymentDistribution = async (paymentData) => {
  * @returns {object} - Refund result
  */
 export const processRefund = async (bookingId, refundReason = "Booking cancelled") => {
-  console.log("=== PROCESSING REFUND ===");
-  console.log(`Booking ID: ${bookingId}`);
-
   try {
     // Step 1: Find the payment record
     const payment = await Payment.findOne({ 
@@ -192,11 +166,6 @@ export const processRefund = async (bookingId, refundReason = "Booking cancelled
     if (payment.paymentStatus === "refunded") {
       throw new Error("Payment already refunded");
     }
-
-    console.log(`Found payment: ₹${payment.totalAmount}`);
-    console.log(`Admin Commission: ₹${payment.adminCommission}`);
-    console.log(`Merchant Amount: ₹${payment.merchantAmount}`);
-
     // Step 2: Update payment status to refunded
     payment.paymentStatus = "refunded";
     payment.refundAmount = payment.totalAmount;
@@ -226,10 +195,6 @@ export const processRefund = async (bookingId, refundReason = "Booking cancelled
       },
       { new: true }
     );
-
-    console.log(`✅ Merchant wallet reversed: -₹${payment.merchantAmount}`);
-    console.log(`   New wallet balance: ₹${merchant.walletBalance}`);
-
     // Step 5: Reverse admin commission
     const admin = await User.findOneAndUpdate(
       { role: "admin" },
@@ -242,8 +207,6 @@ export const processRefund = async (bookingId, refundReason = "Booking cancelled
     );
 
     if (admin) {
-      console.log(`✅ Admin commission reversed: -₹${payment.adminCommission}`);
-      console.log(`   Total admin commission: ₹${admin.totalCommissionEarned}`);
     }
 
     return {

@@ -5,14 +5,8 @@ import bcrypt from "bcryptjs";
 // Get admin profile
 export const getAdminProfile = async (req, res) => {
   try {
-    console.log("📋 Get admin profile request received");
-    console.log("👤 User from token:", req.user);
-    
     // req.user.userId comes from the JWT token
     const admin = await User.findById(req.user.userId).select('-password');
-    
-    console.log("🔍 Found admin:", !!admin);
-    
     if (!admin) {
       return res.status(404).json({ success: false, message: "Admin not found" });
     }

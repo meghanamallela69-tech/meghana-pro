@@ -30,7 +30,6 @@ const FullServiceBookingModal = ({ isOpen, onClose, event, onSuccess }) => {
     if (isOpen) {
       setDate(""); setTime(""); setGuests(1); setNotes(""); setActiveImg(0);
       setLocation(""); setCouponCode(""); setAppliedCoupon(null); setShowCouponList(false); setCouponError("");
-      applyingRef.current = false;
       const normalizedAddons = (event?.addons || []).map(a => ({
         ...a,
         type: /catering|food|meal|veg|non.?veg|plate|per.?person|person/i.test(a.name)
@@ -51,7 +50,7 @@ const FullServiceBookingModal = ({ isOpen, onClose, event, onSuccess }) => {
       params: {
         eventId: event._id,
         serviceId: event._id,
-        totalAmount: event.price || 1,
+        totalAmount: 999999,
         category: event.category || ""
       }
     })
@@ -139,11 +138,10 @@ const FullServiceBookingModal = ({ isOpen, onClose, event, onSuccess }) => {
   const applyCouponCode = async (codeOverride) => {
     const code = (typeof codeOverride === "string" ? codeOverride : couponCode).trim().toUpperCase();
     if (!code) return toast.error("Enter a coupon code");
-    // Hard guard using ref — prevents any double-call regardless of state timing
-    if (applyingRef.current) return;
-    applyingRef.current = true;
+    if (couponLoading) return;
     setCouponCode(code);
     setCouponLoading(true);
+    setCouponError("");
     try {
       const base = parseFloat(event?.price) || 0;
       const addonsAmt = addons.reduce((sum, a) => {
@@ -151,21 +149,23 @@ const FullServiceBookingModal = ({ isOpen, onClose, event, onSuccess }) => {
         return sum + (selectedAddons[a.name] ? (parseFloat(a.price) || 0) : 0);
       }, 0);
       const computedSubtotal = base + addonsAmt;
-      const amountToValidate = computedSubtotal > 0 ? computedSubtotal : base > 0 ? base : 1;
+      const amountToSend = computedSubtotal > 0 ? computedSubtotal : base > 0 ? base : 1;
 
-      const res = await axios.post(`${API_BASE}/coupons/validate`, {
-        couponCode: code,
+      // Use /apply which returns discountAmount directly
+      const res = await axios.post(`${API_BASE}/coupons/apply`, {
+        code,
+        totalAmount: amountToSend,
         eventId: event._id,
-        amount: amountToValidate,
       }, { headers: authHeaders(token) });
 
       if (res.data.success) {
-        setAppliedCoupon(res.data.coupon);
+        // Store coupon with discountAmount so total updates immediately
+        setAppliedCoupon({
+          ...res.data.coupon,
+          discountAmount: res.data.discountAmount,
+        });
         setCouponError("");
-        const c = res.data.coupon;
-        const isPercent = c.discountType === "percentage";
-        const saved = isPercent ? `${c.discountValue}%` : `₹${c.discountValue}`;
-        toast.success(`Coupon "${code}" applied! You save ${saved}`);
+        toast.success(`Coupon "${code}" applied! You save ₹${res.data.discountAmount.toLocaleString("en-IN")}`);
       } else {
         const errMsg = res.data.message || "Invalid coupon";
         setCouponError(errMsg);
@@ -179,7 +179,6 @@ const FullServiceBookingModal = ({ isOpen, onClose, event, onSuccess }) => {
       toast.error(msg, { duration: 4000 });
     } finally {
       setCouponLoading(false);
-      applyingRef.current = false;
     }
   };
 
@@ -682,7 +681,7 @@ const FullServiceBookingModal = ({ isOpen, onClose, event, onSuccess }) => {
                     </div>
                   )}
 
-                  {/* Coupon cards — always visible */}
+                  {/* Coupon cards — always visible, all look the same */}
                   {availableCoupons.length > 0 && (
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                       {availableCoupons.slice(0, 4).map(c => {
@@ -699,68 +698,59 @@ const FullServiceBookingModal = ({ isOpen, onClose, event, onSuccess }) => {
                             type="button"
                             onClick={() => {
                               if (isAlreadyUsed) {
-                                toast.error("You have already used this promo code once. Each customer can only use it once across all bookings.");
+                                toast.error(`You have already used coupon "${c.code}". Each coupon can only be used once per account.`);
                                 return;
                               }
-                              if (!couponLoading && (isApplied ? removeCoupon() : applyCouponCode(c.code)));
+                              if (!couponLoading) {
+                                isApplied ? removeCoupon() : applyCouponCode(c.code);
+                              }
                             }}
-                            disabled={couponLoading || isAlreadyUsed}
+                            disabled={couponLoading}
                             style={{
                               display: "flex", flexDirection: "column", alignItems: "flex-start",
                               padding: "12px 14px", borderRadius: 12, textAlign: "left",
-                              cursor: couponLoading || isAlreadyUsed ? "not-allowed" : "pointer",
+                              cursor: couponLoading ? "not-allowed" : "pointer",
                               transition: "all 0.2s",
-                              opacity: (couponLoading && !isLoading) || isAlreadyUsed ? 0.6 : 1,
-                              // Applied = solid green; used = gray; available = dashed blue
                               background: isApplied
                                 ? "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)"
-                                : isAlreadyUsed
-                                ? "linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)"
                                 : "#f8fafc",
                               border: isApplied
                                 ? "2px solid #16a34a"
-                                : isAlreadyUsed
-                                ? "1.5px solid #d1d5db"
                                 : "1.5px dashed #cbd5e1",
-                              boxShadow: isApplied ? "0 2px 8px rgba(22,163,74,0.15)" : isAlreadyUsed ? "none" : "none",
+                              boxShadow: isApplied ? "0 2px 8px rgba(22,163,74,0.15)" : "none",
                             }}
                             onMouseEnter={e => {
-                              if (!couponLoading && !isApplied && !isAlreadyUsed) {
+                              if (!couponLoading && !isApplied) {
                                 e.currentTarget.style.borderColor = "#2563eb";
                                 e.currentTarget.style.background = "linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)";
                                 e.currentTarget.style.boxShadow = "0 2px 8px rgba(37,99,235,0.12)";
                               }
                             }}
                             onMouseLeave={e => {
-                              if (!couponLoading && !isApplied && !isAlreadyUsed) {
+                              if (!couponLoading && !isApplied) {
                                 e.currentTarget.style.borderColor = "#cbd5e1";
                                 e.currentTarget.style.background = "#f8fafc";
                                 e.currentTarget.style.boxShadow = "none";
                               }
                             }}
                           >
-                            {/* Top row: badge + check icon */}
+                            {/* Top row: discount badge */}
                             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", marginBottom: 6 }}>
                               <span style={{
                                 fontSize: 12, fontWeight: 800, letterSpacing: "0.04em",
                                 padding: "3px 10px", borderRadius: 20,
-                                background: isApplied ? "#16a34a" : isAlreadyUsed ? "#9ca3af" : "#2563eb",
+                                background: isApplied ? "#16a34a" : "#2563eb",
                                 color: "#fff",
                               }}>
-                                {isLoading ? "..." : isAlreadyUsed ? "USED" : discountLabel}
+                                {isLoading ? "..." : discountLabel}
                               </span>
-                              {isApplied && (
-                                <span style={{ fontSize: 16, color: "#16a34a", lineHeight: 1 }}>✓</span>
-                              )}
-                              {isAlreadyUsed && !isApplied && (
-                                <span style={{ fontSize: 12, color: "#9ca3af", lineHeight: 1 }}>✗</span>
-                              )}
+                              {isApplied && <span style={{ fontSize: 16, color: "#16a34a" }}>✓</span>}
                             </div>
 
                             {/* Code */}
                             <span style={{
                               fontSize: 13, fontWeight: 800,
-                              color: isApplied ? "#15803d" : isAlreadyUsed ? "#6b7280" : "#0f172a",
+                              color: isApplied ? "#15803d" : "#0f172a",
                               fontFamily: "monospace", letterSpacing: "0.1em",
                             }}>
                               {c.code}
@@ -768,7 +758,7 @@ const FullServiceBookingModal = ({ isOpen, onClose, event, onSuccess }) => {
 
                             {/* Description */}
                             {c.description && (
-                              <span style={{ fontSize: 10, color: isApplied ? "#16a34a" : isAlreadyUsed ? "#9ca3af" : "#64748b", marginTop: 3, lineHeight: 1.4 }}>
+                              <span style={{ fontSize: 10, color: isApplied ? "#16a34a" : "#64748b", marginTop: 3, lineHeight: 1.4 }}>
                                 {c.description}
                               </span>
                             )}
@@ -780,17 +770,9 @@ const FullServiceBookingModal = ({ isOpen, onClose, event, onSuccess }) => {
                               </span>
                             )}
 
-                            {/* Applied label */}
                             {isApplied && (
                               <span style={{ fontSize: 10, fontWeight: 700, color: "#16a34a", marginTop: 4 }}>
                                 Tap to remove
-                              </span>
-                            )}
-
-                            {/* Already used label */}
-                            {isAlreadyUsed && !isApplied && (
-                              <span style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", marginTop: 4 }}>
-                                Already used
                               </span>
                             )}
                           </button>

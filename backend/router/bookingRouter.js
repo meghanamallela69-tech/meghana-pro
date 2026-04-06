@@ -30,7 +30,6 @@ const router = express.Router();
 // Debug middleware for merchant routes
 router.use((req, res, next) => {
   if (req.path.includes('/merchant/')) {
-    console.log('🔍 Merchant route hit:', req.method, req.path);
   }
   next();
 });

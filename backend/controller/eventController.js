@@ -29,7 +29,6 @@ export const listEvents = async (req, res) => {
       
       // DYNAMICALLY calculate ticket availability for ticketed events
       if (eventObj.eventType === 'ticketed' && eventObj.ticketTypes && eventObj.ticketTypes.length > 0) {
-        console.log(`\n🎫 CALCULATING AVAILABILITY for: ${eventObj.title}`);
         let totalAvailable = 0;
         
         eventObj.ticketTypes.forEach(ticket => {
@@ -38,9 +37,6 @@ export const listEvents = async (req, res) => {
           const quantitySold = ticket.quantitySold || 0;
           const quantityAvailable = ticket.quantityAvailable || ticket.available || 0;
           const calculated = quantityTotal - quantitySold;
-          
-          console.log(`   📌 Ticket: ${ticket.name} | Total: ${quantityTotal} | Sold: ${quantitySold} | Available (stored): ${quantityAvailable} | Calculated: ${calculated}`);
-          
           // Update the ticket object with calculated availability
           ticket.quantityAvailable = calculated;
           
@@ -54,7 +50,6 @@ export const listEvents = async (req, res) => {
         
         // Update event-level available tickets
         eventObj.availableTickets = totalAvailable;
-        console.log(`   ✅ Total Available Tickets: ${totalAvailable}\n`);
       }
       
       // Fetch valid coupons for this event (merchant-created coupons with new applyTo logic)
@@ -69,29 +64,15 @@ export const listEvents = async (req, res) => {
       })
       .select('code discountType discountValue maxDiscount minAmount expiryDate description usedCount usageLimit')
       .populate('createdBy', 'name');
-      
-      console.log(`\n🎫  Event: ${event.title}`);
-      console.log(`   Event ID: ${event._id}`);
-      console.log(`   Event Merchant ID: ${event.createdBy}`);
-      console.log(`   Coupons Query: $or=[{applyTo:"ALL"}, {applyTo:"EVENT", eventId:${event._id}}]`);
-      console.log(`   Found ${validCoupons.length} raw coupons from DB`);
-      
       // Log each coupon with its applyTo type
       validCoupons.forEach((coupon, index) => {
-        console.log(`   [${index}] ${coupon.code} | applyTo: ${coupon.applyTo || 'N/A'} | eventId: ${coupon.eventId || 'null'}`);
       });
       
       // Filter coupons that haven't reached usage limit
       const filteredCoupons = validCoupons.filter(coupon => {
         const withinLimit = coupon.usedCount < coupon.usageLimit;
-        console.log(`   Coupon "${coupon.code}" (${coupon.applyTo}): used=${coupon.usedCount}, limit=${coupon.usageLimit}, withinLimit=${withinLimit}`);
         return withinLimit;
       });
-      
-      console.log(`   ✅ Final coupons after filtering: ${filteredCoupons.length}`);
-      console.log(`      - applyTo ALL: ${filteredCoupons.filter(c => c.applyTo === 'ALL').length}`);
-      console.log(`      - applyTo EVENT: ${filteredCoupons.filter(c => c.applyTo === 'EVENT').length}\n`);
-      
       // Convert to plain object and add coupons
       eventObj.coupons = filteredCoupons.map(coupon => ({
         _id: coupon._id,
@@ -110,19 +91,10 @@ export const listEvents = async (req, res) => {
     
     // Debug: Log first event to check addons
     if (enhancedEvents.length > 0) {
-      console.log('First event addons:', enhancedEvents[0].addons);
-      console.log('First event date/time:', enhancedEvents[0].date, enhancedEvents[0].time);
-      console.log('First event createdBy:', enhancedEvents[0].createdBy);
-      console.log('First event coupons:', enhancedEvents[0].coupons);
-      
       // Log coupon count for all events
       const totalCoupons = enhancedEvents.reduce((sum, event) => sum + (event.coupons?.length || 0), 0);
-      console.log(`\n📊 COUPON SUMMARY:`);
-      console.log(`Total events: ${enhancedEvents.length}`);
-      console.log(`Total coupons across all events: ${totalCoupons}`);
       enhancedEvents.forEach(event => {
         const couponCodes = event.coupons?.map(c => c.code).join(', ') || 'None';
-        console.log(`Event "${event.title}": ${event.coupons?.length || 0} coupons [${couponCodes}]`);
       });
     }
     

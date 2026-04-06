@@ -59,6 +59,56 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// ── Request Logger ──────────────────────────────────────────────────────────
+// Paths to skip — high-frequency polling endpoints that add noise
+const SKIP_LOG_PATHS = [
+  "/api/v1/notifications/unread-counts",
+  "/api/v1/message/unread-count",
+];
+
+app.use((req, res, next) => {
+  const start = Date.now();
+  const { method, originalUrl, body, query } = req;
+
+  // Strip cache-busting timestamp from path for display
+  const displayUrl = originalUrl.replace(/[?&]t=\d+/, "").replace(/\?$/, "");
+
+  res.on("finish", () => {
+    const status = res.statusCode;
+
+    // Skip 304 (cache hit) and noisy polling endpoints
+    if (status === 304) return;
+    if (SKIP_LOG_PATHS.some(p => originalUrl.startsWith(p))) return;
+
+    const ms = Date.now() - start;
+    const color =
+      status >= 500 ? "\x1b[31m" :   // red
+      status >= 400 ? "\x1b[33m" :   // yellow
+      status >= 300 ? "\x1b[36m" :   // cyan
+                      "\x1b[32m";    // green
+    const reset = "\x1b[0m";
+
+    let extra = "";
+    if (method !== "GET" && body && Object.keys(body).length) {
+      const safe = Object.fromEntries(
+        Object.entries(body).filter(([k]) => !/(password|token|secret)/i.test(k))
+      );
+      if (Object.keys(safe).length) extra += ` | body: ${JSON.stringify(safe)}`;
+    }
+    // Only show query params if they're meaningful (not just cache-busting t=)
+    const meaningfulQuery = Object.fromEntries(
+      Object.entries(query || {}).filter(([k]) => k !== "t")
+    );
+    if (Object.keys(meaningfulQuery).length) {
+      extra += ` | query: ${JSON.stringify(meaningfulQuery)}`;
+    }
+
+    console.log(`${color}[${method}] ${displayUrl} → ${status} (${ms}ms)${reset}${extra}`);
+  });
+
+  next();
+});
+
 app.use("/api/v1/message", messageRouter);
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/events", eventRouter);

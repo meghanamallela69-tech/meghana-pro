@@ -5,12 +5,6 @@ import { deleteImage, deleteMultipleImages } from "../util/cloudinary.js";
 export const createService = async (req, res) => {
   try {
     const { title, description, category, price, rating } = req.body;
-
-    console.log("Create service request received");
-    console.log("Request body:", { title, description, category, price, rating });
-    console.log("Request files:", req.files);
-    console.log("User:", req.user);
-
     // Validate required fields
     if (!title || !description || !category || !price) {
       return res.status(400).json({
@@ -59,9 +53,6 @@ export const createService = async (req, res) => {
         url: file.path,
       }));
     }
-
-    console.log("Images to be saved:", images);
-
     const service = await Service.create({
       title,
       description,
@@ -71,9 +62,6 @@ export const createService = async (req, res) => {
       images,
       createdBy: req.user.userId,
     });
-
-    console.log("Service created successfully:", service._id);
-
     return res.status(201).json({
       success: true,
       message: "Service created successfully",
@@ -299,18 +287,8 @@ export const deleteService = async (req, res) => {
 // Get all services for admin (including inactive)
 export const getAllServicesAdmin = async (req, res) => {
   try {
-    console.log("=== ADMIN SERVICES REQUEST ===");
-    console.log("User:", req.user);
-    console.log("Request headers:", req.headers);
-    
     const services = await Service.find().sort({ createdAt: -1 });
-    
-    console.log(`Found ${services.length} services in database`);
     if (services.length === 0) {
-      console.log("⚠️ WARNING: No services exist in database!");
-      console.log("You need to create services first.");
-    } else {
-      console.log("Services:", services.map(s => ({ id: s._id, title: s.title, isActive: s.isActive })));
     }
 
     return res.status(200).json({

@@ -17,9 +17,6 @@ import {
 } from "../controller/couponController.js";
 
 const router = express.Router();
-
-console.log("🔧 Coupon Router: Registering routes...");
-
 // User routes - Apply/Remove coupons
 router.post("/validate", auth, validateCoupon);
 router.post("/apply", auth, applyCoupon);
@@ -35,7 +32,4 @@ router.put("/:couponId", auth, ensureRole("admin"), updateCoupon);
 router.delete("/:couponId", auth, ensureRole("admin"), deleteCoupon);
 router.patch("/:couponId/toggle", auth, ensureRole("admin"), toggleCouponStatus);
 router.get("/stats", auth, ensureRole("admin"), getCouponStats);
-
-console.log("✅ Coupon Router: All routes registered");
-
 export default router;

@@ -6,11 +6,6 @@ export const findOrCreateChat = async (req, res) => {
   try {
     const userId = req.user.userId;
     const { merchantId } = req.body;
-    
-    console.log(`=== FIND OR CREATE CHAT ===`);
-    console.log(`User ID: ${userId}`);
-    console.log(`Merchant ID: ${merchantId}`);
-    
     if (!merchantId) {
       return res.status(400).json({
         success: false,
@@ -31,14 +26,10 @@ export const findOrCreateChat = async (req, res) => {
     
     // Create chatId (sorted combination of both user IDs for consistency)
     const chatId = [userId, merchantId].sort().join('_');
-    
-    console.log(`Chat ID: ${chatId}`);
-    
     // Check if chat already exists by looking for any messages with this chatId
     const existingMessage = await Message.findOne({ chatId }).sort({ createdAt: 1 });
     
     if (existingMessage) {
-      console.log(`Existing chat found: ${chatId}`);
       return res.status(200).json({
         success: true,
         chatId,
@@ -46,8 +37,6 @@ export const findOrCreateChat = async (req, res) => {
         message: "Chat retrieved successfully"
       });
     }
-    
-    console.log(`New chat created: ${chatId}`);
     return res.status(201).json({
       success: true,
       chatId,
@@ -69,18 +58,11 @@ export const findOrCreateChat = async (req, res) => {
 export const getUnreadCount = async (req, res) => {
   try {
     const userId = req.user.userId;
-    
-    console.log(`=== GET UNREAD COUNT ===`);
-    console.log(`User ID: ${userId}`);
-    
     // Count unread messages where user is receiver
     const unreadCount = await Message.countDocuments({
       receiverId: new mongoose.Types.ObjectId(userId),
       read: false
     });
-    
-    console.log(`Unread count: ${unreadCount}`);
-    
     return res.status(200).json({
       success: true,
       count: unreadCount
@@ -100,10 +82,6 @@ export const getUnreadCount = async (req, res) => {
 export const getChats = async (req, res) => {
   try {
     const userId = req.user.userId;
-    
-    console.log(`=== GET CHATS ===`);
-    console.log(`User ID: ${userId}`);
-    
     // Find all unique chatIds where user is involved
     const messages = await Message.aggregate([
       {
@@ -207,11 +185,6 @@ export const getMessages = async (req, res) => {
   try {
     const userId = req.user.userId;
     const { chatId } = req.params;
-    
-    console.log(`=== GET MESSAGES ===`);
-    console.log(`Chat ID: ${chatId}`);
-    console.log(`User ID: ${userId}`);
-    
     // Mark messages as read
     await Message.updateMany(
       {
@@ -252,12 +225,6 @@ export const sendMessage = async (req, res) => {
   try {
     const senderId = req.user.userId;
     const { receiverId, content } = req.body;
-    
-    console.log(`=== SEND MESSAGE ===`);
-    console.log(`Sender ID: ${senderId}`);
-    console.log(`Receiver ID: ${receiverId}`);
-    console.log(`Content: ${content?.substring(0, 50)}...`);
-    
     if (!content || !content.trim()) {
       return res.status(400).json({
         success: false,
@@ -286,9 +253,6 @@ export const sendMessage = async (req, res) => {
     
     // Populate sender info
     await message.populate('senderId', 'name email profileImage');
-    
-    console.log(`Message created: ${message._id}`);
-    
     // Emit socket event for new message
     if (req.io) {
       // Send to specific chat room
@@ -332,10 +296,6 @@ export const markAsRead = async (req, res) => {
   try {
     const userId = req.user.userId;
     const { chatId } = req.body;
-    
-    console.log(`=== MARK AS READ ===`);
-    console.log(`Chat ID: ${chatId}`);
-    
     const result = await Message.updateMany(
       {
         chatId,
@@ -374,10 +334,6 @@ export const deleteMessage = async (req, res) => {
   try {
     const userId = req.user.userId;
     const { messageId } = req.params;
-    
-    console.log(`=== DELETE MESSAGE ===`);
-    console.log(`Message ID: ${messageId}`);
-    
     const message = await Message.findById(messageId);
     
     if (!message) {

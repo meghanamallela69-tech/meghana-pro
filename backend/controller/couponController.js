@@ -110,9 +110,6 @@ export const validateCoupon = async (req, res) => {
         });
       }
     }
-
-    console.log(`✅ Coupon validated successfully`);
-
     return res.status(200).json({
       success: true,
       message: "Coupon is valid",
@@ -141,12 +138,6 @@ export const applyCoupon = async (req, res) => {
   try {
     const { code, totalAmount, eventId } = req.body;
     const userId = req.user.userId || req.user._id;
-
-    console.log(`=== APPLY COUPON ===`);
-    console.log(`Code: ${code}`);
-    console.log(`Total Amount: ${totalAmount}`);
-    console.log(`User ID: ${userId}`);
-
     // Validate input
     if (!code || !totalAmount) {
       return res.status(400).json({
@@ -274,11 +265,6 @@ export const applyCoupon = async (req, res) => {
     // Round discount to 2 decimal places
     discountAmount = Math.round(discountAmount * 100) / 100;
     const finalAmount = totalAmount - discountAmount;
-
-    console.log(`✅ Coupon applied successfully`);
-    console.log(`Discount: ₹${discountAmount}`);
-    console.log(`Final Amount: ₹${finalAmount}`);
-
     return res.status(200).json({
       success: true,
       message: "Coupon applied successfully",
@@ -331,10 +317,6 @@ export const getAvailableCoupons = async (req, res) => {
   try {
     const userId = req.user.userId || req.user._id;
     const { eventId, totalAmount, category, serviceId } = req.query;
-
-    console.log(`=== GET AVAILABLE COUPONS (FIXED) ===`);
-    console.log(`User ID: ${userId} | Event ID: ${eventId} | Category: ${category} | Amount: ${totalAmount}`);
-
     if (!userId) {
       return res.status(401).json({ success: false, message: "User authentication required" });
     }
@@ -386,19 +368,12 @@ export const getAvailableCoupons = async (req, res) => {
         }
       ];
     }
-
-    console.log("🎫 Executing Final Query:", JSON.stringify(finalQuery, null, 2));
-
     const coupons = await Coupon.find(finalQuery)
       .select('code discountType discountValue maxDiscount minAmount expiryDate description usedCount usageLimit usageHistory category applyTo eventId merchantId')
       .sort({ discountValue: -1 })
       .limit(20); // Limit to prevent large responses
-
-    console.log(`Found ${coupons.length} coupons before user filter`);
-    
     // Log details about found coupons
     coupons.forEach((coupon, idx) => {
-      console.log(`  [${idx}] Code: ${coupon.code} | applyTo: ${coupon.applyTo} | eventId: ${coupon.eventId} | merchantId: ${coupon.merchantId}`);
     });
 
     // Final Filter: Identify coupons the user has already used
@@ -417,9 +392,6 @@ export const getAvailableCoupons = async (req, res) => {
       couponObj.canUse = !couponObj.alreadyUsed; // Flag for frontend to check
       return couponObj;
     });
-
-    console.log(`✅ Found ${processedCoupons.length} total coupons (${processedCoupons.filter(c => c.canUse).length} available, ${processedCoupons.filter(c => !c.canUse).length} already used)`);
-
     return res.status(200).json({
       success: true,
       coupons: processedCoupons,
@@ -454,12 +426,6 @@ export const createCoupon = async (req, res) => {
     } = req.body;
 
     const adminId = req.user.userId || req.user._id;
-
-    console.log(`=== CREATE COUPON ===`);
-    console.log(`Code: ${code}`);
-    console.log(`Type: ${discountType}`);
-    console.log(`Value: ${discountValue}`);
-
     // Validate required fields
     if (!code || !discountType || !discountValue || !expiryDate || !usageLimit) {
       return res.status(400).json({
@@ -537,9 +503,6 @@ export const createCoupon = async (req, res) => {
     }
 
     const coupon = await Coupon.create(couponData);
-
-    console.log(`✅ Coupon created successfully: ${coupon.code}`);
-
     return res.status(201).json({
       success: true,
       message: "Coupon created successfully",
@@ -559,9 +522,6 @@ export const createCoupon = async (req, res) => {
 export const getAllCoupons = async (req, res) => {
   try {
     const { page = 1, limit = 10, status, search } = req.query;
-
-    console.log(`=== GET ALL COUPONS ===`);
-
     // Build query
     const query = {};
 
@@ -620,10 +580,6 @@ export const updateCoupon = async (req, res) => {
   try {
     const { couponId } = req.params;
     const updateData = req.body;
-
-    console.log(`=== UPDATE COUPON ===`);
-    console.log(`Coupon ID: ${couponId}`);
-
     const coupon = await Coupon.findById(couponId);
     if (!coupon) {
       return res.status(404).json({
@@ -646,9 +602,6 @@ export const updateCoupon = async (req, res) => {
       updateData,
       { new: true, runValidators: true }
     );
-
-    console.log(`✅ Coupon updated successfully: ${updatedCoupon.code}`);
-
     return res.status(200).json({
       success: true,
       message: "Coupon updated successfully",
@@ -668,10 +621,6 @@ export const updateCoupon = async (req, res) => {
 export const deleteCoupon = async (req, res) => {
   try {
     const { couponId } = req.params;
-
-    console.log(`=== DELETE COUPON ===`);
-    console.log(`Coupon ID: ${couponId}`);
-
     const coupon = await Coupon.findById(couponId);
     if (!coupon) {
       return res.status(404).json({
@@ -689,9 +638,6 @@ export const deleteCoupon = async (req, res) => {
     }
 
     await Coupon.findByIdAndDelete(couponId);
-
-    console.log(`✅ Coupon deleted successfully: ${coupon.code}`);
-
     return res.status(200).json({
       success: true,
       message: "Coupon deleted successfully"
@@ -710,10 +656,6 @@ export const deleteCoupon = async (req, res) => {
 export const toggleCouponStatus = async (req, res) => {
   try {
     const { couponId } = req.params;
-
-    console.log(`=== TOGGLE COUPON STATUS ===`);
-    console.log(`Coupon ID: ${couponId}`);
-
     const coupon = await Coupon.findById(couponId);
     if (!coupon) {
       return res.status(404).json({
@@ -724,9 +666,6 @@ export const toggleCouponStatus = async (req, res) => {
 
     coupon.isActive = !coupon.isActive;
     await coupon.save();
-
-    console.log(`✅ Coupon status toggled: ${coupon.code} - ${coupon.isActive ? 'Active' : 'Inactive'}`);
-
     return res.status(200).json({
       success: true,
       message: `Coupon ${coupon.isActive ? 'activated' : 'deactivated'} successfully`,
@@ -745,8 +684,6 @@ export const toggleCouponStatus = async (req, res) => {
 // Get coupon usage statistics (Admin only)
 export const getCouponStats = async (req, res) => {
   try {
-    console.log(`=== GET COUPON STATS ===`);
-
     const stats = await Coupon.aggregate([
       {
         $group: {
@@ -811,13 +748,6 @@ export const getCouponStats = async (req, res) => {
 export const recordCouponUsage = async (req, res) => {
   try {
     const { userId, couponCode, bookingId, serviceId, discountAmount } = req.body;
-
-    console.log(`=== RECORD COUPON USAGE ===`);
-    console.log(`User ID: ${userId}`);
-    console.log(`Coupon Code: ${couponCode}`);
-    console.log(`Booking ID: ${bookingId}`);
-    console.log(`Discount Amount: ${discountAmount}`);
-
     if (!userId || !couponCode || !discountAmount) {
       return res.status(400).json({
         success: false,
@@ -867,9 +797,6 @@ export const recordCouponUsage = async (req, res) => {
       discountAmount
     });
     await coupon.save();
-
-    console.log(`Coupon usage recorded: ${usage._id}`);
-
     return res.status(201).json({
       success: true,
       message: "Coupon usage recorded successfully",

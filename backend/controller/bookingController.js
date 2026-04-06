@@ -197,32 +197,11 @@ export const createBooking = async (req, res) => {
     } else {
       bookingData.finalAmount = finalTotalPrice;
     }
-
-    console.log("Creating booking with data:", JSON.stringify(bookingData, null, 2));
-
     // Validate data types before creating
-    console.log("\nData Type Validation:");
-    console.log("- serviceId type:", typeof bookingData.serviceId);
-    console.log("- eventDate type:", bookingData.eventDate instanceof Date ? "Date" : typeof bookingData.eventDate);
-    console.log("- eventTime type:", typeof bookingData.eventTime);
-    console.log("- servicePrice type:", typeof bookingData.servicePrice);
-    console.log("- totalPrice type:", typeof bookingData.totalPrice);
-    console.log("");
-
     // Create booking
     const booking = await Booking.create(bookingData);
-
-    console.log("✅ Booking created successfully:", booking._id);
-
     // CRITICAL: Update ticket quantities for ticketed events
-    console.log("\n=== TICKET UPDATE CHECK ===");
-    console.log("Event Type:", evtType);
-    console.log("Selected Tickets:", JSON.stringify(selectedTickets));
-    console.log("Service ID:", finalServiceId);
-    
     if (evtType === "ticketed" && selectedTickets && finalServiceId) {
-      console.log("\n🎫 UPDATING TICKET QUANTITIES FOR TICKETED EVENT");
-      
       const event = await Event.findById(finalServiceId);
       if (event && event.ticketTypes) {
         let updated = false;
@@ -234,10 +213,8 @@ export const createBooking = async (req, res) => {
             const oldSold = ticketType.quantitySold || 0;
             ticketType.quantitySold = oldSold + quantity;
             const totalQty = ticketType.quantityTotal || ticketType.quantity || 0;
-            console.log(`   ✅ ${ticketName}: ${oldSold} + ${quantity} = ${ticketType.quantitySold} (Total: ${totalQty})`);
             updated = true;
           } else {
-            console.log(`   ⚠️  Ticket type "${ticketName}" not found in event`);
           }
         });
         
@@ -252,16 +229,11 @@ export const createBooking = async (req, res) => {
           event.availableTickets = newAvailable;
           
           await event.save();
-          console.log(`   ✅ Event saved. New available tickets: ${event.availableTickets}`);
-          console.log("\n=== TICKET UPDATE COMPLETE ===\n");
         } else {
-          console.log("   ⚠️  No tickets were updated\n");
         }
       } else {
-        console.log("   ⚠️  Event not found or has no ticket types\n");
       }
     } else {
-      console.log("   ℹ️  Not a ticketed event or no tickets selected\n");
     }
 
     // Track coupon usage if promo code was used
@@ -280,7 +252,6 @@ export const createBooking = async (req, res) => {
           });
 
           if (existingUsage) {
-            console.log(`⚠️ User ${authenticatedUserId} already used coupon ${coupon.code}`);
             // We should have caught this in validation, but double-check here
           } else {
             // Update booking with detailed coupon information
@@ -314,7 +285,6 @@ export const createBooking = async (req, res) => {
             });
 
             await coupon.save();
-            console.log("✅ Coupon usage tracked successfully:", coupon.code);
           }
         }
       } catch (couponError) {
@@ -414,7 +384,6 @@ export const processPayment = async (req, res) => {
         description: `Payment for ${booking.serviceTitle}`, // Changed from "Payment for booking:"
         eventName: event?.title || booking.serviceTitle // Store event name separately
       });
-      console.log(`✅ Payment distribution completed for booking`);
     } catch (distError) {
       console.error("❌ Payment distribution failed:", distError);
     }
@@ -462,12 +431,6 @@ export const processPayment = async (req, res) => {
 export const getUserBookings = async (req, res) => {
   try {
     const userId = req.user.userId;
-    
-    console.log(`=== GET USER BOOKINGS ===`);
-    console.log(`User ID: ${userId}`);
-    console.log(`Request headers:`, req.headers);
-    console.log(`User from token:`, req.user);
-    
     // Validate userId
     if (!userId) {
       console.error('❌ User ID is missing from token!');
@@ -479,13 +442,8 @@ export const getUserBookings = async (req, res) => {
     
     const bookings = await Booking.find({ user: userId })
       .sort({ createdAt: -1 });
-
-    console.log(`Found ${bookings.length} bookings for user ${userId}`);
-    
     if (bookings.length === 0) {
-      console.log('ℹ️ No bookings found for this user');
     } else {
-      console.log('📋 Booking IDs:', bookings.map(b => b._id));
     }
 
     // Enhance bookings with event data if missing date/time
@@ -505,8 +463,6 @@ export const getUserBookings = async (req, res) => {
           try {
             const event = await Event.findById(bookingObj.serviceId);
             if (event) {
-              console.log(`Enhancing booking ${booking._id} with event data`);
-              
               // Update the booking in database with proper date/time if missing
               const updateData = {};
               if (event.date && !bookingObj.eventDate) {
@@ -1153,11 +1109,6 @@ export const requestAdvancePayment = async (req, res) => {
     const { id } = req.params; // Changed from bookingId to match router
     const { advancePercentage = 30 } = req.body; // Default 30%
     const merchantId = req.user.userId;
-
-    console.log(`💰 Requesting advance payment for booking: ${id}`);
-    console.log(`Merchant ID from token: ${merchantId}`);
-    console.log(`Request params:`, req.params);
-    
     // Validate MongoDB ObjectId format
     if (!id || id.length < 24) {
       console.error('❌ Invalid booking ID format:', id);
@@ -1171,7 +1122,6 @@ export const requestAdvancePayment = async (req, res) => {
     let booking;
     try {
       booking = await Booking.findById(id);
-      console.log('📋 Database query completed');
     } catch (dbError) {
       console.error('❌ Database error:', dbError.message);
       return res.status(503).json({
@@ -1179,27 +1129,9 @@ export const requestAdvancePayment = async (req, res) => {
         message: "Database connection failed. Please check MongoDB Atlas connection."
       });
     }
-    
-    console.log('📋 Raw booking found:', !!booking);
     if (booking) {
-      console.log('Booking data:', {
-        _id: booking._id,
-        serviceId: booking.serviceId || 'NULL',
-        merchant: booking.merchant || 'NOT SET',
-        eventType: booking.eventType,
-        serviceTitle: booking.serviceTitle,
-        user: booking.user,
-        status: booking.status
-      });
-      
       // CRITICAL: Check if merchant field matches requesting merchant
       const bookingMerchantId = booking.merchant?.toString();
-      console.log('Comparing merchant IDs:', {
-        bookingMerchantId,
-        requestingMerchantId: merchantId,
-        matches: bookingMerchantId === merchantId
-      });
-      
       if (!bookingMerchantId) {
         console.error('⚠️ WARNING: Booking has NO merchant field! This booking cannot be processed.');
         console.error('Booking details:', {
@@ -1214,7 +1146,6 @@ export const requestAdvancePayment = async (req, res) => {
           const Event = mongoose.model('Event');
           const event = await Event.findById(booking.serviceId);
           if (event && event.createdBy) {
-            console.log('✅ RECOVERED: Found event creator:', event.createdBy.toString());
             // Note: We don't auto-fix here to avoid data integrity issues, just log it
           } else {
             console.error('❌ Cannot recover: Event not found or has no creator');
@@ -1247,13 +1178,11 @@ export const requestAdvancePayment = async (req, res) => {
         const populatedService = await Booking.findById(bookingId).populate("serviceId", "createdBy");
         eventCreatedBy = populatedService.serviceId?.createdBy;
         if (eventCreatedBy) {
-          console.log('✅ Populated serviceId.createdBy:', eventCreatedBy);
         }
       } catch (popError) {
         console.error('Failed to populate serviceId:', popError.message);
       }
     } else {
-      console.warn('⚠️ Booking has no serviceId field');
     }
     
     // Try method 2: Query Event collection directly
@@ -1263,7 +1192,6 @@ export const requestAdvancePayment = async (req, res) => {
         const event = await Event.findById(booking.serviceId).select('createdBy');
         if (event && event.createdBy) {
           eventCreatedBy = event.createdBy;
-          console.log('✅ Found via direct Event query:', eventCreatedBy);
         }
       } catch (directError) {
         console.error('Direct Event query failed:', directError.message);
@@ -1273,11 +1201,7 @@ export const requestAdvancePayment = async (req, res) => {
     // Fallback to merchant field
     if (!eventCreatedBy && booking.merchant) {
       eventCreatedBy = booking.merchant;
-      console.log('✅ Using booking.merchant as fallback:', eventCreatedBy);
     }
-    
-    console.log('Final eventCreatedBy:', eventCreatedBy);
-    
     if (!eventCreatedBy) {
       console.error('❌ Cannot determine event owner. Booking data:', {
         _id: booking._id,
@@ -1293,7 +1217,6 @@ export const requestAdvancePayment = async (req, res) => {
 
     // Verify merchant owns this event
     if (String(eventCreatedBy) !== String(merchantId)) {
-      console.log(`❌ Merchant mismatch. Expected: ${merchantId}, Got: ${eventCreatedBy}`);
       return res.status(403).json({
         success: false,
         message: "Not authorized to manage this booking - you did not create this event"
@@ -1331,13 +1254,9 @@ export const requestAdvancePayment = async (req, res) => {
         type: "payment",
         bookingId: booking._id
       });
-      console.log(`📬 Notification sent to user ${booking.user}`);
     } catch (notifError) {
       console.error("Failed to create notification:", notifError);
     }
-
-    console.log(`✅ Advance payment requested: ₹${advanceAmount} (${advancePercentage}%)`);
-
     return res.status(200).json({
       success: true,
       message: "Advance payment request sent to customer",
@@ -1373,11 +1292,6 @@ export const payAdvance = async (req, res) => {
     const { id } = req.params; // Changed from bookingId to match router
     const { paymentMethod, paymentAmount } = req.body;
     const userId = req.user.userId;
-
-    console.log(`💳 Paying advance for booking: ${id}`);
-    console.log('Request body:', req.body);
-    console.log('User ID from token:', userId);
-
     // Find booking
     const booking = await Booking.findById(id);
     
@@ -1388,16 +1302,6 @@ export const payAdvance = async (req, res) => {
         message: "Booking not found"
       });
     }
-
-    console.log('Found booking:', {
-      _id: booking._id,
-      user: booking.user,
-      status: booking.status,
-      advanceRequired: booking.advanceRequired,
-      advancePaid: booking.advancePaid,
-      advanceAmount: booking.advanceAmount
-    });
-
     // Verify user owns this booking
     if (String(booking.user) !== String(userId)) {
       console.error('❌ User mismatch. Booking user:', booking.user, 'Token user:', userId);
@@ -1428,21 +1332,13 @@ export const payAdvance = async (req, res) => {
     // For advance payment, always use the stored advanceAmount
     // Frontend may or may not send paymentAmount - we use backend's value
     const actualAdvanceAmount = Number(booking.advanceAmount);
-    
-    console.log(`Using advance amount: ₹${actualAdvanceAmount} (from database)`);
-    console.log(`Payment amount from request: ${paymentAmount ? `₹${Number(paymentAmount)}` : 'NOT SENT'}`);
-
     // No validation needed - we trust the backend's stored advanceAmount
     // If frontend sends amount, we can log it but won't validate against it
     if (paymentAmount !== undefined && paymentAmount !== null) {
-      console.log(`Note: Payment amount ${Number(paymentAmount)} ${Number(paymentAmount) === actualAdvanceAmount ? 'matches' : 'does NOT match'} advance amount ${actualAdvanceAmount}`);
     }
 
     // Generate payment ID
     const paymentId = `ADV_PAY_${uuidv4().substring(0, 8).toUpperCase()}`;
-
-    console.log('💾 Updating booking with payment data...');
-    
     // Update booking with advance payment - use backend's stored amount
     booking.advancePaid = true;
     booking.advancePaymentDate = new Date();
@@ -1455,17 +1351,7 @@ export const payAdvance = async (req, res) => {
       paymentDate: new Date(),
       amount: actualAdvanceAmount  // Use backend's stored amount
     };
-
-    console.log('Booking data before save:', {
-      advancePaid: booking.advancePaid,
-      status: booking.status,
-      payment: booking.payment
-    });
-
     await booking.save();
-    
-    console.log('✅ Booking saved successfully');
-
     // Create notification for merchant
     try {
       await Notification.create({
@@ -1475,13 +1361,9 @@ export const payAdvance = async (req, res) => {
         type: "payment",
         bookingId: booking._id
       });
-      console.log(`📬 Notification sent to merchant`);
     } catch (notifError) {
       console.error("Failed to create notification:", notifError);
     }
-
-    console.log(`✅ Advance payment received: ₹${actualAdvanceAmount}`);
-
     return res.status(200).json({
       success: true,
       message: "Advance payment successful! Your booking is now awaiting merchant approval.",
@@ -1510,10 +1392,6 @@ export const acceptRejectBooking = async (req, res) => {
     const { id } = req.params; // Changed from bookingId to match router
     const { accepted, message } = req.body;
     const merchantId = req.user.userId;
-
-    console.log(`📋 Merchant ${accepted ? 'accepting' : 'rejecting'} booking: ${id}`);
-    console.log(`Request params:`, req.params);
-
     if (typeof accepted !== 'boolean') {
       return res.status(400).json({
         success: false,
@@ -1531,13 +1409,6 @@ export const acceptRejectBooking = async (req, res) => {
         message: "Booking not found"
       });
     }
-
-    console.log('📋 Booking found:', {
-      _id: booking._id,
-      merchant: booking.merchant?.toString(),
-      serviceIdCreatedBy: booking.serviceId?.createdBy?.toString()
-    });
-
     // Verify merchant owns this event - check both merchant field and serviceId.createdBy
     const bookingMerchantId = booking.merchant?.toString();
     const serviceCreatorId = booking.serviceId?.createdBy?.toString();
@@ -1578,7 +1449,6 @@ export const acceptRejectBooking = async (req, res) => {
           type: "booking",
           bookingId: booking._id
         });
-        console.log(`📬 Confirmation notification sent to user`);
       } catch (notifError) {
         console.error("Failed to create notification:", notifError);
       }
@@ -1597,7 +1467,6 @@ export const acceptRejectBooking = async (req, res) => {
           type: "booking",
           bookingId: booking._id
         });
-        console.log(`📬 Rejection notification sent to user`);
       } catch (notifError) {
         console.error("Failed to create notification:", notifError);
       }
@@ -1630,10 +1499,6 @@ export const payRemainingAmount = async (req, res) => {
     const { id } = req.params; // Changed from bookingId to match router
     const { paymentMethod, paymentAmount } = req.body;
     const userId = req.user.userId;
-
-    console.log(`💳 Paying remaining amount for booking: ${id}`);
-    console.log('Request body:', req.body);
-
     // Find booking
     const booking = await Booking.findById(id);
     
@@ -1644,19 +1509,6 @@ export const payRemainingAmount = async (req, res) => {
         message: "Booking not found"
       });
     }
-
-    console.log('Found booking:', {
-      _id: booking._id,
-      user: booking.user,
-      status: booking.status,
-      advanceRequired: booking.advanceRequired,
-      advancePaid: booking.advancePaid,
-      advanceAmount: booking.advanceAmount,
-      remainingAmount: booking.remainingAmount,
-      paymentStatus: booking.paymentStatus,
-      totalPrice: booking.totalPrice
-    });
-
     // Verify user owns this booking
     if (String(booking.user) !== String(userId)) {
       console.error('❌ User mismatch. Booking user:', booking.user, 'Token user:', userId);
@@ -1702,15 +1554,8 @@ export const payRemainingAmount = async (req, res) => {
 
     // For remaining payment, always use the stored remainingAmount
     const actualRemainingAmount = Number(booking.remainingAmount);
-    
-    console.log(`Using remaining amount: ₹${actualRemainingAmount} (from database)`);
-    console.log(`Payment amount from request: ${paymentAmount ? `₹${Number(paymentAmount)}` : 'NOT SENT'}`);
-
     // Generate payment ID for remaining payment
     const paymentId = `REM_PAY_${uuidv4().substring(0, 8).toUpperCase()}`;
-
-    console.log('💾 Updating booking with remaining payment data...');
-    
     // Update booking with final payment - use backend's stored amount
     booking.paymentStatus = "paid";
     booking.payment = {
@@ -1720,17 +1565,7 @@ export const payRemainingAmount = async (req, res) => {
       paymentDate: new Date(),
       amount: Number(booking.payment?.amount || 0) + actualRemainingAmount  // Add remaining to existing payment
     };
-
-    console.log('Booking data before save:', {
-      paymentStatus: booking.paymentStatus,
-      payment: booking.payment,
-      status: booking.status
-    });
-
     await booking.save();
-    
-    console.log('✅ Booking saved successfully');
-
     // Create notification for merchant
     try {
       await Notification.create({
@@ -1740,13 +1575,9 @@ export const payRemainingAmount = async (req, res) => {
         type: "payment",
         bookingId: booking._id
       });
-      console.log(`📬 Final payment notification sent to merchant`);
     } catch (notifError) {
       console.error("Failed to create notification:", notifError);
     }
-
-    console.log(`✅ Remaining payment received: ₹${actualRemainingAmount}`);
-
     return res.status(200).json({
       success: true,
       message: "Final payment successful! Your booking is complete.",
@@ -1772,36 +1603,22 @@ export const payRemainingAmount = async (req, res) => {
 export const getMerchantAdvanceRequests = async (req, res) => {
   try {
     const merchantId = req.user.userId;
-
-    console.log(`📋 Getting advance requests for merchant: ${merchantId}`);
-
     // Get all events created by this merchant
     const merchantEvents = await Event.find({ createdBy: merchantId }).select('_id');
     const eventIds = merchantEvents.map(ev => ev._id.toString());
-
-    console.log(`Merchant has ${merchantEvents.length} events`);
-    console.log('Event IDs:', eventIds);
-
     // Get ALL bookings for these events (not filtering by status for debugging)
     const allBookings = await Booking.find({
       serviceId: { $in: eventIds }
     })
     .populate('user', 'name email phone')
     .sort({ createdAt: -1 });
-
-    console.log(`Found ${allBookings.length} total bookings for merchant events`);
-
     // Filter to only those in advance workflow
     const bookings = allBookings.filter(b => 
       b.eventType === 'full-service' && 
       ['pending', 'awaiting_advance', 'advance_paid'].includes(b.status)
     );
-
-    console.log(`Filtered to ${bookings.length} bookings in advance workflow`);
-    
     // Log booking IDs for debugging
     bookings.forEach(b => {
-      console.log(`Booking: ${b._id} - Status: ${b.status} - Title: ${b.serviceTitle}`);
     });
 
     return res.status(200).json({
@@ -1822,9 +1639,6 @@ export const validateTicket = async (req, res) => {
   try {
     const { ticketId } = req.params;
     const merchantId = req.user.userId;
-
-    console.log(`🎫 Validating ticket: ${ticketId} by merchant: ${merchantId}`);
-
     if (!ticketId || ticketId.trim() === "") {
       return res.status(400).json({
         success: false,
@@ -1863,19 +1677,9 @@ export const validateTicket = async (req, res) => {
         message: "Ticket not found"
       });
     }
-
-    console.log(`📋 Booking found:`, {
-      bookingId: booking._id,
-      serviceId: booking.serviceId,
-      hasEvent: !!booking.serviceId
-    });
-
     // Verify this booking belongs to merchant's event
     // Use the populated serviceId if available, otherwise use the string ID
     let eventId = booking.serviceId?._id || booking.serviceId;
-    
-    console.log(`🔍 Checking if event ${eventId} belongs to merchant ${merchantId}`);
-    
     const event = await Event.findOne({
       _id: eventId,
       createdBy: merchantId
@@ -1910,9 +1714,6 @@ export const validateTicket = async (req, res) => {
     booking.ticket.isUsed = true;
     booking.ticket.usedAt = new Date();
     await booking.save();
-
-    console.log(`✅ Ticket validated successfully: ${ticketNumber}`);
-
     return res.status(200).json({
       success: true,
       message: "Ticket validated successfully",
@@ -1938,9 +1739,6 @@ export const validateBookingTickets = async (req, res) => {
   try {
     const { id } = req.params;
     const merchantId = req.user.userId;
-
-    console.log(`🎫 Validating all tickets for booking: ${id} by merchant: ${merchantId}`);
-
     // Find booking
     const booking = await Booking.findById(id)
       .populate("user", "name email")
@@ -1992,9 +1790,6 @@ export const validateBookingTickets = async (req, res) => {
     booking.ticket.isUsed = true;
     booking.ticket.usedAt = new Date();
     await booking.save();
-
-    console.log(`✅ All ${totalTickets} tickets validated successfully`);
-
     return res.status(200).json({
       success: true,
       message: `Successfully validated ${totalTickets} ticket(s)`,
