@@ -73,7 +73,7 @@ export const validateCoupon = async (req, res) => {
 
     // Also check usageHistory in coupon for backward compatibility
     const existingUsageInHistory = coupon.usageHistory.find(
-      usage => usage.user.toString() === userId.toString()
+      usage => usage.user && usage.user.toString() === userId.toString()
     );
 
     if (existingUsageInHistory) {
@@ -136,17 +136,18 @@ export const validateCoupon = async (req, res) => {
 // Apply coupon and calculate discount
 export const applyCoupon = async (req, res) => {
   try {
-    const { code, totalAmount, eventId } = req.body;
+    const { code, eventId } = req.body;
+    const totalAmount = parseFloat(req.body.totalAmount);
     const userId = req.user.userId || req.user._id;
     // Validate input
-    if (!code || !totalAmount) {
+    if (!code || !req.body.totalAmount) {
       return res.status(400).json({
         success: false,
         message: "Coupon code and total amount are required"
       });
     }
 
-    if (totalAmount <= 0) {
+    if (isNaN(totalAmount) || totalAmount <= 0) {
       return res.status(400).json({
         success: false,
         message: "Invalid total amount"
@@ -205,7 +206,7 @@ export const applyCoupon = async (req, res) => {
 
     // Also check usageHistory in coupon for backward compatibility
     const existingUsageInHistory = coupon.usageHistory.find(
-      usage => usage.user.toString() === userId.toString()
+      usage => usage.user && usage.user.toString() === userId.toString()
     );
 
     if (existingUsageInHistory) {

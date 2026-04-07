@@ -34,6 +34,7 @@ import AdminNotifications from "./pages/dashboards/AdminNotifications";
 import MerchantDashboard from "./pages/dashboards/MerchantDashboard";
 import MerchantNotifications from "./pages/dashboards/MerchantNotifications";
 import MerchantAnalytics from "./pages/dashboards/MerchantAnalytics";
+import MerchantRatings from "./pages/dashboards/MerchantRatings";
 import MerchantTicketValidation from "./pages/dashboards/MerchantTicketValidation";
 import MerchantMarketing from "./pages/dashboards/MerchantMarketing";
 import MerchantEarnings from "./pages/dashboards/MerchantEarnings";
@@ -552,6 +553,17 @@ const AppContent = () => {
               <PrivateRoute>
                 <RoleRoute role="merchant">
                   <MerchantAnalytics />
+                </RoleRoute>
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/dashboard/merchant/ratings"
+            element={
+              <PrivateRoute>
+                <RoleRoute role="merchant">
+                  <MerchantRatings />
                 </RoleRoute>
               </PrivateRoute>
             }

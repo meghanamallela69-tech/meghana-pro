@@ -7,7 +7,10 @@ const eventSchema = new mongoose.Schema(
     category: { type: String, default: "" },
     eventType: { type: String, enum: ["full-service", "ticketed"], default: "full-service" },
     price: { type: Number, default: 0 },
-    rating: { type: Number, default: 0, min: 0, max: 5 },
+    rating: {
+      average: { type: Number, default: 0, min: 0, max: 5 },
+      totalRatings: { type: Number, default: 0 }
+    },
     // Location & schedule
     location: { type: String, default: "" },
     date: { type: Date, default: null },

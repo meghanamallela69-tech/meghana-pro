@@ -184,14 +184,14 @@ const ServiceDetails = () => {
             </div>
 
             {/* Rating */}
-            {service.rating > 0 && (
+            {(service.rating?.average > 0) && (
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1">
                   {[...Array(5)].map((_, i) => (
                     <FaStar
                       key={i}
                       className={`text-lg ${
-                        i < Math.floor(service.rating)
+                        i < Math.floor(service.rating.average)
                           ? "text-yellow-400"
                           : "text-gray-200"
                       }`}
@@ -199,9 +199,12 @@ const ServiceDetails = () => {
                   ))}
                 </div>
                 <span className="text-lg font-semibold text-gray-700">
-                  {service.rating.toFixed(1)}
+                  {service.rating.average.toFixed(1)}
                 </span>
                 <span className="text-gray-500">out of 5</span>
+                {service.rating.totalRatings > 0 && (
+                  <span className="text-sm text-gray-400">({service.rating.totalRatings})</span>
+                )}
               </div>
             )}
 

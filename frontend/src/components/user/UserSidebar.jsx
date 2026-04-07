@@ -13,18 +13,21 @@ const Item = ({ icon: Icon, label, to, badge }) => (
   <NavLink
     to={to}
     className={({ isActive }) =>
-      `flex items-center justify-between gap-3 px-4 py-2 rounded-md transition ${
+      `flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all ${
         isActive ? "bg-blue-600 text-white" : "text-gray-700 hover:bg-blue-50 hover:text-blue-600"
       }`
     }
+    style={{ overflow: "visible" }}
   >
-    <div className="flex items-center gap-3">
-      <Icon className="text-lg" />
-      <span className="text-sm font-medium">{label}</span>
-    </div>
+    <Icon style={{ fontSize: 17, flexShrink: 0 }} />
+    <span style={{ fontSize: 13, fontWeight: 500, flex: 1 }}>{label}</span>
     {badge !== undefined && badge > 0 && (
-      <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center">
-        {badge > 99 ? '99+' : badge}
+      <span style={{
+        background: "#ef4444", color: "#fff", fontSize: 11, fontWeight: 700,
+        padding: "1px 7px", borderRadius: 20, minWidth: 20, textAlign: "center",
+        flexShrink: 0, lineHeight: "18px",
+      }}>
+        {badge > 99 ? "99+" : badge}
       </span>
     )}
   </NavLink>
@@ -57,50 +60,39 @@ const UserSidebar = ({ onLogout, onClose }) => {
       const notifResponse = await axios.get(`${API_BASE}/notifications/unread-counts`, { 
         headers: authHeaders(token) 
       });
-      if (notifResponse.data.success) setNotificationCount(notifResponse.data.data?.totalUnread || 0);
+      if (notifResponse.data.success) setNotificationCount(notifResponse.data.data?.total || 0);
     } catch {}
   };
 
   return (
-    <div className="h-full w-64 bg-white text-gray-800 flex flex-col border-r border-gray-200">
-      {/* Header with close button on mobile */}
-      <div className="px-4 py-4 text-lg font-semibold border-b border-gray-200 text-blue-600 flex items-center justify-between">
+    <div style={{ height: "100%", width: "100%", background: "#fff", display: "flex", flexDirection: "column" }}>
+      <div className="px-4 py-4 text-lg font-semibold border-b border-gray-200 text-blue-600 flex items-center justify-between" style={{ flexShrink: 0 }}>
         <span>User Dashboard</span>
-        <button onClick={onClose} className="lg:hidden p-1 rounded hover:bg-gray-100 text-gray-500">
+        <button onClick={onClose} className="p-1 rounded hover:bg-gray-100 text-gray-500">
           <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
             <path d="M6 18L18 6M6 6l12 12"/>
           </svg>
         </button>
       </div>
-      <div role="navigation" className="flex-1 px-2 py-2 space-y-1 overflow-y-auto">
+      <div role="navigation" style={{ flex: 1, overflowY: "auto", overflowX: "visible", padding: "8px" }}>
         <Item icon={RxDashboard} label="Dashboard" to="/dashboard/user" />
         <Item icon={BsSearch} label="Browse Events" to="/dashboard/user/browse" />
         <Item icon={FaTicketAlt} label="My Bookings" to="/dashboard/user/bookings" />
         <Item icon={FaCreditCard} label="Payments" to="/dashboard/user/payments" />
-        <Item 
-          icon={FaEnvelope} 
-          label="Messages" 
-          to="/dashboard/user/messages" 
-          badge={messageCount} 
-        />
+        <Item icon={FaEnvelope} label="Messages" to="/dashboard/user/messages" badge={messageCount} />
         <Item icon={BsBookmarkHeart} label="Saved Events" to="/dashboard/user/saved" />
         <Item icon={FaStar} label="My Reviews" to="/dashboard/user/reviews" />
-        <Item 
-          icon={FiBell} 
-          label="Notifications" 
-          to="/dashboard/user/notifications" 
-          badge={notificationCount} 
-        />
+        <Item icon={FiBell} label="Notifications" to="/dashboard/user/notifications" badge={notificationCount} />
         <Item icon={FaUser} label="My Profile" to="/dashboard/user/profile" />
         <Item icon={FaHome} label="Back to Home" to="/home" />
       </div>
-      <div className="p-2 border-t border-gray-200">
+      <div style={{ padding: "12px", borderTop: "1px solid #e5e7eb", flexShrink: 0 }}>
         <button
           onClick={onLogout}
-          className="w-full flex items-center gap-3 justify-center px-4 py-2 rounded-md bg-red-500 text-white transition hover:bg-red-600 shadow-sm"
+          style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "10px 16px", borderRadius: 8, background: "#ef4444", color: "#fff", border: "none", cursor: "pointer", fontSize: 14, fontWeight: 600 }}
         >
-          <FiLogOut className="text-lg" />
-          <span className="text-sm font-medium">Logout</span>
+          <FiLogOut style={{ fontSize: 16 }} />
+          <span>Logout</span>
         </button>
       </div>
     </div>

@@ -30,12 +30,12 @@ const AdminTopbar = ({ onToggleSidebar, profileName = "Admin", onLogout }) => {
     <header className="sticky top-0 z-50 bg-white border-b">
       <div className="flex items-center justify-between px-4 py-3">
 
-        <button className="tb-hamburger" onClick={onToggleSidebar}
-          style={{ padding: 8, border: "none", background: "transparent", cursor: "pointer", fontSize: 20 }}>
+        <button onClick={onToggleSidebar}
+          style={{ padding: 8, border: "none", background: "transparent", cursor: "pointer", fontSize: 22, lineHeight: 1, color: "#374151" }}>
           ☰
         </button>
 
-        <div className="tb-logo font-semibold flex items-center gap-2">
+        <div className="font-semibold flex items-center gap-2" style={{ fontSize: 15 }}>
           <BsCalendarEvent />
           <span>{SITE_NAME}</span>
         </div>
@@ -72,16 +72,7 @@ const AdminTopbar = ({ onToggleSidebar, profileName = "Admin", onLogout }) => {
       </div>
 
       <style>{`
-        @media (max-width: 1023px) {
-          .tb-hamburger { display: block !important; }
-          .tb-logo      { display: none !important; }
-          .tb-name      { display: none !important; }
-        }
-        @media (min-width: 1024px) {
-          .tb-hamburger { display: none !important; }
-          .tb-logo      { display: flex !important; }
-          .tb-name      { display: inline !important; }
-        }
+        .tb-name { display: inline !important; }
       `}</style>
     </header>
   );

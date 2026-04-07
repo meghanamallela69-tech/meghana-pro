@@ -64,6 +64,8 @@ app.use(express.urlencoded({ extended: true }));
 const SKIP_LOG_PATHS = [
   "/api/v1/notifications/unread-counts",
   "/api/v1/message/unread-count",
+  "/api/v1/events",
+  "/api/v1/coupons/available",
 ];
 
 app.use((req, res, next) => {

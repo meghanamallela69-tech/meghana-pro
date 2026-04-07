@@ -688,7 +688,7 @@ export const rejectFullServiceBooking = async (req, res) => {
         message: `Your service booking for "${booking.eventTitle}" has been rejected. ${reason ? `Reason: ${reason}` : ''}`,
         eventId: booking.eventId,
         bookingId: booking._id,
-        type: "booking_rejected"
+        type: "booking_cancelled"
       });
     } catch (notifError) {
       console.error("Failed to create notification:", notifError);
@@ -862,7 +862,7 @@ export const acceptBooking = async (req, res) => {
         message: `Your booking for "${booking.eventTitle}" has been accepted. Please proceed to payment.`,
         eventId: booking.eventId,
         bookingId: booking._id,
-        type: "booking_accepted"
+        type: "booking_approved"
       });
     } catch (notifError) {
       console.error("Failed to create notification:", notifError);
@@ -923,7 +923,7 @@ export const rejectBooking = async (req, res) => {
         message: `Your booking for "${booking.eventTitle}" has been rejected. ${reason ? `Reason: ${reason}` : ''}`,
         eventId: booking.eventId,
         bookingId: booking._id,
-        type: "booking_rejected"
+        type: "booking_cancelled"
       });
     } catch (notifError) {
       console.error("Failed to create notification:", notifError);
@@ -1142,12 +1142,15 @@ export const addRating = async (req, res) => {
       const { Event } = await import("../models/eventSchema.js");
       const event = await Event.findById(booking.eventId);
       if (event) {
-        const currentTotal = event.rating.average * event.rating.totalRatings;
-        const newTotalRatings = event.rating.totalRatings + 1;
-        const newAverage = (currentTotal + rating) / newTotalRatings;
+        const currentAvg = event.rating?.average || 0;
+        const currentTotal = event.rating?.totalRatings || 0;
+        const newTotalRatings = currentTotal + 1;
+        const newAverage = (currentAvg * currentTotal + rating) / newTotalRatings;
         
-        event.rating.average = Math.round(newAverage * 10) / 10; // Round to 1 decimal
-        event.rating.totalRatings = newTotalRatings;
+        event.rating = {
+          average: Math.round(newAverage * 10) / 10,
+          totalRatings: newTotalRatings
+        };
         await event.save();
         
       }
@@ -1155,16 +1158,16 @@ export const addRating = async (req, res) => {
       console.error("Failed to update event rating:", eventError);
     }
 
-    // Also create a rating record in Rating collection
+    // Also create a record in Review collection (for event reviews display)
     try {
-      const { Rating } = await import("../models/ratingSchema.js");
-      await Rating.findOneAndUpdate(
+      const { Review } = await import("../models/reviewSchema.js");
+      await Review.findOneAndUpdate(
         { user: userId, event: booking.eventId },
-        { rating, review },
+        { rating, reviewText: review || "" },
         { upsert: true, new: true }
       );
-    } catch (ratingError) {
-      console.error("Failed to create rating record:", ratingError);
+    } catch (reviewError) {
+      console.error("Failed to create review record:", reviewError);
     }
     return res.status(200).json({
       success: true,
@@ -1536,10 +1539,25 @@ export const cancelBooking = async (req, res) => {
         message: `Your booking for "${booking.eventTitle || 'Event'}" has been cancelled successfully.`,
         eventId: booking.eventId,
         bookingId: booking._id,
-        type: "booking"
+        type: "booking_cancelled"
       });
     } catch (notifError) {
       console.error("Failed to create cancellation notification:", notifError);
+    }
+
+    // Notify merchant about cancellation
+    if (booking.merchant) {
+      try {
+        await Notification.create({
+          user: booking.merchant,
+          message: `Booking for "${booking.eventTitle || 'Event'}" has been cancelled by the customer.`,
+          eventId: booking.eventId,
+          bookingId: booking._id,
+          type: "booking_cancelled"
+        });
+      } catch (notifError) {
+        console.error("Failed to create merchant cancellation notification:", notifError);
+      }
     }
     return res.status(200).json({
       success: true,

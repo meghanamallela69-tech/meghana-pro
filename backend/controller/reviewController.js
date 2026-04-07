@@ -25,27 +25,19 @@ export const createReview = async (req, res) => {
       });
     }
 
-    // Check if user booked this event
+    // Check if user booked this event (check both serviceId and eventId fields)
     const booking = await Booking.findOne({
       user: userId,
-      eventId: eventId,
-      status: { $in: ["confirmed", "completed"] }
+      $or: [
+        { serviceId: eventId.toString() },
+        { eventId: eventId }
+      ]
     });
 
     if (!booking) {
       return res.status(403).json({
         success: false,
         message: "You can only review events you have booked"
-      });
-    }
-
-    // Check if event is completed
-    const now = new Date();
-    const eventDate = new Date(event.date || booking.serviceDate);
-    if (eventDate > now) {
-      return res.status(400).json({
-        success: false,
-        message: "You can only review events after they are completed"
       });
     }
 
@@ -182,13 +174,44 @@ export const deleteReview = async (req, res) => {
 // Get latest reviews (public – for homepage testimonials)
 export const getLatestReviews = async (req, res) => {
   try {
-    const reviews = await Review.find({ reviewText: { $exists: true, $ne: "" } })
+    // Get reviews from Review collection with non-empty text
+    const allReviews = await Review.find({})
       .populate("user", "name")
       .populate("event", "title")
-      .sort({ createdAt: -1 })
-      .limit(6);
+      .sort({ createdAt: -1 });
 
-    return res.status(200).json({ success: true, reviews });
+    // Filter in JS to be safe — only keep reviews with actual text
+    const reviews = allReviews
+      .filter(r => r.reviewText && r.reviewText.trim().length > 0)
+      .slice(0, 6);
+
+    // If not enough, supplement from Booking collection ratings that have review text
+    let result = reviews;
+    if (reviews.length < 6) {
+      const bookingReviews = await Booking.find({
+        "rating.score": { $exists: true },
+        "rating.review": { $exists: true }
+      })
+        .populate("user", "name")
+        .populate("eventId", "title")
+        .sort({ updatedAt: -1 });
+
+      const mapped = bookingReviews
+        .filter(b => b.rating?.review && b.rating.review.trim().length > 0)
+        .slice(0, 6 - reviews.length)
+        .map(b => ({
+          _id: b._id,
+          user: b.user,
+          event: b.eventId,
+          rating: b.rating.score,
+          reviewText: b.rating.review,
+          createdAt: b.rating.createdAt || b.updatedAt
+        }));
+
+      result = [...reviews, ...mapped];
+    }
+
+    return res.status(200).json({ success: true, reviews: result });
   } catch (error) {
     return res.status(500).json({ success: false, message: "Failed to get reviews" });
   }

@@ -451,6 +451,20 @@ export const getAllBookings = async (req, res) => {
 
     // Format bookings for display
     const formattedBookings = allBookings.map(booking => {
+      // Calculate total quantity correctly
+      let quantity = 1;
+      if (booking.eventType === "ticketed") {
+        // Sum all selected ticket quantities if available
+        if (booking.selectedTickets && booking.selectedTickets.size > 0) {
+          quantity = Array.from(booking.selectedTickets.values()).reduce((sum, q) => sum + q, 0);
+        } else if (booking.ticket?.quantity) {
+          quantity = booking.ticket.quantity;
+        }
+      } else {
+        // Full-service: use guestCount
+        quantity = booking.guestCount || 1;
+      }
+
       return {
         _id: booking._id,
         bookingId: booking._id,
@@ -461,10 +475,10 @@ export const getAllBookings = async (req, res) => {
         date: booking.eventDate || booking.bookingDate,
         time: booking.eventTime || 'N/A',
         location: booking.location || 'N/A',
-        quantity: booking.ticket?.quantity || booking.guestCount || 1,
-        totalAmount: booking.totalPrice || booking.servicePrice || 0,
-        paymentStatus: booking.payment?.paid ? 'paid' : 'pending',
-        bookingStatus: booking.status || 'pending',
+        quantity,
+        totalAmount: booking.totalPrice || booking.finalAmount || booking.servicePrice || 0,
+        paymentStatus: booking.paymentStatus || (booking.payment?.paid ? 'paid' : 'pending'),
+        bookingStatus: booking.bookingStatus || booking.status || 'pending',
         createdAt: booking.createdAt
       };
     });

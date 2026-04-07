@@ -83,7 +83,7 @@ const Services = () => {
         id: ev._id,
         description: ev.description || ev.title,
         price: ev.price || 0,
-        rating: ev.rating || 0,
+        rating: ev.rating?.average || 0,
         category: (ev.category || "other").toLowerCase(),
         images: ev.images || [],
       }));

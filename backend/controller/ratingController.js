@@ -25,27 +25,19 @@ export const createRating = async (req, res) => {
       });
     }
 
-    // Check if user booked this event
+    // Check if user booked this event (check both serviceId and eventId fields)
     const booking = await Booking.findOne({
       user: userId,
-      eventId: eventId,
-      status: { $in: ["confirmed", "completed"] }
+      $or: [
+        { serviceId: eventId.toString() },
+        { eventId: eventId }
+      ]
     });
 
     if (!booking) {
       return res.status(403).json({
         success: false,
         message: "You can only rate events you have booked"
-      });
-    }
-
-    // Check if event is completed
-    const now = new Date();
-    const eventDate = new Date(event.date || booking.serviceDate);
-    if (eventDate > now) {
-      return res.status(400).json({
-        success: false,
-        message: "You can only rate events after they are completed"
       });
     }
 

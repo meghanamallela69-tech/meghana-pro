@@ -15,7 +15,8 @@ import {
   getMerchantBookings,
   approveBooking,
   updateBookingStatus,
-  getBookingDetails
+  getBookingDetails,
+  getMerchantRatings
 } from "../controller/merchantController.js";
 import { upload } from "../util/cloudinary.js";
 
@@ -47,5 +48,6 @@ router.get("/bookings", auth, ensureRole("merchant"), getMerchantBookings);
 router.put("/bookings/:bookingId/approve", auth, ensureRole("merchant"), approveBooking);
 router.put("/bookings/:bookingId/status", auth, ensureRole("merchant"), updateBookingStatus);
 router.get("/bookings/:bookingId/details", auth, ensureRole("merchant"), getBookingDetails);
+router.get("/ratings", auth, ensureRole("merchant"), getMerchantRatings);
 
 export default router;

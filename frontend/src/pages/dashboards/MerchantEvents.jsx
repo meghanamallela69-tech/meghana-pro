@@ -105,9 +105,9 @@ const MerchantEvents = () => {
                     <h4 className="text-white font-semibold truncate">{ev.title}</h4>
                     <span className="text-white/80 text-xs">{ev.category || "Event"}</span>
                   </div>
-                  {ev.rating > 0 && (
+                  {(ev.rating?.average > 0) && (
                     <span className="absolute top-2 left-2 px-2 py-1 bg-yellow-400 text-yellow-900 rounded text-xs font-medium flex items-center gap-1">
-                      ⭐ {ev.rating.toFixed(1)}
+                      ⭐ {ev.rating.average.toFixed(1)}
                     </span>
                   )}
                 </div>

@@ -258,12 +258,17 @@ const UserEventDetails = () => {
               </div>
 
               {/* Rating */}
-              {event.rating > 0 && (
+              {(event.rating?.average > 0) && (
                 <div className="flex items-center gap-2 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
                   <div className="text-2xl">⭐</div>
                   <div>
                     <p className="text-sm text-gray-600">Event Rating</p>
-                    <p className="font-semibold text-lg text-yellow-700">{event.rating.toFixed(1)} / 5.0</p>
+                    <p className="font-semibold text-lg text-yellow-700">
+                      {event.rating.average.toFixed(1)} / 5.0
+                      {event.rating.totalRatings > 0 && (
+                        <span className="text-sm font-normal text-gray-500 ml-1">({event.rating.totalRatings} reviews)</span>
+                      )}
+                    </p>
                   </div>
                 </div>
               )}

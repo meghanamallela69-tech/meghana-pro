@@ -447,12 +447,33 @@ const UserMyEvents = () => {
                       </div>
                     </div>
 
-                    {/* Guest Count */}
-                    {booking.guestCount && (
-                      <div className="text-sm text-gray-600 mb-4">
-                        <span className="font-medium">{booking.guestCount}</span> guest{booking.guestCount !== 1 ? 's' : ''}
-                      </div>
-                    )}
+                    {/* Guest Count / Ticket Quantity */}
+                    {(() => {
+                      if (booking.eventType === "ticketed") {
+                        // Sum selectedTickets or fall back to ticket.quantity
+                        let qty = booking.ticket?.quantity || 1;
+                        if (booking.selectedTickets) {
+                          const entries = booking.selectedTickets instanceof Map
+                            ? Array.from(booking.selectedTickets.entries())
+                            : Object.entries(booking.selectedTickets);
+                          const total = entries.reduce((s, [, v]) => s + Number(v), 0);
+                          if (total > 0) qty = total;
+                        }
+                        return (
+                          <div className="text-sm text-gray-600 mb-4">
+                            <span className="font-medium">{qty}</span> ticket{qty !== 1 ? 's' : ''}
+                          </div>
+                        );
+                      }
+                      if (booking.guestCount) {
+                        return (
+                          <div className="text-sm text-gray-600 mb-4">
+                            <span className="font-medium">{booking.guestCount}</span> guest{booking.guestCount !== 1 ? 's' : ''}
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                 </div>
 

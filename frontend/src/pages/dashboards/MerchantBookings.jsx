@@ -421,9 +421,7 @@ const MerchantBookings = () => {
                       {booking.location || 'N/A'}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
-                      {booking.eventType === 'ticketed'
-                        ? (booking.ticketCount || booking.ticket?.quantity || (booking.selectedTickets ? Object.values(booking.selectedTickets).reduce((s, v) => s + v, 0) : null) || 1)
-                        : (booking.quantity || booking.guestCount || '—')}
+                      {booking.quantity || booking.guestCount || 1}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                       {booking.addons && booking.addons.length > 0 ? (

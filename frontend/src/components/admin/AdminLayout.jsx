@@ -15,48 +15,33 @@ const AdminLayout = ({ children }) => {
   return (
     <div style={{ minHeight: "100vh", background: "#f9fafb" }}>
 
-      <aside
-        className="app-sidebar"
-        style={{
-          position: "fixed", left: 0, top: 0,
-          height: "100%", width: 256,
-          background: "#fff", zIndex: 50,
-          boxShadow: "2px 0 8px rgba(0,0,0,0.08)",
-          transform: sidebarOpen ? "translateX(0)" : undefined,
-          transition: "transform 0.3s ease",
-          overflowY: "auto",
-        }}
-      >
+      {/* Drawer sidebar — hidden by default on ALL screen sizes */}
+      <aside style={{
+        position: "fixed", left: 0, top: 0,
+        height: "100%", width: 260,
+        background: "#fff", zIndex: 200,
+        boxShadow: "4px 0 20px rgba(0,0,0,0.15)",
+        transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)",
+        transition: "transform 0.28s cubic-bezier(0.4,0,0.2,1)",
+        overflow: "hidden",
+      }}>
         <AdminSidebar onLogout={handleLogout} onClose={() => setSidebarOpen(false)} />
       </aside>
 
+      {/* Backdrop */}
       {sidebarOpen && (
-        <div
-          className="sidebar-backdrop"
-          onClick={() => setSidebarOpen(false)}
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 40 }}
-        />
+        <div onClick={() => setSidebarOpen(false)} style={{
+          position: "fixed", inset: 0,
+          background: "rgba(0,0,0,0.45)",
+          zIndex: 199,
+        }} />
       )}
 
-      <div className="app-main" style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
-        <AdminTopbar
-          onToggleSidebar={() => setSidebarOpen(p => !p)}
-          onLogout={handleLogout}
-        />
+      {/* Full-width main — no margin offset */}
+      <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+        <AdminTopbar onToggleSidebar={() => setSidebarOpen(p => !p)} onLogout={handleLogout} />
         <main style={{ padding: "24px", flex: 1 }}>{children}</main>
       </div>
-
-      <style>{`
-        @media (min-width: 1024px) {
-          .app-sidebar { transform: translateX(0) !important; }
-          .app-main { margin-left: 256px; }
-          .sidebar-backdrop { display: none !important; }
-        }
-        @media (max-width: 1023px) {
-          .app-sidebar { transform: translateX(-100%); }
-          .app-main { margin-left: 0; }
-        }
-      `}</style>
     </div>
   );
 };

@@ -504,6 +504,15 @@ footer .banner .tag div button {
   margin-bottom: 20px;
   letter-spacing: 4px;
 }
+.upcoming-events .section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.upcoming-events .section-header h2 {
+  margin-bottom: 0;
+}
 .upcoming-events .banner {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));

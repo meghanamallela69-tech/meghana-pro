@@ -123,11 +123,11 @@ const EventBookingModal = ({ event, isOpen, onClose, onConfirm }) => {
     setCouponLoading(true);
     try {
       const response = await axios.post(
-        `${API_BASE}/coupons/validate`,
+        `${API_BASE}/coupons/apply`,
         { 
-          couponCode: coupon.code,
+          code: coupon.code,
+          totalAmount: originalTotal,
           eventId: safeEvent._id,
-          amount: originalTotal
         },
         { headers: authHeaders(token) }
       );
@@ -141,7 +141,7 @@ const EventBookingModal = ({ event, isOpen, onClose, onConfirm }) => {
         throw new Error(response.data.message || "Invalid coupon");
       }
     } catch (error) {
-      console.error("Coupon validation error:", error);
+      console.error("Coupon apply error:", error);
       toast.error(error.response?.data?.message || "Failed to apply coupon");
       setCouponData(null);
     } finally {
@@ -158,11 +158,11 @@ const EventBookingModal = ({ event, isOpen, onClose, onConfirm }) => {
     setCouponLoading(true);
     try {
       const response = await axios.post(
-        `${API_BASE}/coupons/validate`,
+        `${API_BASE}/coupons/apply`,
         { 
-          couponCode: couponCode.trim().toUpperCase(),
+          code: couponCode.trim().toUpperCase(),
+          totalAmount: originalTotal,
           eventId: safeEvent._id,
-          amount: originalTotal
         },
         { headers: authHeaders(token) }
       );
@@ -174,7 +174,7 @@ const EventBookingModal = ({ event, isOpen, onClose, onConfirm }) => {
         throw new Error(response.data.message || "Invalid coupon");
       }
     } catch (error) {
-      console.error("Coupon validation error:", error);
+      console.error("Coupon apply error:", error);
       toast.error(error.response?.data?.message || "Invalid or expired coupon");
       setCouponData(null);
     } finally {
@@ -376,20 +376,6 @@ const EventBookingModal = ({ event, isOpen, onClose, onConfirm }) => {
           {/* Promo Code Section */}
           {originalTotal > 0 && (
             <div className="border-t pt-4">
-              {/* Debug Info */}
-              <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-xs">
-                <div className="font-semibold text-yellow-800 mb-1">🔍 Debug Info:</div>
-                <div className="text-yellow-700 space-y-1">
-                  <div>Event: {safeEvent.title}</div>
-                  <div>Event ID: {safeEvent._id}</div>
-                  <div>Available Coupons: {availableCoupons.length}</div>
-                  <div>Coupon Dropdown Open: {showCouponDropdown ? 'Yes' : 'No'}</div>
-                  {availableCoupons.length > 0 && (
-                    <div>Coupons: {availableCoupons.map(c => c.code).join(', ')}</div>
-                  )}
-                </div>
-              </div>
-
               <h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
                 <span>🎟️</span> Have a Promo Code?
               </h4>
@@ -440,27 +426,17 @@ const EventBookingModal = ({ event, isOpen, onClose, onConfirm }) => {
                 <>
                   {/* Coupon Input with Apply Button */}
                   <div className="flex gap-2 mb-4">
-                    <div className="flex-1 relative">
-                      <input
-                        type="text"
-                        value={couponCode}
-                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                        placeholder="Enter promo code"
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent uppercase"
-                        disabled={couponLoading}
-                      />
-                      
-                      {/* Dropdown Arrow */}
-                      {availableCoupons.length > 0 && (
-                        <button
-                          onClick={() => setShowCouponDropdown(!showCouponDropdown)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-purple-600"
-                        >
-                          ▼
-                        </button>
-                      )}
-                    </div>
+                    <input
+                      type="text"
+                      value={couponCode}
+                      onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleManualApply(); } }}
+                      placeholder="Enter promo code"
+                      className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent uppercase"
+                      disabled={couponLoading}
+                    />
                     <button
+                      type="button"
                       onClick={handleManualApply}
                       disabled={!couponCode.trim() || couponLoading}
                       className="px-6 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
@@ -475,8 +451,8 @@ const EventBookingModal = ({ event, isOpen, onClose, onConfirm }) => {
                     </button>
                   </div>
 
-                  {/* Available Coupons Dropdown */}
-                  {showCouponDropdown && availableCoupons.length > 0 && (
+                  {/* Available Coupons — always visible */}
+                  {availableCoupons.length > 0 && (
                     <div className="mb-4 bg-purple-50 rounded-lg border border-purple-200 overflow-hidden">
                       <div className="p-3 bg-purple-100 border-b border-purple-200">
                         <div className="text-sm font-semibold text-purple-800 flex items-center gap-2">
@@ -489,8 +465,10 @@ const EventBookingModal = ({ event, isOpen, onClose, onConfirm }) => {
                             key={coupon._id}
                             className="p-3 bg-white border-b border-purple-100 last:border-0 hover:bg-purple-50 cursor-pointer transition"
                             onClick={() => {
-                              setCouponCode(coupon.code);
-                              applyCouponFromOffer(coupon);
+                              if (!couponLoading) {
+                                setCouponCode(coupon.code);
+                                applyCouponFromOffer(coupon);
+                              }
                             }}
                           >
                             <div className="flex items-center justify-between">
@@ -498,14 +476,15 @@ const EventBookingModal = ({ event, isOpen, onClose, onConfirm }) => {
                                 <div className="flex items-center gap-2 mb-1">
                                   <span className="font-bold text-purple-700">{coupon.code}</span>
                                   <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full font-medium">
-                                    {coupon.discountValue}% OFF
+                                    {coupon.discountType === "percentage" ? `${coupon.discountValue}% OFF` : `₹${coupon.discountValue} OFF`}
                                   </span>
                                 </div>
                                 <p className="text-xs text-gray-600">
-                                  {coupon.description || `${coupon.discountValue}% off on orders above ₹${coupon.minAmount || 0}`}
+                                  {coupon.description || `Save ${coupon.discountType === "percentage" ? `${coupon.discountValue}%` : `₹${coupon.discountValue}`} on orders above ₹${coupon.minAmount || 0}`}
                                 </p>
                               </div>
                               <button
+                                type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setCouponCode(coupon.code);
@@ -514,7 +493,7 @@ const EventBookingModal = ({ event, isOpen, onClose, onConfirm }) => {
                                 disabled={couponLoading}
                                 className="ml-3 px-4 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-xs font-medium disabled:opacity-50"
                               >
-                                Apply
+                                {couponLoading && couponCode === coupon.code ? "..." : "Apply"}
                               </button>
                             </div>
                           </div>

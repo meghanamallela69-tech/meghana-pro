@@ -7,6 +7,8 @@ import { toast } from "react-hot-toast";
 import { FiX, FiCalendar, FiClock, FiUsers, FiMinus, FiPlus, FiMapPin } from "react-icons/fi";
 import { FaRupeeSign, FaCheckCircle, FaStar } from "react-icons/fa";
 import PropTypes from "prop-types";
+import useCoupon from "../hooks/useCoupon";
+import CouponSection from "./CouponSection";
 
 const FullServiceBookingModal = ({ isOpen, onClose, event, onSuccess }) => {
   const { token } = useAuth();
@@ -16,20 +18,17 @@ const FullServiceBookingModal = ({ isOpen, onClose, event, onSuccess }) => {
   const [guests, setGuests] = useState(1);
   const [location, setLocation] = useState("");
   const [notes, setNotes] = useState("");
-  const [couponCode, setCouponCode] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState(null);
-  const [couponLoading, setCouponLoading] = useState(false);
-  const [couponError, setCouponError] = useState("");
-  const [availableCoupons, setAvailableCoupons] = useState([]);
-  const [showCouponList, setShowCouponList] = useState(false);
   const [selectedAddons, setSelectedAddons] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [activeImg, setActiveImg] = useState(0);
 
+  // ── Coupon hook — must be before any conditional returns ──────────────────
+  const coupon = useCoupon({ token, eventId: event?._id, getAmount: () => parseFloat(event?.price) || 0 });
+
   useEffect(() => {
     if (isOpen) {
       setDate(""); setTime(""); setGuests(1); setNotes(""); setActiveImg(0);
-      setLocation(""); setCouponCode(""); setAppliedCoupon(null); setShowCouponList(false); setCouponError("");
+      setLocation(""); coupon.reset();
       const normalizedAddons = (event?.addons || []).map(a => ({
         ...a,
         type: /catering|food|meal|veg|non.?veg|plate|per.?person|person/i.test(a.name)
@@ -42,44 +41,10 @@ const FullServiceBookingModal = ({ isOpen, onClose, event, onSuccess }) => {
     }
   }, [isOpen, event]);
 
-  // Fetch available coupons for this event
-  useEffect(() => {
-    if (!isOpen || !event?._id || !token) return;
-    axios.get(`${API_BASE}/coupons/available`, {
-      headers: authHeaders(token),
-      params: {
-        eventId: event._id,
-        serviceId: event._id,
-        totalAmount: 999999,
-        category: event.category || ""
-      }
-    })
-      .then(r => {
-        if (r.data.success) setAvailableCoupons(r.data.coupons || []);
-      })
-      .catch(() => setAvailableCoupons([]));
-  }, [isOpen, event, token]);
-
-  const couponRef = useRef(null);
-  const applyingRef = useRef(false); // prevent double-call
-
-  // Close coupon dropdown on outside click
-  useEffect(() => {
-    if (!showCouponList) return;
-    const handler = (e) => {
-      if (couponRef.current && !couponRef.current.contains(e.target)) {
-        setShowCouponList(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [showCouponList]);
-
   if (!isOpen || !event) return null;
 
   // Check if user is logged in
   if (!token) {
-    // Save event ID and redirect to login
     localStorage.setItem("bookingEventId", event._id);
     window.location.href = `/login?redirect=booking`;
     return null;
@@ -88,7 +53,6 @@ const FullServiceBookingModal = ({ isOpen, onClose, event, onSuccess }) => {
   const images = event.images?.map(i => i.url).filter(Boolean) || [];
   const mainImg = images[activeImg] || images[0] || "/party.jpg";
   const basePrice = event.price || 0;
-  // (handles old events where type was stored as "fixed" before schema update)
   const addons = (event.addons || []).map(a => ({
     ...a,
     type: /catering|food|meal|veg|non.?veg|plate|per.?person|person/i.test(a.name)
@@ -102,14 +66,7 @@ const FullServiceBookingModal = ({ isOpen, onClose, event, onSuccess }) => {
     return sum + (selectedAddons[a.name] ? a.price : 0);
   }, 0);
   const subtotal = basePrice + addonTotal;
-  const discount = appliedCoupon
-    ? (appliedCoupon.discountType === "percentage")
-      ? Math.min(
-          Math.round(subtotal * appliedCoupon.discountValue / 100),
-          appliedCoupon.maxDiscount || Infinity
-        )
-      : Math.min(appliedCoupon.discountValue, subtotal) // "flat" type
-    : 0;
+  const discount = coupon.discount;
   const total = Math.max(0, subtotal - discount);
   const fmt = (n) => `₹${Number(n).toLocaleString("en-IN")}`;
 
@@ -133,56 +90,6 @@ const FullServiceBookingModal = ({ isOpen, onClose, event, onSuccess }) => {
       return { ...p, [name]: newVal };
     });
   };
-
-  // ── Coupon ─────────────────────────────────────────────────────────────────
-  const applyCouponCode = async (codeOverride) => {
-    const code = (typeof codeOverride === "string" ? codeOverride : couponCode).trim().toUpperCase();
-    if (!code) return toast.error("Enter a coupon code");
-    if (couponLoading) return;
-    setCouponCode(code);
-    setCouponLoading(true);
-    setCouponError("");
-    try {
-      const base = parseFloat(event?.price) || 0;
-      const addonsAmt = addons.reduce((sum, a) => {
-        if (a.type === "per_person") return sum + (parseFloat(a.price) || 0) * (selectedAddons[a.name] || 0);
-        return sum + (selectedAddons[a.name] ? (parseFloat(a.price) || 0) : 0);
-      }, 0);
-      const computedSubtotal = base + addonsAmt;
-      const amountToSend = computedSubtotal > 0 ? computedSubtotal : base > 0 ? base : 1;
-
-      // Use /apply which returns discountAmount directly
-      const res = await axios.post(`${API_BASE}/coupons/apply`, {
-        code,
-        totalAmount: amountToSend,
-        eventId: event._id,
-      }, { headers: authHeaders(token) });
-
-      if (res.data.success) {
-        // Store coupon with discountAmount so total updates immediately
-        setAppliedCoupon({
-          ...res.data.coupon,
-          discountAmount: res.data.discountAmount,
-        });
-        setCouponError("");
-        toast.success(`Coupon "${code}" applied! You save ₹${res.data.discountAmount.toLocaleString("en-IN")}`);
-      } else {
-        const errMsg = res.data.message || "Invalid coupon";
-        setCouponError(errMsg);
-        setAppliedCoupon(null);
-        toast.error(errMsg, { duration: 4000 });
-      }
-    } catch (err) {
-      const msg = err.response?.data?.message || "Invalid coupon code";
-      setCouponError(msg);
-      setAppliedCoupon(null);
-      toast.error(msg, { duration: 4000 });
-    } finally {
-      setCouponLoading(false);
-    }
-  };
-
-  const removeCoupon = () => { setAppliedCoupon(null); setCouponCode(""); setCouponError(""); };
 
   // ── Current location ───────────────────────────────────────────────────────
   const getCurrentLocation = () => {
@@ -293,7 +200,7 @@ const FullServiceBookingModal = ({ isOpen, onClose, event, onSuccess }) => {
         selectedAddOns: selectedAddonsList,
         totalAmount: total,
         discount,
-        promoCode: appliedCoupon?.code || "",
+        promoCode: coupon.applied?.coupon?.code || "",
         status: "pending",
       };
       
@@ -317,7 +224,7 @@ const FullServiceBookingModal = ({ isOpen, onClose, event, onSuccess }) => {
           location,
           totalAmount: total,
           discount,
-          promoCode: appliedCoupon?.code || "",
+          promoCode: coupon.applied?.coupon?.code || "",
           selectedAddOns: selectedAddonsList,
         };
         console.log("📤 Calling onSuccess with booking data:", bookingData);
@@ -626,163 +533,7 @@ const FullServiceBookingModal = ({ isOpen, onClose, event, onSuccess }) => {
             )}
 
             {/* Coupon */}
-            <div style={{ marginBottom: 16 }} ref={couponRef}>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#374151", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                Coupon Code
-              </label>
-
-              {appliedCoupon ? (
-                /* ── Applied: full green bar ── */
-                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", background: "linear-gradient(135deg,#f0fdf4,#dcfce7)", border: "2px solid #16a34a", borderRadius: 12, boxShadow: "0 2px 8px rgba(22,163,74,0.15)" }}>
-                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#16a34a", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <svg width="16" height="16" fill="none" stroke="#fff" strokeWidth="3" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span style={{ fontSize: 14, fontWeight: 800, color: "#15803d", fontFamily: "monospace", letterSpacing: "0.08em" }}>{appliedCoupon.code}</span>
-                      <span style={{ fontSize: 12, fontWeight: 700, padding: "2px 8px", background: "#16a34a", color: "#fff", borderRadius: 20 }}>
-                        {appliedCoupon.discountType === "percentage" ? `${appliedCoupon.discountValue}% OFF` : `₹${appliedCoupon.discountValue} OFF`}
-                      </span>
-                    </div>
-                    <p style={{ fontSize: 11, color: "#16a34a", margin: "2px 0 0" }}>
-                      Discount applied to your total
-                    </p>
-                  </div>
-                  <button type="button" onClick={removeCoupon}
-                    style={{ fontSize: 11, color: "#dc2626", background: "rgba(220,38,38,0.08)", border: "1px solid rgba(220,38,38,0.2)", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontWeight: 700, flexShrink: 0 }}>
-                    Remove
-                  </button>
-                </div>
-              ) : (
-                <>
-                  {/* Input row */}
-                  <div style={{ display: "flex", gap: 8, marginBottom: couponError ? 6 : availableCoupons.length > 0 ? 10 : 0 }}>
-                    <input
-                      type="text"
-                      value={couponCode}
-                      onChange={e => { setCouponCode(e.target.value.toUpperCase()); setCouponError(""); }}
-                      onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); applyCouponCode(); } }}
-                      placeholder="Enter coupon code"
-                      style={{ flex: 1, padding: "10px 14px", border: `1.5px solid ${couponError ? "#ef4444" : "#e2e8f0"}`, borderRadius: 10, fontSize: 13, outline: "none", background: couponError ? "#fef2f2" : "#f8fafc", letterSpacing: "0.06em", fontWeight: 600, boxSizing: "border-box" }}
-                      onFocus={e => e.target.style.borderColor = couponError ? "#ef4444" : "#2563eb"}
-                      onBlur={e => e.target.style.borderColor = couponError ? "#ef4444" : "#e2e8f0"}
-                    />
-                    <button type="button" onClick={() => applyCouponCode()} disabled={couponLoading}
-                      style={{ padding: "0 18px", background: couponLoading ? "#93c5fd" : "#2563eb", color: "#fff", border: "none", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: couponLoading ? "not-allowed" : "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
-                      {couponLoading ? "..." : "Apply"}
-                    </button>
-                  </div>
-
-                  {/* Inline error */}
-                  {couponError && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 12px", background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 8, marginBottom: 8 }}>
-                      <svg width="13" height="13" fill="none" stroke="#ef4444" strokeWidth="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                      <span style={{ fontSize: 12, color: "#dc2626", fontWeight: 500 }}>{couponError}</span>
-                    </div>
-                  )}
-
-                  {/* Coupon cards — always visible, all look the same */}
-                  {availableCoupons.length > 0 && (
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                      {availableCoupons.slice(0, 4).map(c => {
-                        const isApplied = appliedCoupon?.code === c.code;
-                        const isLoading = couponLoading && couponCode === c.code;
-                        const isAlreadyUsed = c.alreadyUsed || !c.canUse;
-                        const discountLabel = c.discountType === "percentage"
-                          ? `${c.discountValue}% OFF`
-                          : `₹${c.discountValue} OFF`;
-
-                        return (
-                          <button
-                            key={c._id}
-                            type="button"
-                            onClick={() => {
-                              if (isAlreadyUsed) {
-                                toast.error(`You have already used coupon "${c.code}". Each coupon can only be used once per account.`);
-                                return;
-                              }
-                              if (!couponLoading) {
-                                isApplied ? removeCoupon() : applyCouponCode(c.code);
-                              }
-                            }}
-                            disabled={couponLoading}
-                            style={{
-                              display: "flex", flexDirection: "column", alignItems: "flex-start",
-                              padding: "12px 14px", borderRadius: 12, textAlign: "left",
-                              cursor: couponLoading ? "not-allowed" : "pointer",
-                              transition: "all 0.2s",
-                              background: isApplied
-                                ? "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)"
-                                : "#f8fafc",
-                              border: isApplied
-                                ? "2px solid #16a34a"
-                                : "1.5px dashed #cbd5e1",
-                              boxShadow: isApplied ? "0 2px 8px rgba(22,163,74,0.15)" : "none",
-                            }}
-                            onMouseEnter={e => {
-                              if (!couponLoading && !isApplied) {
-                                e.currentTarget.style.borderColor = "#2563eb";
-                                e.currentTarget.style.background = "linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)";
-                                e.currentTarget.style.boxShadow = "0 2px 8px rgba(37,99,235,0.12)";
-                              }
-                            }}
-                            onMouseLeave={e => {
-                              if (!couponLoading && !isApplied) {
-                                e.currentTarget.style.borderColor = "#cbd5e1";
-                                e.currentTarget.style.background = "#f8fafc";
-                                e.currentTarget.style.boxShadow = "none";
-                              }
-                            }}
-                          >
-                            {/* Top row: discount badge */}
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", marginBottom: 6 }}>
-                              <span style={{
-                                fontSize: 12, fontWeight: 800, letterSpacing: "0.04em",
-                                padding: "3px 10px", borderRadius: 20,
-                                background: isApplied ? "#16a34a" : "#2563eb",
-                                color: "#fff",
-                              }}>
-                                {isLoading ? "..." : discountLabel}
-                              </span>
-                              {isApplied && <span style={{ fontSize: 16, color: "#16a34a" }}>✓</span>}
-                            </div>
-
-                            {/* Code */}
-                            <span style={{
-                              fontSize: 13, fontWeight: 800,
-                              color: isApplied ? "#15803d" : "#0f172a",
-                              fontFamily: "monospace", letterSpacing: "0.1em",
-                            }}>
-                              {c.code}
-                            </span>
-
-                            {/* Description */}
-                            {c.description && (
-                              <span style={{ fontSize: 10, color: isApplied ? "#16a34a" : "#64748b", marginTop: 3, lineHeight: 1.4 }}>
-                                {c.description}
-                              </span>
-                            )}
-
-                            {/* Min amount */}
-                            {c.minAmount > 0 && (
-                              <span style={{ fontSize: 10, color: "#94a3b8", marginTop: 2 }}>
-                                Min ₹{c.minAmount.toLocaleString("en-IN")}
-                              </span>
-                            )}
-
-                            {isApplied && (
-                              <span style={{ fontSize: 10, fontWeight: 700, color: "#16a34a", marginTop: 4 }}>
-                                Tap to remove
-                              </span>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
+            <CouponSection token={token} eventId={event?._id} couponHook={coupon} />
 
             {/* Notes */}
             <div style={{ marginBottom: 16 }}>

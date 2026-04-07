@@ -651,9 +651,19 @@ export const getMerchantBookings = async (req, res) => {
         eventName: event?.title || booking.serviceTitle || booking.eventTitle || 'Unknown Event',
         eventType: booking.eventType || 'full-service',
         ticketType: booking.ticket?.ticketType || (booking.selectedTickets ? 'Multiple' : 'N/A'),
-        quantity: booking.eventType === 'ticketed'
-          ? (booking.ticketCount || booking.ticket?.quantity || (booking.selectedTickets ? Object.values(Object.fromEntries(booking.selectedTickets instanceof Map ? booking.selectedTickets : Object.entries(booking.selectedTickets || {}))).reduce((s, v) => s + v, 0) : 1))
-          : (booking.guestCount || booking.quantity || 1),
+        quantity: (() => {
+          if (booking.eventType === 'ticketed') {
+            if (booking.selectedTickets) {
+              const map = booking.selectedTickets instanceof Map
+                ? booking.selectedTickets
+                : new Map(Object.entries(booking.selectedTickets));
+              const total = Array.from(map.values()).reduce((s, v) => s + Number(v), 0);
+              if (total > 0) return total;
+            }
+            return booking.ticket?.quantity || booking.ticketCount || 1;
+          }
+          return booking.guestCount || 1;
+        })(),
         selectedTickets: booking.selectedTickets || {},
         date: booking.eventDate || event?.date || booking.bookingDate,
         time: booking.eventTime || event?.time || 'TBD',
@@ -740,18 +750,38 @@ export const updateBookingStatus = async (req, res) => {
     
     await booking.save();
 
-    // Notify user when merchant marks completed — they need to pay remaining
-    if (status === "completed" && booking.advancePaid && booking.remainingAmount > 0) {
-      try {
+    // Notify user about status change
+    try {
+      const statusMessages = {
+        accepted:   `Your booking for "${booking.serviceTitle}" has been accepted by the merchant.`,
+        approved:   `Your booking for "${booking.serviceTitle}" has been approved! Please proceed with payment.`,
+        rejected:   `Your booking for "${booking.serviceTitle}" has been rejected.${message ? ` Reason: ${message}` : ""}`,
+        cancelled:  `Your booking for "${booking.serviceTitle}" has been cancelled.${message ? ` Reason: ${message}` : ""}`,
+        processing: `Your booking for "${booking.serviceTitle}" is now being processed.`,
+        confirmed:  `Your booking for "${booking.serviceTitle}" is confirmed!`,
+        completed:  booking.advancePaid && booking.remainingAmount > 0
+          ? `Your event "${booking.serviceTitle}" is complete! Please pay the remaining ₹${booking.remainingAmount} to finalise.`
+          : `Your event "${booking.serviceTitle}" has been completed. Thank you!`,
+      };
+
+      const notifType = {
+        accepted: "booking_approved", approved: "booking_approved",
+        rejected: "booking_cancelled", cancelled: "booking_cancelled",
+        completed: "booking_completed", confirmed: "booking_approved",
+        processing: "booking_status_update",
+      };
+
+      const msg = statusMessages[status];
+      if (msg) {
         await Notification.create({
           user: booking.user,
-          type: "booking_status_update",
-          message: `Your event "${booking.serviceTitle}" is complete! Please pay the remaining ₹${booking.remainingAmount} to finalise.`,
+          type: notifType[status] || "booking_status_update",
+          message: msg,
           bookingId: booking._id
         });
-      } catch (notifError) {
-        console.error("Failed to create completion notification:", notifError);
       }
+    } catch (notifError) {
+      console.error("Failed to create status notification:", notifError);
     }
 
     return res.status(200).json({ 
@@ -795,6 +825,18 @@ export const approveBooking = async (req, res) => {
 
     await booking.save();
 
+    // Notify user about approval
+    try {
+      await Notification.create({
+        user: booking.user,
+        type: "booking_approved",
+        message: `Your booking for "${booking.serviceTitle}" has been approved! ${booking.merchantResponse.message}`,
+        bookingId: booking._id
+      });
+    } catch (notifError) {
+      console.error("Failed to create approval notification:", notifError);
+    }
+
     return res.status(200).json({
       success: true,
       message: "Booking approved successfully. Customer can now pay.",
@@ -833,5 +875,55 @@ export const getBookingDetails = async (req, res) => {
   } catch (error) {
     console.error("Error fetching booking details:", error);
     return res.status(500).json({ success: false, message: error.message || "Failed to fetch booking details" });
+  }
+};
+
+// Get ratings/reviews for merchant's events
+export const getMerchantRatings = async (req, res) => {
+  try {
+    const merchantId = req.user.userId;
+
+    // Get all events owned by this merchant
+    const events = await Event.find({ createdBy: merchantId }).select("_id title rating");
+
+    const eventIds = events.map(e => e._id);
+
+    // Get all reviews for these events
+    const { Review } = await import("../models/reviewSchema.js");
+    const reviews = await Review.find({ event: { $in: eventIds } })
+      .populate("user", "name")
+      .populate("event", "title")
+      .sort({ createdAt: -1 });
+
+    // Build per-event summary
+    const eventMap = {};
+    events.forEach(e => {
+      eventMap[e._id.toString()] = {
+        eventId: e._id,
+        title: e.title,
+        averageRating: e.rating?.average || 0,
+        totalRatings: e.rating?.totalRatings || 0,
+        reviews: []
+      };
+    });
+
+    reviews.forEach(r => {
+      const key = r.event?._id?.toString();
+      if (key && eventMap[key]) {
+        eventMap[key].reviews.push(r);
+      }
+    });
+
+    return res.status(200).json({
+      success: true,
+      events: Object.values(eventMap),
+      totalReviews: reviews.length,
+      overallAverage: reviews.length > 0
+        ? Math.round((reviews.reduce((s, r) => s + r.rating, 0) / reviews.length) * 10) / 10
+        : 0
+    });
+  } catch (error) {
+    console.error("getMerchantRatings error:", error);
+    return res.status(500).json({ success: false, message: "Failed to fetch ratings" });
   }
 };

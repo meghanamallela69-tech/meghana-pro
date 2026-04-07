@@ -19,10 +19,18 @@ const UpcomingEvents = () => {
       .then((res) => {
         const events = res.data.events || [];
         const now = new Date();
-        const upcoming = events
-          .filter((e) => e.date && new Date(e.date) >= now)
-          .sort((a, b) => new Date(a.date) - new Date(b.date))
-          .slice(0, 3);
+
+        // Ticketed events: must have a future date
+        const ticketed = events
+          .filter((e) => e.eventType === "ticketed" && e.date && new Date(e.date) >= now)
+          .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        // Full-service events: no fixed date, always "available"
+        const fullService = events
+          .filter((e) => e.eventType !== "ticketed" && e.status !== "inactive");
+
+        // Merge: ticketed first, then full-service, take up to 3
+        const upcoming = [...ticketed, ...fullService].slice(0, 3);
         setItems(upcoming);
       })
       .catch(() => {});
@@ -57,7 +65,15 @@ const UpcomingEvents = () => {
     <>
       <section className="upcoming-events">
         <div className="container">
-          <h2>UPCOMING EVENTS</h2>
+          <div className="section-header">
+            <h2>UPCOMING EVENTS</h2>
+            <a
+              href="/services"
+              style={{ fontSize: 14, color: "#1f2937", fontWeight: 600, textDecoration: "none", cursor: "pointer", alignSelf: "flex-end", paddingBottom: 4 }}
+            >
+              View All
+            </a>
+          </div>
           <div className="banner">
             {items.map((e) => (
               <div key={e._id} className="item">
@@ -68,7 +84,7 @@ const UpcomingEvents = () => {
                 />
                 <div className="content">
                   <h3>{e.title}</h3>
-                  <p>{e.date ? new Date(e.date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : ""}</p>
+                  <p>{e.eventType === "ticketed" && e.date ? new Date(e.date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : ""}</p>
                   <p>{e.location || ""}</p>
                   <button
                     onClick={() => handleViewDetails(e)}

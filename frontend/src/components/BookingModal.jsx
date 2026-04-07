@@ -6,6 +6,8 @@ import { API_BASE } from "../lib/http";
 import useAuth from "../context/useAuth";
 import PaymentModal from "./PaymentModal";
 import FullServiceBookingModal from "./FullServiceBookingModal";
+import useCoupon from "../hooks/useCoupon";
+import CouponSection from "./CouponSection";
 
 const BookingModal = ({ service, isOpen, onClose, onSuccess, coupons = [] }) => {
   const { token } = useAuth();
@@ -14,12 +16,6 @@ const BookingModal = ({ service, isOpen, onClose, onSuccess, coupons = [] }) => 
   const [createdBooking, setCreatedBooking] = useState(null);
   
   // Coupon states
-  const [availableCoupons, setAvailableCoupons] = useState([]);
-  const [showCouponDropdown, setShowCouponDropdown] = useState(false);
-  const [couponCode, setCouponCode] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState(null);
-  const [couponLoading, setCouponLoading] = useState(false);
-  
   // Determine event type
   const eventType = service?.eventType || "full-service";
   const isFullService = eventType === "full-service";
@@ -36,37 +32,17 @@ const BookingModal = ({ service, isOpen, onClose, onSuccess, coupons = [] }) => 
   // Ticketed States
   const [selectedTickets, setSelectedTickets] = useState({});
 
-  // Common States
-  const [promoCode, setPromoCode] = useState("");
-  const [discount, setDiscount] = useState(0);
+  // Common States — coupon handled by hook below
 
   // ── Effects — ALL must be before any conditional return ──────────────────
   useEffect(() => {
     if (isOpen) {
       setEventDate(""); setTimeSlot(""); setSelectedAddons([]);
       setUseCurrentLocation(false); setAddress("");
-      setSelectedTickets({}); setPromoCode(""); setDiscount(0);
+      setSelectedTickets({});
       setShowPayment(false); setCreatedBooking(null);
-      setAppliedCoupon(null); setCouponCode("");
     }
   }, [isOpen]);
-
-  useEffect(() => {
-    if (isOpen && service && service._id) {
-      const fetchCoupons = async () => {
-        try {
-          const headers = token ? { Authorization: `Bearer ${token}` } : {};
-          // Pass a large amount so minAmount filter doesn't hide coupons before user selects tickets
-          const res = await axios.get(`${API_BASE}/coupons/available`, {
-            headers,
-            params: { eventId: service._id, serviceId: service._id, totalAmount: 999999, category: service.category || "" }
-          });
-          if (res.data.success) setAvailableCoupons(res.data.coupons || []);
-        } catch { setAvailableCoupons([]); }
-      };
-      fetchCoupons();
-    }
-  }, [isOpen, service?._id, token]);
 
   // ── Route full-service events to the new FullServiceBookingModal ──────────
   // This return must come AFTER all hooks
@@ -146,50 +122,24 @@ const BookingModal = ({ service, isOpen, onClose, onSuccess, coupons = [] }) => 
     const price = parseInt(ticket.price) || 0;
     return sum + (price * quantity);
   }, 0);
-  const ticketedTotal = Math.max(0, ticketedSubtotal - discount);
 
   // Prices for Full Service
   const basePrice = service?.price || 0;
   const addonsTotal = selectedAddons.reduce((sum, addon) => sum + (addon.price || 0), 0);
   const fullServiceSubtotal = basePrice + addonsTotal;
+
+  // ── Coupon hook — single source of truth ──────────────────────────────────
+  const couponHook = useCoupon({
+    token,
+    eventId: service?._id,
+    getAmount: () => isTicketed ? (ticketedSubtotal || basePrice) : (fullServiceSubtotal || basePrice),
+  });
+  const discount = couponHook.discount;
+
+  const ticketedTotal    = Math.max(0, ticketedSubtotal - discount);
   const fullServiceTotal = Math.max(0, fullServiceSubtotal - discount);
 
   // --- HELPER FUNCTIONS ---
-
-  const calculateTotal = () => {
-    return isTicketed ? ticketedSubtotal : fullServiceTotal;
-  };
-
-  const fetchAvailableCoupons = async () => {
-    try {
-      if (!service || !service._id) {
-        setAvailableCoupons([]);
-        return;
-      }
-      const amount = calculateTotal() || 1000;
-      const serviceCategory = service.category || service.serviceType || '';
-      const serviceOrEventId = service.eventId || service._id;
-      const url = `${API_BASE}/coupons/available?eventId=${serviceOrEventId}&totalAmount=${amount}&category=${encodeURIComponent(serviceCategory)}`;
-      
-      const response = await axios.get(url, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      if (response.data && response.data.success) {
-        const couponsData = response.data.coupons || [];
-        setAvailableCoupons(couponsData);
-        setShowCouponDropdown(couponsData.length > 0);
-      } else {
-        setAvailableCoupons([]);
-        setShowCouponDropdown(false);
-      }
-    } catch (error) {
-      console.error('❌ COUPON FETCH FAILED:', error.message);
-      setAvailableCoupons([]);
-      setShowCouponDropdown(false);
-      toast.error('Unable to load coupons');
-    }
-  };
 
   const updateTicketQuantity = (ticketName, newQuantity) => {
     const ticket = ticketTypes.find(t => t.name === ticketName);
@@ -211,15 +161,6 @@ const BookingModal = ({ service, isOpen, onClose, onSuccess, coupons = [] }) => 
     const exists = selectedAddons.find(a => a.name === addon.name);
     if (exists) setSelectedAddons(selectedAddons.filter(a => a.name !== addon.name));
     else setSelectedAddons([...selectedAddons, addon]);
-  };
-
-  const formatTimeDisplay = (timeString) => {
-    if (!timeString) return "";
-    const [hours, minutes] = timeString.split(':');
-    const hour = parseInt(hours);
-    const ampm = hour >= 12 ? 'PM' : 'AM';
-    const displayHour = hour % 12 || 12;
-    return `${displayHour}:${minutes} ${ampm}`;
   };
 
   const handleCheckboxChange = async (e) => {
@@ -251,58 +192,6 @@ const BookingModal = ({ service, isOpen, onClose, onSuccess, coupons = [] }) => 
     } else setAddress('');
   };
 
-  // --- EFFECTS ---
-  // (Effects moved above the conditional return to comply with Rules of Hooks)
-
-  // --- HANDLERS ---
-
-  const handleApplyPromo = async () => {
-    if (!promoCode || !promoCode.trim()) {
-      toast.error("Please enter a promo code");
-      return;
-    }
-
-    // Check locally first if user already used this coupon
-    const localCoupon = availableCoupons.find(c => c.code === promoCode.trim().toUpperCase());
-    if (localCoupon?.alreadyUsed) {
-      toast.error(`You have already used coupon "${localCoupon.code}". Each coupon can only be used once per account.`);
-      return;
-    }
-
-    const subtotal = isTicketed ? ticketedSubtotal : fullServiceSubtotal;
-    const serviceOrEventId = service.eventId || service._id;
-
-    try {
-      setLoading(true);
-      const response = await axios.post(
-        `${API_BASE}/coupons/apply`,
-        {
-          code: promoCode.toUpperCase(),
-          totalAmount: subtotal,
-          eventId: serviceOrEventId
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
-
-      if (response.data.success) {
-        const { discountAmount, coupon } = response.data;
-        setDiscount(discountAmount);
-        setAppliedCoupon(coupon);
-        toast.success(`Promo applied! You saved ₹${discountAmount.toLocaleString("en-IN")}`);
-      }
-    } catch (error) {
-      console.error("Apply promo error:", error);
-      const message = error.response?.data?.message || "Invalid promo code";
-      toast.error(message);
-      setDiscount(0);
-      setAppliedCoupon(null);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleFullServiceSubmit = async (e) => {
     e.preventDefault();
     if (!eventDate || !timeSlot || (!useCurrentLocation && !address.trim())) {
@@ -324,7 +213,7 @@ const BookingModal = ({ service, isOpen, onClose, onSuccess, coupons = [] }) => 
         locationType: "custom",
         totalAmount: fullServiceTotal,
         discount,
-        promoCode: promoCode || null,
+        promoCode: couponHook.applied?.coupon?.code || null,
         status: "pending",
         guestCount: 1,
       };
@@ -358,7 +247,7 @@ const BookingModal = ({ service, isOpen, onClose, onSuccess, coupons = [] }) => 
         selectedTickets,
         totalAmount: ticketedTotal,
         discount,
-        promoCode: promoCode?.trim() || null,
+        promoCode: couponHook.applied?.coupon?.code || null,
         status: "pending_payment",
         paymentStatus: "pending",
         location: service.location || "Event Venue",
@@ -460,60 +349,7 @@ const BookingModal = ({ service, isOpen, onClose, onSuccess, coupons = [] }) => 
                       ))}
                     </div>
                     <div style={{ marginBottom: "20px" }}>
-                      <label style={{ display: "block", fontSize: "14px", fontWeight: "500", color: "#374151", marginBottom: "8px" }}>Have a promo code?</label>
-                      {availableCoupons.length > 0 ? (
-                        <div style={{ marginBottom: "12px" }}>
-                          <p style={{ fontSize: "13px", color: "#6b7280", marginBottom: "6px" }}>🏷️ Available offers ({availableCoupons.length}):</p>
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                            {availableCoupons.map((coupon) => (
-                              <button key={coupon._id} type="button"
-                                onClick={async () => {
-                                  if (coupon.alreadyUsed) {
-                                    toast.error(`You have already used coupon "${coupon.code}". Each coupon can only be used once per account.`);
-                                    return;
-                                  }
-                                  setPromoCode(coupon.code);
-                                  // auto-apply
-                                  const subtotal = isTicketed ? ticketedSubtotal : fullServiceSubtotal;
-                                  try {
-                                    setLoading(true);
-                                    const response = await axios.post(
-                                      `${API_BASE}/coupons/apply`,
-                                      { code: coupon.code, totalAmount: subtotal, eventId: service.eventId || service._id },
-                                      { headers: { Authorization: `Bearer ${token}` } }
-                                    );
-                                    if (response.data.success) {
-                                      setDiscount(response.data.discountAmount);
-                                      setAppliedCoupon(response.data.coupon);
-                                      toast.success(`Coupon "${coupon.code}" applied! Saved ₹${response.data.discountAmount.toLocaleString("en-IN")}`);
-                                    }
-                                  } catch (err) {
-                                    toast.error(err.response?.data?.message || "Failed to apply coupon");
-                                  } finally {
-                                    setLoading(false);
-                                  }
-                                }}
-                                style={{
-                                  padding: "6px 12px",
-                                  backgroundColor: "#fef3c7",
-                                  border: "1px solid #f59e0b",
-                                  borderRadius: "6px", fontSize: "12px", fontWeight: "600",
-                                  color: "#92400e",
-                                  cursor: "pointer"
-                                }}>
-                                {coupon.code} — {coupon.discountType === 'percentage' ? `${coupon.discountValue}%` : `₹${coupon.discountValue}`} off
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      ) : (
-                        <p style={{ fontSize: "12px", color: "#9ca3af", marginBottom: "8px" }}>No promo codes available for this event</p>
-                      )}
-                      <div style={{ display: "flex", gap: "8px" }}>
-                        <input type="text" value={promoCode} onChange={(e) => setPromoCode(e.target.value.toUpperCase())} placeholder="Enter code" style={{ flex: 1, padding: "10px 12px", border: "1px solid #d1d5db", borderRadius: "6px", fontSize: "14px" }} />
-                        <button type="button" onClick={handleApplyPromo} style={{ padding: "10px 20px", backgroundColor: discount > 0 ? "#10b981" : "#a2783a", color: "white", border: "none", borderRadius: "6px", fontSize: "14px", fontWeight: "500", cursor: "pointer" }}>Apply</button>
-                      </div>
-                      {discount > 0 && <div style={{ marginTop: "8px", padding: "8px", backgroundColor: "#d1fae5", borderRadius: "6px", color: "#065f46", fontSize: "14px" }}>Discount applied: ₹{discount.toLocaleString("en-IN")} off</div>}
+                      <CouponSection token={token} eventId={service?._id} couponHook={couponHook} compact />
                     </div>
                     <div style={{ padding: "16px", backgroundColor: "#fef3e6", borderRadius: "12px", marginBottom: "20px", border: "1px solid #a2783a" }}>
                       <div style={{ marginBottom: "8px", paddingBottom: "8px", borderBottom: "1px solid rgba(162, 120, 58, 0.3)" }}>
@@ -563,51 +399,7 @@ const BookingModal = ({ service, isOpen, onClose, onSuccess, coupons = [] }) => 
                       )}
                     </div>
                     <div style={{ marginBottom: "20px" }}>
-                      <label style={{ display: "block", fontSize: "14px", fontWeight: "500", color: "#374151", marginBottom: "8px" }}><FaPercent style={{ marginRight: "6px" }} />Promo Code (Optional)</label>
-                      
-                      {/* Available Coupons List for Full Service */}
-                      {availableCoupons.length > 0 && (
-                        <div style={{ marginBottom: "12px" }}>
-                          <p style={{ fontSize: "13px", color: "#6b7280", marginBottom: "6px" }}>🏷️ Available offers ({availableCoupons.length}):</p>
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                            {availableCoupons.map((coupon) => (
-                              <button 
-                                key={coupon._id} 
-                                type="button" 
-                                onClick={() => { 
-                                  if (coupon.alreadyUsed) {
-                                    toast.error("You have already used this promo code once.");
-                                    return;
-                                  }
-                                  setPromoCode(coupon.code); 
-                                  toast.success(`Coupon "${coupon.code}" selected!`); 
-                                }} 
-                                style={{ 
-                                  padding: "6px 12px", 
-                                  backgroundColor: "#fef3c7", 
-                                  border: "1px solid #f59e0b", 
-                                  borderRadius: "6px", 
-                                  fontSize: "12px", 
-                                  fontWeight: "600", 
-                                  color: "#92400e", 
-                                  cursor: "pointer",
-                                  transition: "all 0.2s"
-                                }}
-                                onMouseEnter={(e) => e.target.style.backgroundColor = "#fde68a"}
-                                onMouseLeave={(e) => e.target.style.backgroundColor = "#fef3c7"}
-                              >
-                                {coupon.code} - {coupon.discountType === 'percentage' ? `${coupon.discountValue}%` : `₹${coupon.discountValue}`} Off
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      <div style={{ display: "flex", gap: "8px" }}>
-                        <input type="text" value={promoCode} onChange={(e) => setPromoCode(e.target.value.toUpperCase())} placeholder="Enter code" style={{ flex: 1, padding: "10px 12px", border: "1px solid #d1d5db", borderRadius: "6px", fontSize: "14px" }} />
-                        <button type="button" onClick={handleApplyPromo} disabled={!promoCode || !promoCode.trim()} style={{ padding: "10px 20px", backgroundColor: discount > 0 ? "#10b981" : "#a2783a", color: "white", border: "none", borderRadius: "6px", fontSize: "14px", fontWeight: "500", cursor: "pointer", opacity: (!promoCode || !promoCode.trim()) ? 0.6 : 1 }}>Apply</button>
-                      </div>
-                      {discount > 0 && <div style={{ marginTop: "8px", padding: "8px", backgroundColor: "#d1fae5", borderRadius: "6px", color: "#065f46", fontSize: "14px" }}>Discount applied: ₹{discount.toLocaleString("en-IN")} off</div>}
+                      <CouponSection token={token} eventId={service?._id} couponHook={couponHook} compact />
                     </div>
                     <div style={{ padding: "16px", backgroundColor: "#f9fafb", borderRadius: "8px", marginBottom: "20px", border: "1px solid #e5e7eb" }}>
                       <div style={{ marginBottom: "8px", paddingBottom: "8px", borderBottom: "1px solid #e5e7eb" }}>

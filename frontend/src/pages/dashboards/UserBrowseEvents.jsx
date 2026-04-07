@@ -242,17 +242,6 @@ const UserBrowseEvents = () => {
             <h2 className="text-2xl md:text-3xl font-semibold">Browse Events</h2>
             <p className="text-gray-600 mt-1">Discover and book amazing events near you</p>
           </div>
-          <button
-            onClick={fetchEvents}
-            disabled={loading}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 flex items-center gap-2"
-            title="Refresh events data"
-          >
-            <svg className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            {loading ? 'Refreshing...' : 'Refresh'}
-          </button>
         </div>
       </section>
 

@@ -14,7 +14,7 @@ const UserReviews = () => {
 
   useEffect(() => {
     fetchReviews();
-  }, []);
+  }, [token]);
 
   const fetchReviews = async () => {
     try {
@@ -22,15 +22,12 @@ const UserReviews = () => {
       const response = await axios.get(`${API_BASE}/reviews/my-reviews`, {
         headers: authHeaders(token),
       });
-      
       if (response.data.success) {
         setReviews(response.data.reviews || []);
-      } else {
-        toast.error(response.data.message || "Failed to load reviews");
       }
     } catch (error) {
       console.error("Fetch reviews error:", error);
-      toast.error(error.response?.data?.message || "Failed to load your reviews");
+      toast.error("Failed to load your reviews");
     } finally {
       setLoading(false);
     }
@@ -47,7 +44,7 @@ const UserReviews = () => {
 
       if (response.data.success) {
         toast.success("Review deleted successfully");
-        fetchReviews();
+        setReviews(prev => prev.filter(r => r._id !== reviewId));
       } else {
         toast.error(response.data.message || "Failed to delete review");
       }
@@ -78,10 +75,10 @@ const UserReviews = () => {
           <FiStar
             key={i}
             size={16}
-            className={i < rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}
+            style={{ color: i < rating ? "#facc15" : "#d1d5db", fill: i < rating ? "#facc15" : "none" }}
           />
         ))}
-        <span className="ml-2 text-sm font-medium text-gray-700">({rating}/5)</span>
+        <span className="ml-2 text-sm font-medium text-gray-700">{rating}/5</span>
       </div>
     );
   };
@@ -137,10 +134,10 @@ const UserReviews = () => {
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
                   <h3 className="text-lg font-semibold text-gray-900">
-                    {review.eventTitle || review.event?.title || "Event"}
+                    {review.event?.title || review.eventTitle || "Event"}
                   </h3>
                   <p className="text-sm text-gray-500 mt-1">
-                    {review.eventCategory || review.event?.category || "Event"}
+                    {review.event?.category || review.eventCategory || "Event"}
                   </p>
                 </div>
                 <button
@@ -159,9 +156,9 @@ const UserReviews = () => {
               </div>
 
               {/* Review Text */}
-              {review.comment && (
+              {(review.reviewText || review.comment) && (
                 <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-                  <p className="text-gray-700 text-sm leading-relaxed">{review.comment}</p>
+                  <p className="text-gray-700 text-sm leading-relaxed">{review.reviewText || review.comment}</p>
                 </div>
               )}
 
