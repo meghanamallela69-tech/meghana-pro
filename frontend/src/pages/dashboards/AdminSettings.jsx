@@ -93,12 +93,12 @@ const AdminSettings = () => {
 
   return (
     <AdminLayout>
-      <div className="mb-6">
+      <div className="mb-6 max-w-4xl mx-auto">
         <h2 className="text-3xl font-bold text-gray-800">Platform Settings</h2>
         <p className="text-gray-600 mt-1">Configure system-wide settings and preferences</p>
       </div>
 
-      <form onSubmit={handleSave} className="max-w-4xl space-y-6">
+      <form onSubmit={handleSave} className="max-w-4xl mx-auto space-y-6">
         {/* General Settings */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">

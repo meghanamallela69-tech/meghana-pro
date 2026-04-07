@@ -36,9 +36,18 @@ const UserSavedEvents = () => {
     });
   };
 
-  // Get image based on category or title keywords
+  // Get image from merchant-uploaded images, then banner, then category fallback
   const getEventImage = (event) => {
+    // Priority 1: merchant uploaded images array
+    if (event?.images && event.images.length > 0) {
+      const first = event.images[0];
+      return first?.url || first;
+    }
+    // Priority 2: single image/banner fields
+    if (event?.bannerImage?.url) return event.bannerImage.url;
+    if (event?.bannerImage && typeof event.bannerImage === "string") return event.bannerImage;
     if (event?.image && event.image.trim() !== "") return event.image;
+    // Priority 3: category fallback
     const categoryImages = {
       "Wedding": "/wedding.jpg",
       "Party": "/party.jpg",
@@ -53,13 +62,11 @@ const UserSavedEvents = () => {
     if (event?.category && categoryImages[event.category]) return categoryImages[event.category];
     const title = (event?.title || "").toLowerCase();
     if (title.includes("wedding") || title.includes("marriage")) return "/wedding.jpg";
-    if (title.includes("music") || title.includes("concert") || title.includes("band")) return "/party.jpg";
+    if (title.includes("music") || title.includes("concert")) return "/party.jpg";
     if (title.includes("party") || title.includes("celebration")) return "/party.jpg";
     if (title.includes("birthday")) return "/birthday.jpg";
-    if (title.includes("conference") || title.includes("meeting")) return "/gamenight.jpg";
     if (title.includes("food") || title.includes("dinner")) return "/restaurant.jpg";
     if (title.includes("outdoor") || title.includes("camping")) return "/camping.jpg";
-    if (title.includes("anniversary")) return "/anniversary.jpg";
     return "/party.jpg";
   };
 

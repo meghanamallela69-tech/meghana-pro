@@ -118,7 +118,37 @@ const UserPayments = () => {
   };
 
   // View receipt
-  const handleViewReceipt = async (paymentId) => {
+  const handleViewReceipt = async (paymentId, paymentRow) => {
+    // Booking-fallback rows: build receipt inline without API call
+    if (paymentRow?._fromBooking) {
+      const b = paymentRow.bookingId || {};
+      const amount = paymentRow.totalAmount || 0;
+      setSelectedPayment({
+        payment: {
+          _id: paymentRow._id,
+          transactionId: paymentRow.transactionId || '-',
+          paymentStatus: paymentRow.paymentStatus,
+          paymentMethod: paymentRow.paymentMethod || 'Manual',
+          paymentGateway: 'Manual',
+          description: paymentRow.description || '',
+          refundAmount: 0,
+        },
+        booking: {
+          _id: paymentRow._id,
+          serviceTitle: paymentRow.eventName || b.serviceTitle || 'Event',
+          serviceCategory: paymentRow.eventType || b.serviceCategory || '-',
+        },
+        event: paymentRow.eventId || null,
+        merchant: null,
+        formattedData: {
+          amount: formatCurrency(amount),
+          date: formatDate(paymentRow.createdAt),
+        },
+      });
+      setShowReceiptModal(true);
+      return;
+    }
+
     try {
       const headers = authHeaders(token);
       const response = await axios.get(`${API_BASE}/payments/details/${paymentId}`, {
@@ -242,72 +272,20 @@ const UserPayments = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="text-sm font-medium text-gray-900">
-                        {(() => {
-                          // Priority 1: Get from populated event data
-                          if (payment.eventId?.title) {
-                            return payment.eventId.title;
-                          }
-                          
-                          // Priority 2: Get from populated booking data
-                          if (payment.bookingId?.serviceTitle) {
-                            return payment.bookingId.serviceTitle;
-                          }
-                          
-                          // Priority 3: Get from custom eventName field
-                          if (payment.eventName) {
-                            return payment.eventName;
-                          }
-                          
-                          // Priority 4: Extract from description
-                          if (payment.description) {
-                            const extracted = payment.description
-                              .replace('Payment for booking:', '')
-                              .replace('Payment for ', '')
-                              .trim();
-                            if (extracted) return extracted;
-                          }
-                          
-                          // Fallback
-                          return 'N/A';
-                        })()}
+                        {payment.eventName || payment.eventId?.title || payment.bookingId?.serviceTitle || 'N/A'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full capitalize ${
-                        payment.eventId?.eventType === 'ticketed' || payment.bookingId?.serviceType === 'ticketed' 
-                          ? 'bg-purple-100 text-purple-700' 
-                          : 'bg-amber-100 text-amber-700'
-                      }`}>
-                        {(() => {
-                          // Try multiple sources for event type
-                          let eventType = null;
-                          
-                          // Priority 1: From populated event
-                          if (payment.eventId?.eventType) {
-                            eventType = payment.eventId.eventType;
-                          }
-                          // Priority 2: From populated booking serviceType
-                          else if (payment.bookingId?.serviceType) {
-                            eventType = payment.bookingId.serviceType;
-                          }
-                          // Priority 3: From populated booking serviceCategory
-                          else if (payment.bookingId?.serviceCategory) {
-                            eventType = payment.bookingId.serviceCategory;
-                          }
-                          // Priority 4: From direct payment field
-                          else if (payment.eventType) {
-                            eventType = payment.eventType;
-                          }
-                          
-                          // Format and display
-                          if (!eventType) return 'N/A';
-                          if (eventType === 'ticketed') return 'Ticketed';
-                          if (eventType === 'full-service' || eventType === 'fullService') return 'Full Service';
-                          
-                          // Fallback for other types
-                          return eventType.charAt(0).toUpperCase() + eventType.slice(1);
-                        })()}
-                      </span>
+                      {(() => {
+                        const et = payment.eventType || payment.eventId?.eventType || payment.bookingId?.serviceType || payment.bookingId?.serviceCategory || '';
+                        const isTicketed = et === 'ticketed';
+                        const label = isTicketed ? 'Ticketed' : et === 'full-service' ? 'Full Service' : et ? et.charAt(0).toUpperCase() + et.slice(1) : 'N/A';
+                        return (
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${isTicketed ? 'bg-purple-100 text-purple-700' : 'bg-amber-100 text-amber-700'}`}>
+                            {label}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="text-sm font-semibold text-gray-900">
@@ -324,7 +302,7 @@ const UserPayments = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="text-xs text-gray-500 font-mono">
-                        {payment.transactionId.slice(0, 12)}...
+                        {payment.transactionId ? `${payment.transactionId.slice(0, 12)}...` : '-'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
@@ -332,7 +310,7 @@ const UserPayments = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <button
-                        onClick={() => handleViewReceipt(payment._id)}
+                        onClick={() => handleViewReceipt(payment._id, payment)}
                         className="flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm font-medium"
                       >
                         <FaEye className="text-xs" />
@@ -530,12 +508,20 @@ const UserPayments = () => {
                   <p className="text-sm text-gray-600">Total Amount Paid</p>
                   <p className="text-2xl font-bold text-gray-900">{selectedPayment.formattedData.amount}</p>
                 </div>
-                <button
-                  onClick={() => window.print()}
-                  className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition font-medium"
-                >
-                  Print Receipt
-                </button>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setSelectedPayment(null)}
+                    className="px-6 py-3 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 transition font-medium"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => window.print()}
+                    className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition font-medium"
+                  >
+                    Print Receipt
+                  </button>
+                </div>
               </div>
             </div>
           </div>

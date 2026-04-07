@@ -33,14 +33,15 @@ const MerchantTopbar = ({ onToggleSidebar }) => {
     <header className="sticky top-0 z-50 bg-white border-b">
       <div className="flex items-center justify-between px-4 py-3">
 
-        <button onClick={onToggleSidebar}
-          style={{ padding: 8, border: "none", background: "transparent", cursor: "pointer", fontSize: 22, lineHeight: 1, color: "#374151" }}>
-          ☰
-        </button>
-
-        <div className="font-semibold flex items-center gap-2" style={{ fontSize: 15 }}>
-          <BsCalendarEvent />
-          <span>{SITE_NAME}</span>
+        {/* Left: Hamburger + Logo */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <button onClick={onToggleSidebar}
+            style={{ padding: 8, border: "none", background: "transparent", cursor: "pointer", fontSize: 22, lineHeight: 1, color: "#374151" }}>
+            ☰
+          </button>
+          <div className="font-semibold" style={{ fontSize: 15 }}>
+            {SITE_NAME}
+          </div>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>

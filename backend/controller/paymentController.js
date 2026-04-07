@@ -581,57 +581,107 @@ export const getAllPayments = async (req, res) => {
 export const getUserPayments = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { status } = req.query; // Optional filter: all, completed, pending, failed
-    // Build query - use userId directly as MongoDB handles string ObjectIds
-    const query = { userId };
-    
-    // Add status filter if provided
+    const { status } = req.query;
+
+    // Cast to ObjectId for reliable matching
+    const userObjectId = new mongoose.Types.ObjectId(userId);
+
+    // ── 1. Fetch from Payment collection ──────────────────────────────────
+    const paymentQuery = { userId: userObjectId };
     if (status && status !== 'all') {
       if (['success', 'pending', 'failed', 'refunded'].includes(status)) {
-        query.paymentStatus = status;
+        paymentQuery.paymentStatus = status;
       }
     }
-    
-    // Fetch payments and populate related data
-    const payments = await Payment.find(query)
+
+    const paymentRecords = await Payment.find(paymentQuery)
       .populate('eventId', 'title eventType date location')
-      .populate('bookingId', 'serviceTitle serviceCategory eventDate serviceType bookingStatus')
+      .populate('bookingId', 'serviceTitle serviceCategory eventDate serviceType bookingStatus eventType')
       .sort({ createdAt: -1 })
-      .limit(100); // Limit to 100 most recent
-    // Enhance payments with event/booking data
-    const enhancedPayments = payments.map(payment => {
-      const paymentObj = payment.toObject();
-      
-      // Extract event name and type from populated data with better fallback logic
-      if (paymentObj.eventId) {
-        paymentObj.eventName = paymentObj.eventId.title;
-        paymentObj.eventType = paymentObj.eventId.eventType;
-        paymentObj.eventDate = paymentObj.eventId.date;
-        paymentObj.eventLocation = paymentObj.eventId.location;
-      } else if (paymentObj.bookingId) {
-        paymentObj.eventName = paymentObj.bookingId.serviceTitle;
-        paymentObj.eventType = paymentObj.bookingId.serviceCategory || paymentObj.bookingId.serviceType;
-        paymentObj.eventDate = paymentObj.bookingId.eventDate;
-        // For full service events, use booking data as backup
-        if (!paymentObj.eventName && paymentObj.description) {
-          paymentObj.eventName = paymentObj.description;
-        }
+      .limit(200);
+
+    // Track which bookingIds already have a Payment record
+    const coveredBookingIds = new Set(
+      paymentRecords
+        .filter(p => p.bookingId)
+        .map(p => String(p.bookingId._id || p.bookingId))
+    );
+
+    // ── 2. Fetch paid bookings that have NO Payment record ─────────────────
+    const bookingQuery = { user: userObjectId, paymentStatus: "paid" };
+    // Map frontend status filter to booking paymentStatus
+    if (status && status !== 'all') {
+      if (status === 'success') bookingQuery.paymentStatus = 'paid';
+      else if (status === 'pending') bookingQuery.paymentStatus = 'pending';
+      else if (status === 'failed') bookingQuery.paymentStatus = 'failed';
+      else if (status === 'refunded') bookingQuery.paymentStatus = 'refunded';
+    } else {
+      // "all" — include all payment statuses from bookings
+      delete bookingQuery.paymentStatus;
+      bookingQuery.paymentStatus = { $in: ['paid', 'partial_paid', 'pending', 'refunded', 'failed'] };
+    }
+
+    const paidBookings = await Booking.find(bookingQuery)
+      .populate('eventId', 'title eventType date location')
+      .sort({ createdAt: -1 })
+      .limit(200);
+
+    // ── 3. Build synthetic payment objects from bookings without Payment records ──
+    const bookingFallbacks = paidBookings
+      .filter(b => !coveredBookingIds.has(String(b._id)))
+      .map(b => {
+        const bo = b.toObject();
+        const amount = bo.finalAmount || bo.totalPrice || bo.servicePrice || 0;
+        const eventName = bo.eventId?.title || bo.serviceTitle || "Event";
+        const eventType = bo.eventType || bo.eventId?.eventType || bo.serviceCategory || "full-service";
+        // Map booking paymentStatus to Payment paymentStatus values
+        const statusMap = { paid: 'success', partial_paid: 'pending', pending: 'pending', refunded: 'refunded', failed: 'failed' };
+        return {
+          _id: bo._id, // use booking _id as row key
+          bookingId: bo,
+          eventId: bo.eventId || null,
+          userId: bo.user,
+          totalAmount: amount,
+          paymentStatus: statusMap[bo.paymentStatus] || 'pending',
+          paymentMethod: bo.paymentMethod || 'Manual',
+          transactionId: bo.paymentId || `BKG-${String(bo._id).slice(-8).toUpperCase()}`,
+          paymentGateway: 'manual',
+          description: `Payment for ${eventName}`,
+          createdAt: bo.paymentDate || bo.updatedAt || bo.createdAt,
+          // Flattened helpers
+          eventName,
+          eventType,
+          eventDate: bo.eventId?.date || bo.eventDate,
+          _fromBooking: true,
+        };
+      });
+
+    // ── 4. Enhance Payment records with event/booking name ─────────────────
+    const enhancedPayments = paymentRecords.map(payment => {
+      const p = payment.toObject();
+      if (p.eventId) {
+        p.eventName = p.eventId.title;
+        p.eventType = p.eventId.eventType;
+        p.eventDate = p.eventId.date;
+      } else if (p.bookingId) {
+        p.eventName = p.bookingId.serviceTitle;
+        p.eventType = p.bookingId.eventType || p.bookingId.serviceCategory || p.bookingId.serviceType;
+        p.eventDate = p.bookingId.eventDate;
       }
-      
-      // Ensure eventName is never undefined/null
-      if (!paymentObj.eventName) {
-        paymentObj.eventName = paymentObj.description || "Full Service Event";
-      }
-      
-      return paymentObj;
+      if (!p.eventName) p.eventName = p.description?.replace(/^Payment for\s*/i, '') || "Event";
+      return p;
     });
-    
+
+    // ── 5. Merge, deduplicate, sort ────────────────────────────────────────
+    const allPayments = [...enhancedPayments, ...bookingFallbacks]
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
     return res.status(200).json({
       success: true,
-      payments: enhancedPayments,
-      count: enhancedPayments.length
+      payments: allPayments,
+      count: allPayments.length
     });
-    
+
   } catch (error) {
     console.error("Get user payments error:", error);
     return res.status(500).json({

@@ -209,7 +209,7 @@ const MerchantEditEvent = () => {
 
   return (
     <MerchantLayout>
-      <div className="mb-6">
+      <div className="mb-6 max-w-3xl mx-auto">
         <h2 className="text-2xl font-semibold">Edit Event</h2>
         <p className="text-gray-500 mt-1">
           <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${isTicketed ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"}`}>
@@ -218,7 +218,7 @@ const MerchantEditEvent = () => {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl">
+      <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl mx-auto">
 
         {/* ── Basic Info ── */}
         <div className="bg-white rounded-xl border p-6 space-y-4">

@@ -9,9 +9,19 @@ import { FiUpload, FiX, FiImage, FiCalendar, FiClock, FiMapPin, FiTag, FiPlus, F
 import { FaHandshake, FaTicketAlt, FaCrown, FaUser } from "react-icons/fa";
 
 // ── Event Type Selection Modal ──────────────────────────────────────────────
-const EventTypeModal = ({ onSelect }) => (
+const EventTypeModal = ({ onSelect, onClose }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-    <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-lg mx-4">
+    <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-lg mx-4 relative">
+      {/* Close button */}
+      <button
+        type="button"
+        onClick={onClose}
+        className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 transition"
+        style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, lineHeight: 1 }}
+      >
+        <FiX />
+      </button>
+
       <h2 className="text-2xl font-bold text-gray-900 mb-2 text-center">Choose Event Type</h2>
       <p className="text-gray-500 text-center mb-8">Select how you want to offer this event</p>
 
@@ -350,7 +360,7 @@ const MerchantCreateEvent = () => {
   return (
     <MerchantLayout>
       {/* Event Type Modal */}
-      {!eventType && <EventTypeModal onSelect={setEventType} />}
+      {!eventType && <EventTypeModal onSelect={setEventType} onClose={() => navigate("/dashboard/merchant")} />}
 
       <section className="mb-6">
         <h2 className="text-2xl md:text-3xl font-semibold">Create Event</h2>

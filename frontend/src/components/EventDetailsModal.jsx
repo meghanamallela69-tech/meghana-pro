@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import PropTypes from "prop-types";
-import { FaTimes, FaMapMarkerAlt, FaUser, FaCheck } from "react-icons/fa";
+import { FaTimes, FaMapMarkerAlt, FaUser, FaCheck, FaPlusCircle, FaCalendarAlt, FaClock } from "react-icons/fa";
 import { getEventStatus } from "../lib/utils";
 
 const EventDetailsModal = ({ isOpen, onClose, event, onBookNow }) => {
@@ -289,16 +289,95 @@ const EventDetailsModal = ({ isOpen, onClose, event, onBookNow }) => {
               <h3 style={{ fontSize: "18px", fontWeight: "600", marginBottom: "16px", color: "#374151" }}>
                 Event Information
               </h3>
-              <div style={{ backgroundColor: "#f9fafb", padding: "20px", borderRadius: "12px", border: "1px solid #e5e7eb" }}>
+              <div style={{ backgroundColor: "#f9fafb", padding: "20px", borderRadius: "12px", border: "1px solid #e5e7eb", display: "flex", flexDirection: "column", gap: "16px" }}>
+                {/* Location */}
                 <div style={{ display: "flex", alignItems: "center" }}>
-                  <FaMapMarkerAlt style={{ color: "#ef4444", marginRight: "12px", fontSize: "16px" }} />
+                  <FaMapMarkerAlt style={{ color: "#ef4444", marginRight: "12px", fontSize: "16px", flexShrink: 0 }} />
                   <div>
                     <p style={{ fontWeight: "600", color: "#374151", fontSize: "14px", marginBottom: "2px" }}>Location</p>
                     <p style={{ color: "#6b7280", fontSize: "14px" }}>{event.location || "Location TBD"}</p>
                   </div>
                 </div>
+                {/* Date — ticketed events */}
+                {event.date && (
+                  <div style={{ display: "flex", alignItems: "center" }}>
+                    <FaCalendarAlt style={{ color: "#2563eb", marginRight: "12px", fontSize: "16px", flexShrink: 0 }} />
+                    <div>
+                      <p style={{ fontWeight: "600", color: "#374151", fontSize: "14px", marginBottom: "2px" }}>Date</p>
+                      <p style={{ color: "#6b7280", fontSize: "14px" }}>
+                        {new Date(event.date).toLocaleDateString("en-IN", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                {/* Time — ticketed events */}
+                {event.time && (
+                  <div style={{ display: "flex", alignItems: "center" }}>
+                    <FaClock style={{ color: "#059669", marginRight: "12px", fontSize: "16px", flexShrink: 0 }} />
+                    <div>
+                      <p style={{ fontWeight: "600", color: "#374151", fontSize: "14px", marginBottom: "2px" }}>Time</p>
+                      <p style={{ color: "#6b7280", fontSize: "14px" }}>{event.time}</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
+
+            {/* Add-ons — full-service events only */}
+            {event.eventType !== "ticketed" && event.addons && event.addons.length > 0 && (
+              <div style={{ marginBottom: "32px" }}>
+                <h3 style={{ fontSize: "18px", fontWeight: "600", marginBottom: "16px", color: "#374151", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <FaPlusCircle style={{ color: "#a2783a", fontSize: "16px" }} />
+                  Available Add-ons
+                </h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  {event.addons.map((addon, idx) => {
+                    // Infer per_person for food/catering add-ons even if stored as fixed
+                    const perPersonKeywords = /veg|catering|food|meal|plate|lunch|dinner|breakfast/i;
+                    const displayType = addon.type === "per_person" || perPersonKeywords.test(addon.name)
+                      ? "per_person" : "fixed";
+                    return (
+                    <div key={idx} style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      backgroundColor: "#fdf8f2",
+                      border: "1px solid #e8d5b7",
+                      borderRadius: "10px",
+                      padding: "12px 16px"
+                    }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <div style={{
+                          width: "8px", height: "8px", borderRadius: "50%",
+                          backgroundColor: "#a2783a", flexShrink: 0
+                        }} />
+                        <span style={{ fontWeight: "500", color: "#374151", fontSize: "14px" }}>
+                          {addon.name}
+                        </span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <span style={{
+                          fontSize: "15px", fontWeight: "700", color: "#a2783a"
+                        }}>
+                          ₹{Number(addon.price || 0).toLocaleString("en-IN")}
+                        </span>
+                        <span style={{
+                          fontSize: "11px", color: "#9ca3af",
+                          backgroundColor: "#f3f4f6",
+                          padding: "2px 8px", borderRadius: "20px"
+                        }}>
+                          {displayType === "per_person" ? "/ person" : "fixed"}
+                        </span>
+                      </div>
+                    </div>
+                    );
+                  })}
+                </div>
+                <p style={{ fontSize: "12px", color: "#9ca3af", marginTop: "10px" }}>
+                  Add-ons can be selected during booking
+                </p>
+              </div>
+            )}
 
             {/* Ticket Availability — ticketed events only */}
             {event.eventType === "ticketed" && event.ticketTypes && event.ticketTypes.length > 0 && (

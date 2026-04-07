@@ -51,7 +51,7 @@ const MerchantRatings = () => {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-3 gap-4 mb-6">
         <div className="bg-white rounded-xl shadow-sm border p-5">
           <p className="text-sm text-gray-500 mb-1">Overall Rating</p>
           <p className="text-3xl font-bold text-yellow-500">{data?.overallAverage ?? "—"}</p>

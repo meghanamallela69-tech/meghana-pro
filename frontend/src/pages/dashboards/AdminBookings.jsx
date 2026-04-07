@@ -167,7 +167,7 @@ const AdminBookings = () => {
       </div>
 
       {/* Stats Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-6 gap-4 mb-6">
+      <div className="grid grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
         <div className="bg-white rounded-xl p-4 shadow-sm border">
           <p className="text-gray-500 text-sm">Total Bookings</p>
           <p className="text-2xl font-bold text-gray-900">{bookings.length}</p>

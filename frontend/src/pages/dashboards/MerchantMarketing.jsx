@@ -254,7 +254,7 @@ const MerchantMarketing = () => {
       </div>
 
       {/* Stats Overview - 4 cards per row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl shadow-lg p-6 border border-blue-200 hover:shadow-xl transition-shadow">
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 bg-blue-500 rounded-lg">
@@ -303,7 +303,7 @@ const MerchantMarketing = () => {
       {/* Marketing Tools Menu - 4 cards per row */}
       <div className="mb-8">
         <h3 className="font-semibold text-lg mb-4">Marketing Tools</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {marketingTools.map((tool) => (
             <div
               key={tool.id}

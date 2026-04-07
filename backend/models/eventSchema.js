@@ -57,4 +57,12 @@ const eventSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Fix legacy documents where rating was stored as a number instead of an object
+eventSchema.pre("save", function (next) {
+  if (typeof this.rating !== "object" || this.rating === null || Array.isArray(this.rating)) {
+    this.rating = { average: 0, totalRatings: 0 };
+  }
+  next();
+});
+
 export const Event = mongoose.model("Event", eventSchema);

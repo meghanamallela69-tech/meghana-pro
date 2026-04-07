@@ -271,175 +271,133 @@ const UserMessages = () => {
 
   return (
     <UserLayout>
-      <div className="h-[calc(100vh-80px)] bg-white rounded-xl shadow-lg overflow-hidden">
-        <div className="flex h-full">
-          {/* Left Sidebar - Chat List */}
-          <div className={`${selectedChat ? 'hidden md:block' : 'block'} w-full md:w-80 border-r border-gray-200 flex flex-col`}>
-            {/* Header */}
-            <div className="p-4 border-b border-gray-200">
-              <h2 className="text-xl font-bold text-gray-800 mb-3">Messages</h2>
-              <div className="relative">
-                <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search chats..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
+      <div style={{ height: "calc(100vh - 80px)", display: "flex", background: "#f0f2f5", borderRadius: 12, overflow: "hidden", boxShadow: "0 2px 16px rgba(0,0,0,0.08)" }}>
 
-            {/* Chat List */}
-            <div className="flex-1 overflow-y-auto">
-              {filteredChats.length === 0 ? (
-                <div className="p-4 text-center text-gray-500">
-                  <p>No chats yet</p>
-                  <p className="text-sm mt-2">Start a conversation with a merchant!</p>
+        {/* ── Left: Chat List ── */}
+        <div style={{ width: 320, flexShrink: 0, display: "flex", flexDirection: "column", background: "#fff", borderRight: "1px solid #e5e7eb" }}>
+          <div style={{ padding: "16px", borderBottom: "1px solid #e5e7eb", background: "#f8fafc" }}>
+            <h2 style={{ color: "#111827", fontWeight: 700, fontSize: 18, marginBottom: 10 }}>Messages</h2>
+            <div style={{ position: "relative" }}>
+              <FaSearch style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#aaa", fontSize: 13 }} />
+              <input type="text" placeholder="Search chats..." value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ width: "100%", paddingLeft: 32, paddingRight: 12, paddingTop: 8, paddingBottom: 8, borderRadius: 20, border: "1px solid #e5e7eb", background: "#fff", fontSize: 13, outline: "none" }} />
+            </div>
+          </div>
+          <div style={{ flex: 1, overflowY: "auto" }}>
+            {filteredChats.length === 0 ? (
+              <div style={{ padding: 24, textAlign: "center", color: "#9ca3af", fontSize: 14 }}>
+                <p>No chats yet</p>
+                <p style={{ marginTop: 6, fontSize: 12 }}>Start a conversation with a merchant!</p>
+              </div>
+            ) : filteredChats.map((chat) => (
+              <div key={chat.chatId} onClick={() => setSelectedChat(chat)}
+                style={{ padding: "12px 16px", borderBottom: "1px solid #f3f4f6", cursor: "pointer", background: selectedChat?.chatId === chat.chatId ? "#e7f3ef" : "#fff", display: "flex", alignItems: "center", gap: 12, transition: "background 0.15s" }}
+                onMouseEnter={e => { if (selectedChat?.chatId !== chat.chatId) e.currentTarget.style.background = "#f9fafb"; }}
+                onMouseLeave={e => { if (selectedChat?.chatId !== chat.chatId) e.currentTarget.style.background = "#fff"; }}>
+                <img src={chat.otherUser?.profileImage || `https://ui-avatars.com/api/?name=${chat.otherUser?.name}&background=random`}
+                  alt={chat.otherUser?.name} style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
+                    <span style={{ fontWeight: 600, fontSize: 14, color: "#111827", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{chat.otherUser?.name}</span>
+                    {chat.unreadCount > 0 && (
+                      <span style={{ background: "#25d366", color: "#fff", fontSize: 11, fontWeight: 700, padding: "2px 7px", borderRadius: 20 }}>{chat.unreadCount}</span>
+                    )}
+                  </div>
+                  <p style={{ fontSize: 12, color: "#6b7280", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{chat.lastMessage?.content || "No messages yet"}</p>
                 </div>
-              ) : (
-                filteredChats.map((chat) => (
-                  <div
-                    key={chat.chatId}
-                    onClick={() => setSelectedChat(chat)}
-                    className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition ${
-                      selectedChat?.chatId === chat.chatId ? 'bg-blue-50' : ''
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <img
-                        src={chat.otherUser?.profileImage || `https://ui-avatars.com/api/?name=${chat.otherUser?.name}&background=random`}
-                        alt={chat.otherUser?.name}
-                        className="w-12 h-12 rounded-full object-cover"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-center mb-1">
-                          <h3 className="font-semibold text-gray-800 truncate">{chat.otherUser?.name}</h3>
-                          {chat.unreadCount > 0 && (
-                            <span className="bg-blue-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                              {chat.unreadCount}
-                            </span>
-                          )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Right: Conversation ── */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+          {selectedChat ? (
+            <>
+              {/* Header */}
+              <div style={{ padding: "10px 16px", background: "#fff", borderBottom: "1px solid #e5e7eb", display: "flex", alignItems: "center", gap: 12 }}>
+                <img src={selectedChat.otherUser?.profileImage || `https://ui-avatars.com/api/?name=${selectedChat.otherUser?.name}&background=random`}
+                  alt={selectedChat.otherUser?.name} style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover" }} />
+                <div>
+                  <p style={{ fontWeight: 700, color: "#111827", fontSize: 15 }}>{selectedChat.otherUser?.name}</p>
+                  <p style={{ fontSize: 12, color: "#6b7280" }}>{selectedChat.otherUser?.email}</p>
+                </div>
+              </div>
+
+              {/* Messages area */}
+              <div style={{ flex: 1, overflowY: "auto", padding: "16px 12px", background: "#f8fafc", display: "flex", flexDirection: "column", gap: 4 }}>
+                {loading ? (
+                  <div style={{ textAlign: "center", color: "#6b7280", paddingTop: 40 }}>Loading messages...</div>
+                ) : messages.length === 0 ? (
+                  <div style={{ textAlign: "center", color: "#6b7280", paddingTop: 40 }}>
+                    <p>No messages yet</p>
+                    <p style={{ fontSize: 13, marginTop: 6 }}>Say hello to start the conversation!</p>
+                  </div>
+                ) : messages.map((msg, index) => {
+                  const senderId = msg.senderId?._id || msg.senderId;
+                  const currentUserId = user?.id || user?._id || user?.userId;
+                  const isMe = String(senderId) === String(currentUserId);
+
+                  // Date separator logic
+                  const msgDate = new Date(msg.createdAt);
+                  const prevMsg = messages[index - 1];
+                  const prevDate = prevMsg ? new Date(prevMsg.createdAt) : null;
+                  const showDateSep = !prevDate || msgDate.toDateString() !== prevDate.toDateString();
+                  const today = new Date();
+                  const yesterday = new Date(); yesterday.setDate(today.getDate() - 1);
+                  const dateLabel = msgDate.toDateString() === today.toDateString() ? "Today"
+                    : msgDate.toDateString() === yesterday.toDateString() ? "Yesterday"
+                    : msgDate.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+
+                  return (
+                    <div key={msg._id}>
+                      {showDateSep && (
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", margin: "12px 0 8px" }}>
+                          <span style={{ background: "#e2e8f0", color: "#475569", fontSize: 11, fontWeight: 600, padding: "3px 12px", borderRadius: 20 }}>
+                            {dateLabel}
+                          </span>
                         </div>
-                        <p className="text-sm text-gray-600 truncate">{chat.lastMessage?.content}</p>
-                        <p className="text-xs text-gray-400 mt-1">
-                          {chat.lastMessage?.createdAt ? new Date(chat.lastMessage.createdAt).toLocaleString() : ''}
-                        </p>
+                      )}
+                      <div style={{ display: "flex", justifyContent: isMe ? "flex-end" : "flex-start", marginBottom: 2 }}>
+                        <div style={{
+                          maxWidth: "65%", padding: "8px 12px 6px",
+                          borderRadius: isMe ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
+                          background: isMe ? "#dbeafe" : "#fff",
+                          boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
+                          border: isMe ? "1px solid #bfdbfe" : "1px solid #d1d5db",
+                        }}>
+                          <p style={{ fontSize: 14, color: "#111827", lineHeight: 1.5, wordBreak: "break-word", margin: 0 }}>{msg.content}</p>
+                          <p style={{ fontSize: 11, color: isMe ? "#1d4ed8" : "#4b5563", textAlign: "right", marginTop: 4, marginBottom: 0, fontWeight: 500 }}>
+                            {msgDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                            {isMe && <span style={{ marginLeft: 4 }}>✓✓</span>}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Right Side - Chat Conversation */}
-          <div className={`${!selectedChat ? 'hidden' : 'block'} flex-1 flex flex-col`}>
-            {selectedChat ? (
-              <>
-                {/* Chat Header */}
-                <div className="p-4 border-b border-gray-200 flex items-center gap-3 bg-white shadow-sm">
-                  <button
-                    onClick={() => setSelectedChat(null)}
-                    className="md:hidden p-2 hover:bg-gray-100 rounded-lg"
-                  >
-                    <FaArrowLeft />
-                  </button>
-                  <img
-                    src={selectedChat.otherUser?.profileImage || `https://ui-avatars.com/api/?name=${selectedChat.otherUser?.name}&background=random`}
-                    alt={selectedChat.otherUser?.name}
-                    className="w-10 h-10 rounded-full object-cover"
-                  />
-                  <div>
-                    <h3 className="font-semibold text-gray-800">{selectedChat.otherUser?.name}</h3>
-                    <p className="text-xs text-gray-500">
-                      {selectedChat.otherUser?.email}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-4 bg-gray-50 space-y-3">
-                  {loading ? (
-                    <div className="text-center text-gray-500 py-8">Loading messages...</div>
-                  ) : messages.length === 0 ? (
-                    <div className="text-center text-gray-500 py-8">
-                      <p>No messages yet</p>
-                      <p className="text-sm mt-2">Say hello to start the conversation!</p>
-                    </div>
-                  ) : (
-                    messages.map((msg, index) => {
-                      // Handle both populated and non-populated senderId
-                      const senderId = msg.senderId?._id || msg.senderId;
-                      const currentUserId = user?.userId;
-                      const isCurrentUser = String(senderId) === String(currentUserId);
-                      
-                      // Debug first 3 messages only
-                      if (index < 3) {
-                        console.log(`Message ${index}:`, {
-                          msgId: msg._id,
-                          senderId: senderId,
-                          currentUserId: currentUserId,
-                          isCurrentUser: isCurrentUser,
-                          content: msg.content.substring(0, 30)
-                        });
-                      }
-                      
-                      return (
-                        <div
-                          key={msg._id}
-                          className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
-                        >
-                          <div
-                            className={`max-w-[70%] px-4 py-2.5 rounded-2xl shadow-md ${
-                              isCurrentUser
-                                ? 'bg-blue-100 text-gray-800 rounded-br-none border border-blue-200'
-                                : 'bg-gray-200 text-gray-800 rounded-bl-none border border-gray-300'
-                            }`}
-                          >
-                            <p className="text-sm leading-relaxed break-words">{msg.content}</p>
-                            <p className={`text-xs mt-1 ${
-                              isCurrentUser ? 'text-blue-600 font-medium' : 'text-gray-500 font-medium'
-                            }`}>
-                              {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                  <div ref={messagesEndRef} />
-                </div>
-
-                {/* Message Input */}
-                <form onSubmit={sendMessage} className="p-4 border-t border-gray-200 bg-white">
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      placeholder="Type a message..."
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <button
-                      type="submit"
-                      disabled={!newMessage.trim()}
-                      className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                    >
-                      <FaPaperPlane />
-                      <span className="hidden sm:inline">Send</span>
-                    </button>
-                  </div>
-                </form>
-              </>
-            ) : (
-              <div className="flex-1 flex items-center justify-center bg-gray-50">
-                <div className="text-center text-gray-500">
-                  <p className="text-lg">Select a chat to start messaging</p>
-                </div>
+                  );
+                })}
+                <div ref={messagesEndRef} />
               </div>
-            )}
-          </div>
+
+              {/* Input */}
+              <form onSubmit={sendMessage} style={{ padding: "10px 12px", background: "#fff", display: "flex", alignItems: "center", gap: 10, borderTop: "1px solid #e5e7eb" }}>
+                <input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)}
+                  placeholder="Type a message..."
+                  style={{ flex: 1, padding: "10px 16px", borderRadius: 24, border: "1px solid #e5e7eb", background: "#f8fafc", fontSize: 14, outline: "none" }} />
+                <button type="submit" disabled={!newMessage.trim()}
+                  style={{ width: 44, height: 44, borderRadius: "50%", background: newMessage.trim() ? "#2563eb" : "#ccc", border: "none", cursor: newMessage.trim() ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background 0.2s" }}>
+                  <FaPaperPlane style={{ color: "#fff", fontSize: 16 }} />
+                </button>
+              </form>
+            </>
+          ) : (
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#f0f2f5", color: "#9ca3af" }}>
+              <div style={{ fontSize: 48, marginBottom: 16 }}>💬</div>
+              <p style={{ fontSize: 18, fontWeight: 600, color: "#374151" }}>Select a chat</p>
+              <p style={{ fontSize: 14, marginTop: 6 }}>Choose a conversation from the left to start messaging</p>
+            </div>
+          )}
         </div>
       </div>
     </UserLayout>

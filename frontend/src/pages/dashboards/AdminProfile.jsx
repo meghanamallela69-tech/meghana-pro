@@ -143,7 +143,7 @@ const AdminProfile = () => {
         <p className="text-gray-600 mt-1">Manage your personal information</p>
       </div>
 
-      <div className="max-w-4xl">
+      <div className="max-w-4xl mx-auto">
         {/* Profile Card */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-6">
           <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">

@@ -228,6 +228,11 @@ export const createBooking = async (req, res) => {
           
           event.availableTickets = newAvailable;
           
+          // Fix legacy rating field if stored as number
+          if (typeof event.rating !== "object" || event.rating === null) {
+            event.rating = { average: 0, totalRatings: 0 };
+          }
+
           await event.save();
         } else {
         }
