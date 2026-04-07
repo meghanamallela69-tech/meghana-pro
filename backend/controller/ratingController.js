@@ -130,21 +130,25 @@ export const getUserRatings = async (req, res) => {
 const updateEventRating = async (eventId) => {
   try {
     const ratings = await Rating.find({ event: eventId });
-    
+
+    // First, ensure the rating field is an object (fix legacy number values)
+    await Event.updateOne(
+      { _id: eventId, $or: [{ rating: { $type: "number" } }, { rating: null }] },
+      { $set: { rating: { average: 0, totalRatings: 0 } } }
+    );
+
     if (ratings.length === 0) {
       await Event.findByIdAndUpdate(eventId, {
-        "rating.average": 0,
-        "rating.totalRatings": 0
+        $set: { "rating.average": 0, "rating.totalRatings": 0 }
       });
       return;
     }
 
-    const totalScore = ratings.reduce((sum, rating) => sum + rating.rating, 0);
-    const average = totalScore / ratings.length;
+    const totalScore = ratings.reduce((sum, r) => sum + r.rating, 0);
+    const average = Math.round((totalScore / ratings.length) * 10) / 10;
 
     await Event.findByIdAndUpdate(eventId, {
-      "rating.average": Math.round(average * 10) / 10, // Round to 1 decimal
-      "rating.totalRatings": ratings.length
+      $set: { "rating.average": average, "rating.totalRatings": ratings.length }
     });
 
   } catch (error) {

@@ -400,12 +400,47 @@ const UserMyEvents = () => {
                     {/* Price Section */}
                     <div className="mb-4 p-3 bg-gray-50 rounded-lg">
                       <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600">Service Price:</span>
-                          <span className="text-sm font-medium text-gray-900">
-                            {formatPrice(booking.servicePrice || 0)}
-                          </span>
-                        </div>
+                        {/* Ticketed: show per-type price breakdown */}
+                        {booking.eventType === "ticketed" && booking.selectedTickets && Object.keys(booking.selectedTickets).length > 0 ? (
+                          (() => {
+                            const entries = Object.entries(booking.selectedTickets).filter(([, v]) => Number(v) > 0);
+                            return entries.map(([type, qty]) => {
+                              // Priority 1: eventTicketTypes from event lookup
+                              const typeInfo = booking.eventTicketTypes?.find(
+                                t => t.name?.toLowerCase() === type?.toLowerCase()
+                              );
+                              // Priority 2: ticketTypePrices stored at booking time
+                              const storedPrice = booking.ticketTypePrices?.[type];
+                              let unitPrice = typeInfo?.price ?? storedPrice;
+                              if (!unitPrice) {
+                                if (entries.length === 1) {
+                                  const total = booking.finalAmount || booking.totalPrice || 0;
+                                  unitPrice = Number(qty) > 0 ? Math.round(total / Number(qty)) : 0;
+                                } else {
+                                  unitPrice = booking.servicePrice || 0;
+                                }
+                              }
+                              return (
+                                <div key={type} className="flex items-center justify-between">
+                                  <span className="text-sm text-gray-600">
+                                    {type} × {qty}:
+                                  </span>
+                                  <span className="text-sm font-medium text-gray-900">
+                                    {formatPrice(unitPrice * Number(qty))}
+                                    <span className="text-xs text-gray-400 ml-1">({formatPrice(unitPrice)}/ticket)</span>
+                                  </span>
+                                </div>
+                              );
+                            });
+                          })()
+                        ) : (
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-600">Service Price:</span>
+                            <span className="text-sm font-medium text-gray-900">
+                              {formatPrice(booking.servicePrice || 0)}
+                            </span>
+                          </div>
+                        )}
 
                         {booking.addons && booking.addons.length > 0 && (
                           <div className="flex items-center justify-between">
@@ -450,18 +485,30 @@ const UserMyEvents = () => {
                     {/* Guest Count / Ticket Quantity */}
                     {(() => {
                       if (booking.eventType === "ticketed") {
-                        // Sum selectedTickets or fall back to ticket.quantity
-                        let qty = booking.ticket?.quantity || 1;
-                        if (booking.selectedTickets) {
-                          const entries = booking.selectedTickets instanceof Map
-                            ? Array.from(booking.selectedTickets.entries())
-                            : Object.entries(booking.selectedTickets);
-                          const total = entries.reduce((s, [, v]) => s + Number(v), 0);
-                          if (total > 0) qty = total;
-                        }
+                        const entries = booking.selectedTickets
+                          ? (booking.selectedTickets instanceof Map
+                              ? Array.from(booking.selectedTickets.entries())
+                              : Object.entries(booking.selectedTickets)
+                            ).filter(([, v]) => Number(v) > 0)
+                          : [];
+                        const total = entries.reduce((s, [, v]) => s + Number(v), 0) || booking.ticket?.quantity || 1;
+
                         return (
-                          <div className="text-sm text-gray-600 mb-4">
-                            <span className="font-medium">{qty}</span> ticket{qty !== 1 ? 's' : ''}
+                          <div className="mb-4">
+                            {entries.length > 0 ? (
+                              <div className="flex flex-wrap gap-2">
+                                {entries.map(([type, qty]) => (
+                                  <span key={type} className="inline-flex items-center gap-1 px-2 py-1 bg-purple-50 border border-purple-200 rounded-lg text-xs font-medium text-purple-700">
+                                    🎟 {qty}× {type}
+                                  </span>
+                                ))}
+                                <span className="text-xs text-gray-500 self-center">({total} total)</span>
+                              </div>
+                            ) : (
+                              <div className="text-sm text-gray-600">
+                                <span className="font-medium">{total}</span> ticket{total !== 1 ? 's' : ''}
+                              </div>
+                            )}
                           </div>
                         );
                       }

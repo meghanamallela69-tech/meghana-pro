@@ -10,7 +10,33 @@ class NotificationService {
     eventId = null, bookingId = null, actionUrl = null, actionText = null
   }) {
     try {
-      return await Notification.create({ user: userId, message, type, priority, eventId, bookingId, actionUrl, actionText });
+      const notification = await Notification.create({
+        user: userId, message, type, priority, eventId, bookingId, actionUrl, actionText
+      });
+
+      // Emit real-time socket event to the user's room
+      try {
+        const { getIO } = await import('../util/socketIO.js');
+        const io = getIO();
+        if (io) {
+          io.to(`user_${userId}`).emit('newNotification', {
+            _id: notification._id,
+            message: notification.message,
+            type: notification.type,
+            priority: notification.priority,
+            read: false,
+            createdAt: notification.createdAt,
+            bookingId: notification.bookingId,
+            eventId: notification.eventId,
+            actionUrl: notification.actionUrl,
+            actionText: notification.actionText,
+          });
+        }
+      } catch (socketErr) {
+        // Non-fatal — notification is saved, just not pushed in real-time
+      }
+
+      return notification;
     } catch (error) {
       console.error('❌ Failed to create notification:', error.message);
       throw error;

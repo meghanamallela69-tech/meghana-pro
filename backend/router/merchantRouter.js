@@ -19,6 +19,7 @@ import {
   getMerchantRatings
 } from "../controller/merchantController.js";
 import { upload } from "../util/cloudinary.js";
+import { Event } from "../models/eventSchema.js";
 
 const router = express.Router();
 
@@ -49,5 +50,18 @@ router.put("/bookings/:bookingId/approve", auth, ensureRole("merchant"), approve
 router.put("/bookings/:bookingId/status", auth, ensureRole("merchant"), updateBookingStatus);
 router.get("/bookings/:bookingId/details", auth, ensureRole("merchant"), getBookingDetails);
 router.get("/ratings", auth, ensureRole("merchant"), getMerchantRatings);
+
+// One-time migration: fix legacy rating fields stored as numbers
+router.post("/migrate/fix-ratings", auth, ensureRole("merchant"), async (req, res) => {
+  try {
+    const result = await Event.updateMany(
+      { $or: [{ rating: { $type: "number" } }, { rating: null }, { rating: { $exists: false } }] },
+      { $set: { rating: { average: 0, totalRatings: 0 } } }
+    );
+    res.json({ success: true, fixed: result.modifiedCount });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
 
 export default router;

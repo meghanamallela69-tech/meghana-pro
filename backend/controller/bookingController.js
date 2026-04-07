@@ -159,6 +159,13 @@ export const createBooking = async (req, res) => {
       if (selectedTickets) {
         bookingData.selectedTickets = selectedTickets;
       }
+
+      // Store per-type prices from event so frontend always has them
+      if (event?.ticketTypes?.length > 0) {
+        bookingData.ticketTypePrices = Object.fromEntries(
+          event.ticketTypes.map(t => [t.name, t.price])
+        );
+      }
       
       // Add discount and promo code info (both optional)
       if (discount && discount > 0) {
@@ -462,11 +469,24 @@ export const getUserBookings = async (req, res) => {
         } else if (!bookingObj.selectedTickets) {
           bookingObj.selectedTickets = {};
         }
+
+        // Convert ticketTypePrices Map to plain object
+        if (bookingObj.ticketTypePrices instanceof Map) {
+          bookingObj.ticketTypePrices = Object.fromEntries(bookingObj.ticketTypePrices);
+        } else if (!bookingObj.ticketTypePrices) {
+          bookingObj.ticketTypePrices = {};
+        }
+
+        // Build eventTicketTypes from stored prices (most reliable source)
+        if (bookingObj.eventType === "ticketed" && Object.keys(bookingObj.ticketTypePrices).length > 0) {
+          bookingObj.eventTicketTypes = Object.entries(bookingObj.ticketTypePrices).map(([name, price]) => ({ name, price }));
+        }
         
         // Try to get event data to enhance the booking
-        if (bookingObj.serviceId) {
+        const eventLookupId = bookingObj.eventId || bookingObj.serviceId;
+        if (eventLookupId) {
           try {
-            const event = await Event.findById(bookingObj.serviceId);
+            const event = await Event.findById(eventLookupId);
             if (event) {
               // Update the booking in database with proper date/time if missing
               const updateData = {};
@@ -479,13 +499,20 @@ export const getUserBookings = async (req, res) => {
               
               if (Object.keys(updateData).length > 0) {
                 await Booking.findByIdAndUpdate(booking._id, updateData);
-                // Update the object we're returning
                 Object.assign(bookingObj, updateData);
               }
               
               // Add event images to the booking object for frontend
               bookingObj.eventImages = event.images || [];
               bookingObj.eventImage = event.images && event.images.length > 0 ? event.images[0].url : null;
+
+              // Always include ticketTypes for price lookup on frontend
+              if (event.ticketTypes?.length > 0) {
+                bookingObj.eventTicketTypes = event.ticketTypes.map(t => ({
+                  name: t.name,
+                  price: t.price,
+                }));
+              }
             }
           } catch (error) {
             console.error(`Error enhancing booking ${booking._id}:`, error.message);

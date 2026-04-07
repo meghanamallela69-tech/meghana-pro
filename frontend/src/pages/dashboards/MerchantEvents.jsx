@@ -7,6 +7,7 @@ import MerchantLayout from "../../components/merchant/MerchantLayout";
 import { BsCalendar2Event } from "react-icons/bs";
 import { FaEdit, FaTrash, FaPlus, FaMapMarkerAlt, FaClock } from "react-icons/fa";
 import toast from "react-hot-toast";
+import { getEventStatus } from "../../lib/utils";
 
 const MerchantEvents = () => {
   const { token } = useAuth();
@@ -105,6 +106,20 @@ const MerchantEvents = () => {
                     <h4 className="text-white font-semibold truncate">{ev.title}</h4>
                     <span className="text-white/80 text-xs">{ev.category || "Event"}</span>
                   </div>
+                  {/* Status badge */}
+                  {(() => {
+                    const s = getEventStatus(ev);
+                    const colorMap = {
+                      Completed: "bg-gray-600 text-white",
+                      Live: "bg-green-500 text-white",
+                      Upcoming: "bg-blue-500 text-white",
+                    };
+                    return (
+                      <span className={`absolute top-2 right-2 px-2 py-0.5 rounded text-xs font-semibold ${colorMap[s.label] || "bg-gray-500 text-white"}`}>
+                        {s.label}
+                      </span>
+                    );
+                  })()}
                   {(ev.rating?.average > 0) && (
                     <span className="absolute top-2 left-2 px-2 py-1 bg-yellow-400 text-yellow-900 rounded text-xs font-medium flex items-center gap-1">
                       ⭐ {ev.rating.average.toFixed(1)}

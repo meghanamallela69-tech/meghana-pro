@@ -9,6 +9,7 @@ import { BsFilter, BsBookmarkHeart, BsBookmarkHeartFill } from "react-icons/bs";
 import toast from "react-hot-toast";
 import BookingModal from "../../components/BookingModal";
 import EventDetailsModal from "../../components/EventDetailsModal";
+import { getEventStatus } from "../../lib/utils";
 
 const UserBrowseEvents = () => {
   const { token } = useAuth();
@@ -325,7 +326,10 @@ const UserBrowseEvents = () => {
           gridTemplateColumns: 'repeat(4, 1fr)', 
           gap: '24px' 
         }}>
-          {filteredEvents.map((event) => (
+          {filteredEvents.map((event) => {
+            const eventStatus = getEventStatus(event);
+            const isCompleted = eventStatus.label === 'Completed';
+            return (
             <article key={event._id} style={{
               backgroundColor: 'white',
               borderRadius: '16px',
@@ -333,7 +337,8 @@ const UserBrowseEvents = () => {
               boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
               transition: 'all 0.3s ease',
               display: 'flex',
-              flexDirection: 'column'
+              flexDirection: 'column',
+              opacity: isCompleted ? 0.75 : 1,
             }} className="event-card">
               <div style={{ 
                 position: 'relative', 
@@ -394,6 +399,26 @@ const UserBrowseEvents = () => {
                 }}>
                   {event.category || "Event"}
                 </div>
+                {/* Status badge — only for ticketed events with a date */}
+                {event.eventType === 'ticketed' && event.date && (() => {
+                  const s = getEventStatus(event);
+                  const colorMap = {
+                    Completed: { bg: "#4b5563", color: "#fff" },
+                    Live: { bg: "#16a34a", color: "#fff" },
+                    Upcoming: { bg: "#2563eb", color: "#fff" },
+                  };
+                  const c = colorMap[s.label] || { bg: "#4b5563", color: "#fff" };
+                  return (
+                    <div style={{
+                      position: 'absolute', bottom: '12px', left: '12px',
+                      backgroundColor: c.bg, color: c.color,
+                      padding: '3px 10px', borderRadius: '20px',
+                      fontSize: '11px', fontWeight: '600'
+                    }}>
+                      {s.label}
+                    </div>
+                  );
+                })()}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -463,19 +488,19 @@ const UserBrowseEvents = () => {
                     onClick={() => handleViewDetails(event)}
                     style={{
                       flex: 1,
-                      padding: '14px 18px', // Increased padding
+                      padding: '14px 18px',
                       backgroundColor: 'white',
                       color: '#a2783a',
                       textAlign: 'center',
-                      borderRadius: '10px', // Increased border radius
-                      fontWeight: '700', // Increased font weight
-                      fontSize: '15px', // Increased font size
+                      borderRadius: '10px',
+                      fontWeight: '700',
+                      fontSize: '15px',
                       transition: 'all 0.3s',
                       border: '2px solid #a2783a',
                       cursor: 'pointer',
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)', // Added shadow
-                      textTransform: 'uppercase', // Make text uppercase
-                      letterSpacing: '0.5px' // Add letter spacing
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px'
                     }}
                     onMouseEnter={(e) => {
                       e.target.style.backgroundColor = '#a2783a';
@@ -492,43 +517,70 @@ const UserBrowseEvents = () => {
                   >
                     View Details
                   </button>
-                  <button 
-                    onClick={() => handleBookNow(event)}
-                    style={{
-                      flex: 1,
-                      padding: '14px 18px', // Increased padding
-                      backgroundColor: '#a2783a',
-                      color: 'white',
-                      textAlign: 'center',
-                      borderRadius: '10px', // Increased border radius
-                      fontWeight: '700', // Increased font weight
-                      fontSize: '15px', // Increased font size
-                      transition: 'all 0.3s',
-                      border: '2px solid #a2783a',
-                      cursor: 'pointer',
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)', // Added shadow
-                      textTransform: 'uppercase', // Make text uppercase
-                      letterSpacing: '0.5px' // Add letter spacing
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.backgroundColor = '#8b6a30';
-                      e.target.style.borderColor = '#8b6a30';
-                      e.target.style.transform = 'translateY(-2px)';
-                      e.target.style.boxShadow = '0 4px 12px rgba(162, 120, 58, 0.4)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.backgroundColor = '#a2783a';
-                      e.target.style.borderColor = '#a2783a';
-                      e.target.style.transform = 'translateY(0)';
-                      e.target.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
-                    }}
-                  >
-                    Book Now
-                  </button>
+                  {(() => {
+                    const s = getEventStatus(event);
+                    const isCompleted = s.label === 'Completed';
+                    return isCompleted ? (
+                      <div style={{
+                        flex: 1,
+                        padding: '14px 18px',
+                        backgroundColor: '#f3f4f6',
+                        color: '#9ca3af',
+                        textAlign: 'center',
+                        borderRadius: '10px',
+                        fontWeight: '700',
+                        fontSize: '13px',
+                        border: '2px solid #e5e7eb',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px'
+                      }}>
+                        <span>🚫</span> Not Available
+                      </div>
+                    ) : (
+                      <button 
+                        onClick={() => handleBookNow(event)}
+                        style={{
+                          flex: 1,
+                          padding: '14px 18px',
+                          backgroundColor: '#a2783a',
+                          color: 'white',
+                          textAlign: 'center',
+                          borderRadius: '10px',
+                          fontWeight: '700',
+                          fontSize: '15px',
+                          transition: 'all 0.3s',
+                          border: '2px solid #a2783a',
+                          cursor: 'pointer',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.backgroundColor = '#8b6a30';
+                          e.target.style.borderColor = '#8b6a30';
+                          e.target.style.transform = 'translateY(-2px)';
+                          e.target.style.boxShadow = '0 4px 12px rgba(162, 120, 58, 0.4)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.backgroundColor = '#a2783a';
+                          e.target.style.borderColor = '#a2783a';
+                          e.target.style.transform = 'translateY(0)';
+                          e.target.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                        }}
+                      >
+                        Book Now
+                      </button>
+                    );
+                  })()}
                 </div>
               </div>
             </article>
-          ))}
+            );
+          })}
         </section>
       )}
 

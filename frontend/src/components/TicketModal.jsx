@@ -478,7 +478,40 @@ const TicketModal = ({ booking, isOpen, onClose }) => {
             </div>
 
             {/* Ticket Type & Quantity */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px", marginBottom: "24px", position: "relative", zIndex: 1 }}>
+            <div style={{ marginBottom: "24px", position: "relative", zIndex: 1 }}>
+              {/* Ticket breakdown — one row per type */}
+              {(() => {
+                const entries = cleanedBooking.selectedTickets
+                  ? Object.entries(cleanedBooking.selectedTickets).filter(([, v]) => Number(v) > 0)
+                  : [];
+                if (entries.length > 1) {
+                  return (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "16px" }}>
+                      {entries.map(([type, qty]) => (
+                        <div key={type} style={{
+                          display: "flex", justifyContent: "space-between", alignItems: "center",
+                          background: "#ffffff", borderRadius: "12px", padding: "12px 16px",
+                          boxShadow: "0 2px 8px rgba(0,0,0,0.1)", border: "2px solid #e5e7eb"
+                        }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <span style={{ fontSize: "18px" }}>🎟</span>
+                            <div>
+                              <p style={{ fontSize: "11px", color: "#374151", textTransform: "uppercase", letterSpacing: "1px", margin: 0, fontWeight: "700" }}>Ticket Type</p>
+                              <p style={{ fontWeight: "800", fontSize: "16px", margin: "2px 0 0 0", color: "#000" }}>{type}</p>
+                            </div>
+                          </div>
+                          <div style={{ textAlign: "right" }}>
+                            <p style={{ fontSize: "11px", color: "#374151", textTransform: "uppercase", letterSpacing: "1px", margin: 0, fontWeight: "700" }}>Qty</p>
+                            <p style={{ fontWeight: "800", fontSize: "20px", margin: "2px 0 0 0", color: "#667eea" }}>{qty}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px" }}>
               <div style={{ 
                 textAlign: "center", 
                 background: "#ffffff", 
@@ -500,7 +533,16 @@ const TicketModal = ({ booking, isOpen, onClose }) => {
                   fontSize: "16px", 
                   margin: "4px 0 0 0",
                   color: "#000000"
-                }}>{ticketData.ticketType}</p>
+                }}>
+                  {(() => {
+                    const entries = cleanedBooking.selectedTickets
+                      ? Object.entries(cleanedBooking.selectedTickets).filter(([, v]) => Number(v) > 0)
+                      : [];
+                    if (entries.length === 1) return entries[0][0];
+                    if (entries.length > 1) return "Multiple";
+                    return ticketData.ticketType;
+                  })()}
+                </p>
               </div>
               <div style={{ 
                 textAlign: "center", 
@@ -548,6 +590,7 @@ const TicketModal = ({ booking, isOpen, onClose }) => {
                   color: "#059669"
                 }}>{formatPrice(ticketData.finalAmount)}</p>
               </div>
+            </div>
             </div>
 
             {/* Pricing Details */}

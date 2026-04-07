@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { io } from "socket.io-client";
 import { FiBell } from "react-icons/fi";
 import { FaCheck, FaTrash, FaCalendarAlt, FaDollarSign, FaBell, FaInbox, FaSyncAlt } from "react-icons/fa";
 import { toast } from "react-hot-toast";
@@ -60,6 +61,21 @@ const NotificationDropdown = ({ viewAllPath }) => {
       window.removeEventListener("resize", handler);
     };
   }, [open]);
+
+  // Real-time: refresh dropdown list when a new notification arrives
+  useEffect(() => {
+    if (!token || !user) return;
+    const userId = user?.id || user?._id || user?.userId;
+    if (!userId) return;
+
+    const socket = io(API_BASE, { withCredentials: true, transports: ['websocket', 'polling'] });
+    socket.emit('joinUserRoom', userId);
+    socket.on('newNotification', () => {
+      // If dropdown is open, refresh the list immediately
+      if (open) fetchNotifications(1, false);
+    });
+    return () => { socket.emit('leaveUserRoom', userId); socket.disconnect(); };
+  }, [token, user, open]);
 
   const fetchNotifications = async (pageNum = 1, append = false) => {
     if (!token) return;

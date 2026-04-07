@@ -309,6 +309,11 @@ export const updateEvent = async (req, res) => {
       event.images = newImages;
     }
 
+    // Normalize legacy rating field before saving
+    if (typeof event.rating !== "object" || event.rating === null || Array.isArray(event.rating)) {
+      event.rating = { average: 0, totalRatings: 0 };
+    }
+
     await event.save();
     return res.status(200).json({ success: true, event });
   } catch (error) {

@@ -77,5 +77,17 @@ function onConnected(connection) {
   mongoose.connection.on("disconnected", () => console.warn("⚠️  DB disconnected"));
   mongoose.connection.on("reconnected", () => console.log("🔄 DB reconnected"));
 
+  // Auto-migrate: fix legacy rating fields stored as numbers
+  import("../models/eventSchema.js").then(({ Event }) => {
+    Event.updateMany(
+      { $or: [{ rating: { $type: "number" } }, { rating: null }, { rating: { $exists: false } }] },
+      { $set: { rating: { average: 0, totalRatings: 0 } } }
+    ).then(result => {
+      if (result.modifiedCount > 0) {
+        console.log(`🔧 Migrated ${result.modifiedCount} event(s): rating field fixed`);
+      }
+    }).catch(err => console.error("⚠️  Rating migration error:", err.message));
+  });
+
   return connection;
 }

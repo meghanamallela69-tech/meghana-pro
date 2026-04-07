@@ -1,6 +1,7 @@
 import app from "./app.js";
 import { Server } from "socket.io";
 import { startScheduledTasks } from "./services/scheduledTasks.js";
+import { setIO } from "./util/socketIO.js";
 
 const PORT = process.env.PORT || 5000;
 
@@ -35,4 +36,5 @@ io.on('connection', (socket) => {
 });
 
 app.set('io', io);
+setIO(io);
 startScheduledTasks();

@@ -113,6 +113,12 @@ const bookingSchema = new mongoose.Schema(
       of: Number, // { "Regular": 2, "VIP": 1 }
       default: {}
     },
+    // Per-type prices snapshot at booking time (for ticketed events)
+    ticketTypePrices: {
+      type: Map,
+      of: Number, // { "Regular": 500, "VIP": 1500 }
+      default: {}
+    },
     // Payment Status and Commission details
     paymentStatus: {
       type: String,

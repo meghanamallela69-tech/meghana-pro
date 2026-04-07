@@ -155,8 +155,8 @@ const EventDetailsModal = ({ isOpen, onClose, event, onBookNow }) => {
                 fontSize: "12px",
                 fontWeight: "600",
                 marginBottom: "12px",
-                backgroundColor: status.label === 'Available' ? '#10b981' : 
-                                status.label === 'Past' ? '#6b7280' : '#f59e0b',
+                backgroundColor: status.label === 'Completed' ? '#6b7280' :
+                                status.label === 'Live' ? '#10b981' : '#f59e0b',
                 color: "white"
               }}>
                 {status.label}
@@ -505,81 +505,63 @@ const EventDetailsModal = ({ isOpen, onClose, event, onBookNow }) => {
               }}>
                 <button
                   onClick={handleBookNowClick}
-                  disabled={status.label === 'Past' || status.label === 'Sold Out'}
+                  disabled={status.label === 'Completed' || status.label === 'Sold Out'}
                   style={{
                     padding: "16px 32px",
                     borderRadius: "12px",
                     fontWeight: "600",
                     fontSize: "16px",
                     border: "none",
-                    cursor: status.label === 'Past' || status.label === 'Sold Out' ? "not-allowed" : "pointer",
-                    backgroundColor: status.label === 'Past' || status.label === 'Sold Out' ? "#d1d5db" : "#a2783a",
-                    color: status.label === 'Past' || status.label === 'Sold Out' ? "#6b7280" : "white",
+                    cursor: status.label === 'Completed' || status.label === 'Sold Out' ? "not-allowed" : "pointer",
+                    backgroundColor: status.label === 'Completed' || status.label === 'Sold Out' ? "#d1d5db" : "#a2783a",
+                    color: status.label === 'Completed' || status.label === 'Sold Out' ? "#6b7280" : "white",
                     transition: "all 0.3s ease",
-                    transform: status.label === 'Past' || status.label === 'Sold Out' ? "none" : "translateY(0)",
                   }}
                   onMouseEnter={(e) => {
-                    if (status.label !== 'Past' && status.label !== 'Sold Out') {
+                    if (status.label !== 'Completed' && status.label !== 'Sold Out') {
                       e.target.style.backgroundColor = "#92692d";
                       e.target.style.transform = "translateY(-2px)";
                       e.target.style.boxShadow = "0 4px 16px rgba(0,0,0,0.2)";
                     }
                   }}
                   onMouseLeave={(e) => {
-                    if (status.label !== 'Past' && status.label !== 'Sold Out') {
+                    if (status.label !== 'Completed' && status.label !== 'Sold Out') {
                       e.target.style.backgroundColor = "#a2783a";
                       e.target.style.transform = "translateY(0)";
                       e.target.style.boxShadow = "none";
                     }
                   }}
                 >
-                  {status.label === 'Past' ? 'Event Ended' : 
+                  {status.label === 'Completed' ? '🚫 Event Ended' : 
                    status.label === 'Sold Out' ? 'Sold Out' : 'Book Now'}
                 </button>
                 
                 <button
                   onClick={() => {
-                    // Check if user is logged in
                     const token = localStorage.getItem('token');
-                    if (!token) {
-                      // Redirect to login
-                      window.location.href = '/login';
-                      return;
-                    }
-                    
-                    // Get merchant ID from event
+                    if (!token) { window.location.href = '/login'; return; }
                     const merchantId = event.createdBy?._id || event.createdBy?.id;
-                    if (!merchantId) {
-                      alert('Merchant information not available');
-                      return;
-                    }
-                    
-                    // Navigate to messages page with merchant info
+                    if (!merchantId) { alert('Merchant information not available'); return; }
                     window.location.href = `/dashboard/user/messages?merchantId=${merchantId}&merchantName=${encodeURIComponent(event.createdBy.name)}`;
                   }}
-                  disabled={status.label === 'Past' || status.label === 'Sold Out'}
                   style={{
                     padding: "14px 32px",
                     borderRadius: "12px",
                     fontWeight: "600",
                     fontSize: "15px",
                     border: "2px solid #a2783a",
-                    cursor: status.label === 'Past' || status.label === 'Sold Out' ? "not-allowed" : "pointer",
+                    cursor: "pointer",
                     backgroundColor: "white",
-                    color: status.label === 'Past' || status.label === 'Sold Out' ? "#6b7280" : "#a2783a",
+                    color: "#a2783a",
                     transition: "all 0.3s ease",
                   }}
                   onMouseEnter={(e) => {
-                    if (status.label !== 'Past' && status.label !== 'Sold Out') {
-                      e.target.style.backgroundColor = "#a2783a";
-                      e.target.style.color = "white";
-                    }
+                    e.target.style.backgroundColor = "#a2783a";
+                    e.target.style.color = "white";
                   }}
                   onMouseLeave={(e) => {
-                    if (status.label !== 'Past' && status.label !== 'Sold Out') {
-                      e.target.style.backgroundColor = "white";
-                      e.target.style.color = "#a2783a";
-                    }
+                    e.target.style.backgroundColor = "white";
+                    e.target.style.color = "#a2783a";
                   }}
                 >
                   💬 Message Merchant
