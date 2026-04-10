@@ -28,7 +28,7 @@ const AdminTopbar = ({ onToggleSidebar, profileName = "Admin", onLogout }) => {
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b">
-      <div className="flex items-center justify-between px-4 py-3">
+      <div className="tb-header-row flex items-center justify-between px-4 py-3">
 
         {/* Left: Hamburger + Logo */}
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -41,9 +41,9 @@ const AdminTopbar = ({ onToggleSidebar, profileName = "Admin", onLogout }) => {
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div className="tb-right" style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <NotificationDropdown viewAllPath="/dashboard/admin/notifications" />
-          <LanguageSwitcher />
+          <span className="tb-lang"><LanguageSwitcher /></span>
 
           <div style={{ position: "relative" }} ref={profileRef}>
             <button type="button" onClick={() => setOpen(p => !p)}
@@ -74,6 +74,12 @@ const AdminTopbar = ({ onToggleSidebar, profileName = "Admin", onLogout }) => {
 
       <style>{`
         .tb-name { display: inline !important; }
+        @media (max-width: 768px) {
+          .tb-name { display: none !important; }
+          .tb-lang { display: none !important; }
+          .tb-header-row { padding: 6px 12px !important; gap: 4px !important; }
+          .tb-right { gap: 4px !important; }
+        }
       `}</style>
     </header>
   );

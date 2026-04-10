@@ -5,6 +5,7 @@ import useAuth from "../../context/useAuth";
 import { API_BASE, authHeaders } from "../../lib/http";
 import { FaBook, FaCheck, FaTimes, FaClock, FaDollarSign, FaCalendar, FaMapMarkerAlt } from "react-icons/fa";
 import toast from "react-hot-toast";
+import AdminStatCard from "../../components/admin/AdminStatCard";
 
 const AdminRegistrations = () => {
   const { token } = useAuth();
@@ -89,45 +90,11 @@ const AdminRegistrations = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-3 gap-6 mb-6">
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 font-medium">Total Bookings</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{bookings.length}</p>
-            </div>
-            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-              <FaBook className="text-blue-600 text-xl" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 font-medium">Total Revenue</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">
-                {formatCurrency(bookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0))}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-              <FaDollarSign className="text-green-600 text-xl" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 font-medium">Paid Bookings</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">
-                {bookings.filter(b => b.paymentStatus === 'paid').length}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-              <FaCheck className="text-purple-600 text-xl" />
-            </div>
-          </div>
+      <div className="mobile-card-fix">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
+          <AdminStatCard label="Total Bookings" value={bookings.length} icon={FaBook} iconBg="bg-blue-100" iconColor="text-blue-600" />
+          <AdminStatCard label="Total Revenue" value={formatCurrency(bookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0))} icon={FaDollarSign} iconBg="bg-green-100" iconColor="text-green-600" />
+          <AdminStatCard label="Paid Bookings" value={bookings.filter(b => b.paymentStatus === 'paid').length} icon={FaCheck} iconBg="bg-purple-100" iconColor="text-purple-600" />
         </div>
       </div>
 

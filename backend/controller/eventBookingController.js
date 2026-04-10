@@ -1137,28 +1137,7 @@ export const addRating = async (req, res) => {
     };
     await booking.save();
 
-    // Update event average rating
-    try {
-      const { Event } = await import("../models/eventSchema.js");
-      const event = await Event.findById(booking.eventId);
-      if (event) {
-        const currentAvg = event.rating?.average || 0;
-        const currentTotal = event.rating?.totalRatings || 0;
-        const newTotalRatings = currentTotal + 1;
-        const newAverage = (currentAvg * currentTotal + rating) / newTotalRatings;
-        
-        event.rating = {
-          average: Math.round(newAverage * 10) / 10,
-          totalRatings: newTotalRatings
-        };
-        await event.save();
-        
-      }
-    } catch (eventError) {
-      console.error("Failed to update event rating:", eventError);
-    }
-
-    // Also create a record in Review collection (for event reviews display)
+    // Also create a record in Review collection and sync Event.rating from it
     try {
       const { Review } = await import("../models/reviewSchema.js");
       await Review.findOneAndUpdate(
@@ -1166,6 +1145,15 @@ export const addRating = async (req, res) => {
         { rating, reviewText: review || "" },
         { upsert: true, new: true }
       );
+      // Recalculate Event.rating from Review collection as source of truth
+      const allReviews = await Review.find({ event: booking.eventId });
+      const avg = allReviews.length > 0
+        ? Math.round((allReviews.reduce((s, r) => s + r.rating, 0) / allReviews.length) * 10) / 10
+        : 0;
+      const { Event } = await import("../models/eventSchema.js");
+      await Event.findByIdAndUpdate(booking.eventId, {
+        $set: { "rating.average": avg, "rating.totalRatings": allReviews.length }
+      });
     } catch (reviewError) {
       console.error("Failed to create review record:", reviewError);
     }

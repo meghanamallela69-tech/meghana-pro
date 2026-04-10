@@ -141,11 +141,11 @@ const UserMyEvents = () => {
       return { color: "bg-orange-100 text-orange-700", label: "Pay Remaining to Complete" };
     }
     switch (status) {
-      case "confirmed":   return { color: "bg-green-100 text-green-700",  label: "Confirmed" };
+      case "confirmed":   return { color: "bg-green-100 text-green-700",  label: "Confirmed ✓" };
       case "processing":  return { color: "bg-indigo-100 text-indigo-700", label: "In Progress" };
-      case "pending":     return { color: "bg-amber-100 text-amber-700",   label: "Pending Approval" };
+      case "pending":     return { color: "bg-amber-100 text-amber-700",   label: "Pending" };
       case "awaiting_advance": return { color: "bg-blue-100 text-blue-700", label: "Pay Advance Now" };
-      case "advance_paid": return { color: "bg-teal-100 text-teal-700",   label: "Advance Paid – Awaiting Approval" };
+      case "advance_paid": return { color: "bg-green-100 text-green-700",  label: "Confirmed ✓" };
       case "approved":
       case "accepted":    return { color: "bg-blue-100 text-blue-700",    label: "Approved" };
       case "rejected":    return { color: "bg-red-100 text-red-700",      label: "Rejected" };
@@ -198,9 +198,10 @@ const UserMyEvents = () => {
       );
     }
 
-    // 2. Pay Remaining — only when merchant marks completed
+    // 2. Pay Remaining — available once confirmed (advance paid) or merchant marks completed
     const needsRemainingPayment =
-      (status === "completed" || bookingStatus === "completed") &&
+      (status === "confirmed" || status === "completed" || status === "advance_paid" ||
+       bookingStatus === "confirmed" || bookingStatus === "completed") &&
       booking.advancePaid &&
       booking.remainingAmount > 0 &&
       !isFullyPaid;
@@ -404,6 +405,14 @@ const UserMyEvents = () => {
                         {booking.eventType === "ticketed" && booking.selectedTickets && Object.keys(booking.selectedTickets).length > 0 ? (
                           (() => {
                             const entries = Object.entries(booking.selectedTickets).filter(([, v]) => Number(v) > 0);
+                            console.log('🎟 Booking ticket data:', {
+                              id: booking._id,
+                              selectedTickets: booking.selectedTickets,
+                              eventTicketTypes: booking.eventTicketTypes,
+                              ticketTypePrices: booking.ticketTypePrices,
+                              servicePrice: booking.servicePrice,
+                              totalPrice: booking.totalPrice,
+                            });
                             return entries.map(([type, qty]) => {
                               // Priority 1: eventTicketTypes from event lookup
                               const typeInfo = booking.eventTicketTypes?.find(

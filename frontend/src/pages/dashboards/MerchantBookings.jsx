@@ -3,7 +3,7 @@ import axios from "axios";
 import useAuth from "../../context/useAuth";
 import { API_BASE, authHeaders } from "../../lib/http";
 import MerchantLayout from "../../components/merchant/MerchantLayout";
-import { FaListAlt, FaCheck, FaTimes, FaTicketAlt, FaClock, FaCreditCard, FaSearch, FaFilter } from "react-icons/fa";
+import { FaListAlt, FaCheck, FaTimes, FaTicketAlt, FaClock, FaCreditCard, FaSearch, FaFilter, FaEye, FaUser, FaCalendarAlt, FaMapMarkerAlt, FaRupeeSign } from "react-icons/fa";
 import toast from "react-hot-toast";
 import useNotificationBadges from "../../context/useNotificationBadges";
 
@@ -13,6 +13,7 @@ const MerchantBookings = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState(null);
+  const [selectedBooking, setSelectedBooking] = useState(null);
   
   // Filters and search
   const [eventTypeFilter, setEventTypeFilter] = useState("all");
@@ -273,12 +274,7 @@ const MerchantBookings = () => {
             <h2 className="text-2xl md:text-3xl font-semibold">All Bookings</h2>
             <p className="text-gray-600 mt-1">Manage all customer bookings for ticketed and full-service events</p>
           </div>
-          <button
-            onClick={loadBookings}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition text-sm font-medium flex items-center gap-2"
-          >
-            ↻ Refresh
-          </button>
+
         </div>
       </section>
 
@@ -450,6 +446,13 @@ const MerchantBookings = () => {
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm">
                       <div className="flex gap-2 flex-wrap items-center">
+                        {/* View Details button — always visible */}
+                        <button
+                          onClick={() => setSelectedBooking(booking)}
+                          className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded hover:bg-gray-200 transition flex items-center gap-1"
+                        >
+                          <FaEye size={11} /> Details
+                        </button>
 
                         {/* ── TICKETED EVENTS: simple paid/ticket status only ── */}
                         {booking.eventType === 'ticketed' && (
@@ -584,6 +587,131 @@ const MerchantBookings = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Booking Details Modal */}
+      {selectedBooking && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setSelectedBooking(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between p-5 border-b">
+              <h3 className="text-lg font-semibold text-gray-900">Booking Details</h3>
+              <button onClick={() => setSelectedBooking(null)} className="text-gray-400 hover:text-gray-700 text-xl font-bold">✕</button>
+            </div>
+
+            {/* Body */}
+            <div className="p-5 space-y-4">
+              {/* Booking ID & Status */}
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-mono text-gray-500">#{selectedBooking._id.slice(-10).toUpperCase()}</span>
+                <div className="flex gap-2">
+                  {getStatusBadge(selectedBooking.bookingStatus)}
+                  {getPaymentStatusBadge(selectedBooking.paymentStatus)}
+                </div>
+              </div>
+
+              {/* Customer */}
+              <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Customer</p>
+                <div className="flex items-center gap-2">
+                  <FaUser className="text-gray-400" />
+                  <span className="font-medium text-gray-900">{selectedBooking.userName}</span>
+                </div>
+                {selectedBooking.userEmail && (
+                  <p className="text-sm text-gray-600 ml-5">{selectedBooking.userEmail}</p>
+                )}
+              </div>
+
+              {/* Event */}
+              <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Event</p>
+                <div className="flex items-center gap-2">
+                  <FaCalendarAlt className="text-blue-500" />
+                  <span className="font-medium text-gray-900">{selectedBooking.eventName || selectedBooking.serviceTitle}</span>
+                </div>
+                <div className="flex items-center gap-2 ml-5 text-sm text-gray-600">
+                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${selectedBooking.eventType === 'ticketed' ? 'bg-purple-100 text-purple-700' : 'bg-amber-100 text-amber-700'}`}>
+                    {selectedBooking.eventType === 'ticketed' ? 'Ticketed' : 'Full Service'}
+                  </span>
+                </div>
+                {selectedBooking.eventDate && (
+                  <p className="text-sm text-gray-600 ml-5">📅 {formatDate(selectedBooking.eventDate)} {selectedBooking.eventTime && `at ${formatTime(selectedBooking.eventTime)}`}</p>
+                )}
+                {selectedBooking.location && (
+                  <div className="flex items-center gap-2 ml-5 text-sm text-gray-600">
+                    <FaMapMarkerAlt className="text-red-400" />
+                    {selectedBooking.location}
+                  </div>
+                )}
+              </div>
+
+              {/* Ticket breakdown for ticketed events */}
+              {selectedBooking.eventType === 'ticketed' && selectedBooking.selectedTickets && Object.keys(selectedBooking.selectedTickets).length > 0 && (
+                <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Tickets</p>
+                  {Object.entries(selectedBooking.selectedTickets).filter(([,v]) => Number(v) > 0).map(([type, qty]) => (
+                    <div key={type} className="flex justify-between text-sm">
+                      <span className="text-gray-700">🎟 {type}</span>
+                      <span className="font-medium">× {qty}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Add-ons */}
+              {selectedBooking.addons?.length > 0 && (
+                <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Add-ons</p>
+                  {selectedBooking.addons.map((a, i) => (
+                    <div key={i} className="flex justify-between text-sm">
+                      <span className="text-gray-700">{a.name}</span>
+                      <span className="font-medium text-gray-900">₹{Number(a.price || 0).toLocaleString('en-IN')}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Pricing */}
+              <div className="bg-blue-50 rounded-xl p-4 space-y-2">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Pricing</p>
+                {selectedBooking.servicePrice > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Base Price</span>
+                    <span>₹{Number(selectedBooking.servicePrice).toLocaleString('en-IN')}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-sm font-bold border-t pt-2">
+                  <span className="text-gray-800">Total</span>
+                  <span className="text-blue-700">₹{Number(selectedBooking.totalAmount || selectedBooking.totalPrice || 0).toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+
+              {/* Notes */}
+              {selectedBooking.notes && (
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Notes</p>
+                  <p className="text-sm text-gray-700">{selectedBooking.notes}</p>
+                </div>
+              )}
+
+              {/* Merchant response */}
+              {selectedBooking.merchantResponse?.message && (
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Your Response</p>
+                  <p className="text-sm text-gray-700">{selectedBooking.merchantResponse.message}</p>
+                </div>
+              )}
+
+              <p className="text-xs text-gray-400 text-right">Booked on {new Date(selectedBooking.createdAt).toLocaleString()}</p>
+            </div>
+
+            <div className="p-5 border-t">
+              <button onClick={() => setSelectedBooking(null)} className="w-full py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium">
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

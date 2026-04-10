@@ -274,10 +274,10 @@ const UserNotifications = () => {
       <style dangerouslySetInnerHTML={{ __html: `
         @media (max-width: 767px) {
           .responsive-btn { 
-            padding: 6px 10px !important; 
-            font-size: 12px !important; 
+            padding: 8px 14px !important; 
+            font-size: 13px !important; 
           }
-          .btn-label { display: none; }
+          .btn-label { display: inline !important; }
         }
       ` }} />
     </UserLayout>

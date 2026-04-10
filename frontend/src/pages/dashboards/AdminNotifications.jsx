@@ -6,6 +6,7 @@ import useNotificationBadges from "../../context/useNotificationBadges";
 import { API_BASE, authHeaders } from "../../lib/http";
 import { FaBell, FaEnvelope, FaCheck, FaTrash, FaEye, FaSearch, FaFilter, FaCalendarAlt, FaDollarSign, FaInbox } from "react-icons/fa";
 import toast from "react-hot-toast";
+import AdminStatCard from "../../components/admin/AdminStatCard";
 
 const AdminNotifications = () => {
   const { token } = useAuth();
@@ -192,41 +193,11 @@ const AdminNotifications = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-3 gap-6 mb-6">
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 font-medium">Total Notifications</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{totalCount}</p>
-            </div>
-            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-              <FaBell className="text-blue-600 text-xl" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 font-medium">Unread</p>
-              <p className="text-2xl font-bold text-red-600 mt-1">{unreadCount}</p>
-            </div>
-            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-              <FaEnvelope className="text-red-600 text-xl" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 font-medium">Read</p>
-              <p className="text-2xl font-bold text-green-600 mt-1">{totalCount - unreadCount}</p>
-            </div>
-            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-              <FaCheck className="text-green-600 text-xl" />
-            </div>
-          </div>
+      <div className="mobile-card-fix">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
+          <AdminStatCard label="Total Notifications" value={totalCount} icon={FaBell} iconBg="bg-blue-100" iconColor="text-blue-600" />
+          <AdminStatCard label="Unread" value={unreadCount} icon={FaEnvelope} iconBg="bg-red-100" iconColor="text-red-600" valueColor="text-red-600" />
+          <AdminStatCard label="Read" value={totalCount - unreadCount} icon={FaCheck} iconBg="bg-green-100" iconColor="text-green-600" valueColor="text-green-600" />
         </div>
       </div>
 

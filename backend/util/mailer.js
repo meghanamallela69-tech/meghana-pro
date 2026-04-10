@@ -25,9 +25,6 @@ const getTransporter = async () => {
   }
   transporter = {
     sendMail: async ({ to, subject, text }) => {
-      console.log("[Mail Fallback] To:", to);
-      console.log("[Mail Fallback] Subject:", subject);
-      console.log("[Mail Fallback] Body:\n", text);
       return { messageId: "logged" };
     },
   };

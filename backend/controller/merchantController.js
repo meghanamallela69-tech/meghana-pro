@@ -7,6 +7,7 @@ import { User } from "../models/userSchema.js";
 import { Notification } from "../models/notificationSchema.js";
 import { uploadMultipleImages, deleteMultipleImages } from "../util/cloudinary.js";
 import NotificationService from "../services/notificationService.js";
+import { emitToAdmins, emitToUser, emitToMerchant } from "../util/socketIO.js";
 
 export const createEvent = async (req, res) => {
   try {
@@ -183,12 +184,6 @@ export const createEvent = async (req, res) => {
     return res.status(201).json({ success: true, event });
   } catch (error) {
     console.error('❌ Create event error:', error);
-    console.error('Error stack:', error.stack);
-    console.error('Error details:', {
-      name: error.name,
-      message: error.message,
-      code: error.code
-    });
     
     if (error.name === 'ValidationError') {
       return res.status(400).json({ 
@@ -842,6 +837,10 @@ export const approveBooking = async (req, res) => {
       console.error("Failed to create approval notification:", notifError);
     }
 
+    // Real-time: notify user and admin
+    emitToUser(booking.user, 'bookingUpdated', { bookingId: booking._id, status: 'approved' });
+    emitToAdmins('bookingUpdated', { bookingId: booking._id, status: 'approved' });
+
     return res.status(200).json({
       success: true,
       message: "Booking approved successfully. Customer can now pay.",
@@ -900,14 +899,14 @@ export const getMerchantRatings = async (req, res) => {
       .populate("event", "title")
       .sort({ createdAt: -1 });
 
-    // Build per-event summary
+    // Build per-event summary using Review collection as source of truth
     const eventMap = {};
     events.forEach(e => {
       eventMap[e._id.toString()] = {
         eventId: e._id,
         title: e.title,
-        averageRating: e.rating?.average || 0,
-        totalRatings: e.rating?.totalRatings || 0,
+        averageRating: 0,
+        totalRatings: 0,
         reviews: []
       };
     });
@@ -916,6 +915,15 @@ export const getMerchantRatings = async (req, res) => {
       const key = r.event?._id?.toString();
       if (key && eventMap[key]) {
         eventMap[key].reviews.push(r);
+      }
+    });
+
+    // Calculate averageRating and totalRatings from reviews directly
+    Object.values(eventMap).forEach(e => {
+      if (e.reviews.length > 0) {
+        const sum = e.reviews.reduce((s, r) => s + r.rating, 0);
+        e.averageRating = Math.round((sum / e.reviews.length) * 10) / 10;
+        e.totalRatings = e.reviews.length;
       }
     });
 

@@ -19,11 +19,8 @@ if (isCloudinaryConfigured) {
   });
   
   console.log("✓ Cloudinary configured successfully");
-  console.log("  Cloud Name:", process.env.CLOUDINARY_CLOUD_NAME);
-  console.log("  API Key:", process.env.CLOUDINARY_API_KEY ? "****" + String(process.env.CLOUDINARY_API_KEY).slice(-4) : "Not set");
 } else {
   console.warn("⚠️ Cloudinary not configured - image uploads will use local fallback");
-  console.warn("  Add CLOUDINARY_* variables to .env file");
 }
 
 // Configure Multer Storage for Cloudinary
@@ -69,7 +66,6 @@ export const uploadSingleImage = async (file) => {
 // Upload multiple images with Cloudinary or fallback
 export const uploadMultipleImages = async (files) => {
   if (!isCloudinaryConfigured) {
-    console.warn('⚠️ Cloudinary not configured, skipping image upload');
     // Return placeholder URLs when Cloudinary is not available
     return files.map((file, index) => ({
       public_id: `local_${Date.now()}_${index}`,

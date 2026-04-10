@@ -141,3 +141,186 @@ input[type="radio"]:hover {
     grid-template-columns: repeat(2, 1fr) !important;
   }
 }
+
+
+/* ── Admin Dashboard Cards — Mobile Only Fix ── */
+@media (max-width: 768px) {
+  .cards-container,
+  .dashboard-cards,
+  .stats-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+
+  .card {
+    width: 100% !important;
+  }
+
+  /* Target Tailwind grid containers used in admin summary cards */
+  [class*="grid-cols-"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── Mobile card stack fix (scoped, no desktop impact) ── */
+@media (max-width: 768px) {
+  .mobile-card-fix > * {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+  .mobile-card-fix > * > * {
+    width: 100% !important;
+  }
+}
+
+/* ── Merchant Earnings — Mobile Only Fix ── */
+@media (max-width: 768px) {
+  .earnings-mobile-fix {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+
+  .earnings-mobile-fix .ec-card {
+    padding: 12px !important;
+  }
+
+  .earnings-mobile-fix .ec-card > div {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+  }
+
+  .earnings-mobile-fix .ec-content {
+    flex: 1 !important;
+    min-width: 0 !important;
+    order: 1 !important;
+  }
+
+  .earnings-mobile-fix .ec-content p {
+    font-size: 11px !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+    white-space: normal !important;
+  }
+
+  .earnings-mobile-fix .ec-value {
+    font-size: 14px !important;
+    word-break: break-all !important;
+  }
+
+  .earnings-mobile-fix .ec-icon {
+    position: static !important;
+    flex-shrink: 0 !important;
+    order: 2 !important;
+    padding: 8px !important;
+    width: 36px !important;
+    height: 36px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .earnings-mobile-fix .ec-icon svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+
+  .earnings-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+
+  .earnings-header .withdraw-btn {
+    width: 100% !important;
+    display: block !important;
+    text-align: center !important;
+  }
+}
+
+/* ── Create Event Button — Mobile Only Fix ── */
+@media (max-width: 768px) {
+  .create-event-mobile-fix {
+    overflow: visible !important;
+    padding-bottom: 12px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+
+  .create-event-mobile-fix .create-btn {
+    width: 100% !important;
+    display: block !important;
+    margin-top: 8px !important;
+    position: static !important;
+    text-align: center !important;
+  }
+
+  /* Show hidden btn-label text on mobile */
+  .create-event-mobile-fix .btn-label {
+    display: inline !important;
+  }
+}
+
+/* ── My Events Table — Mobile Only Fix ── */
+@media (max-width: 768px) {
+  .events-table-mobile-fix {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .events-table-mobile-fix table {
+    min-width: 550px !important;
+    table-layout: auto !important;
+    width: max-content !important;
+  }
+
+  .events-table-mobile-fix th,
+  .events-table-mobile-fix td {
+    white-space: nowrap !important;
+    padding: 10px 12px !important;
+    font-size: 13px !important;
+  }
+}
+
+/* ── Create Event Modal — Mobile Only Fix ── */
+@media (max-width: 768px) {
+  .event-type-modal {
+    padding: 20px 16px !important;
+    margin: 12px !important;
+    width: calc(100% - 24px) !important;
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+  }
+
+  .event-type-modal h2 {
+    font-size: 18px !important;
+  }
+
+  .event-type-modal p {
+    font-size: 13px !important;
+    margin-bottom: 16px !important;
+  }
+
+  .event-type-modal .event-type-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .event-type-modal .event-type-btn {
+    padding: 16px !important;
+    flex-direction: row !important;
+    gap: 12px !important;
+    text-align: left !important;
+    align-items: center !important;
+  }
+
+  .event-type-modal .event-type-btn span {
+    text-align: left !important;
+  }
+}

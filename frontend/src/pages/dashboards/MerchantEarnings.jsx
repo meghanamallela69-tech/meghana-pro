@@ -92,14 +92,14 @@ const MerchantEarnings = () => {
   };
 
   const StatCard = ({ title, value, icon: Icon, color, subtext }) => (
-    <div className="bg-white rounded-xl shadow-sm ring-1 ring-gray-200 p-6">
+    <div className="ec-card bg-white rounded-xl shadow-sm ring-1 ring-gray-200 p-6">
       <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-gray-600">{title}</p>
-          <p className="text-3xl font-bold text-gray-900 mt-2">₹{value?.toFixed(2) || "0.00"}</p>
-          {subtext && <p className="text-xs text-gray-500 mt-1">{subtext}</p>}
+        <div className="ec-content">
+          <p className="ec-title text-sm font-medium text-gray-600">{title}</p>
+          <p className="ec-value text-3xl font-bold text-gray-900 mt-2">₹{value?.toFixed(2) || "0.00"}</p>
+          {subtext && <p className="ec-subtext text-xs text-gray-500 mt-1">{subtext}</p>}
         </div>
-        <div className={`p-4 rounded-full ${color}`}>
+        <div className={`ec-icon p-4 rounded-full ${color}`}>
           <Icon className="text-2xl text-white" />
         </div>
       </div>
@@ -139,7 +139,7 @@ const MerchantEarnings = () => {
     <MerchantLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="earnings-header flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
               <FaDollarSign className="text-green-500 responsive-icon" />
@@ -149,14 +149,14 @@ const MerchantEarnings = () => {
           </div>
           <button
             onClick={() => setShowWithdrawalForm(!showWithdrawalForm)}
-            className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium responsive-btn"
+            className="withdraw-btn px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium responsive-btn"
           >
-            <span className="btn-label">{showWithdrawalForm ? "Cancel" : "Request Withdrawal"}</span>
+            {showWithdrawalForm ? "Cancel" : "Request Withdrawal"}
           </button>
         </div>
 
         {/* Stats Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }}>
+        <div className="earnings-mobile-fix" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }}>
           <StatCard
             title="Total Earnings"
             value={earnings?.totalEarnings || 0}
@@ -385,6 +385,26 @@ const MerchantEarnings = () => {
           .btn-label { display: none; }
           .responsive-icon { 
             font-size: 18px !important; 
+          }
+          .earnings-mobile-fix {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 12px !important;
+          }
+          .ec-card {
+            padding: 14px !important;
+          }
+          .ec-title {
+            font-size: 14px !important;
+          }
+          .ec-value {
+            font-size: 20px !important;
+            margin-top: 6px !important;
+          }
+          .ec-subtext {
+            font-size: 12px !important;
+          }
+          .ec-icon {
+            padding: 10px !important;
           }
         }
       ` }} />

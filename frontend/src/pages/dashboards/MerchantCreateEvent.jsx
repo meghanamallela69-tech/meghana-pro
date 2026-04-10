@@ -11,7 +11,7 @@ import { FaHandshake, FaTicketAlt, FaCrown, FaUser } from "react-icons/fa";
 // ── Event Type Selection Modal ──────────────────────────────────────────────
 const EventTypeModal = ({ onSelect, onClose }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-    <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-lg mx-4 relative">
+    <div className="event-type-modal bg-white rounded-2xl shadow-2xl p-8 w-full max-w-lg mx-4 relative">
       {/* Close button */}
       <button
         type="button"
@@ -25,12 +25,12 @@ const EventTypeModal = ({ onSelect, onClose }) => (
       <h2 className="text-2xl font-bold text-gray-900 mb-2 text-center">Choose Event Type</h2>
       <p className="text-gray-500 text-center mb-8">Select how you want to offer this event</p>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="event-type-grid grid grid-cols-2 gap-4">
         {/* Full Service */}
         <button
           type="button"
           onClick={() => onSelect("full-service")}
-          className="group flex flex-col items-center gap-3 p-6 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all duration-200 cursor-pointer"
+          className="event-type-btn group flex flex-col items-center gap-3 p-6 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all duration-200 cursor-pointer"
         >
           <div className="w-14 h-14 rounded-full bg-blue-100 group-hover:bg-blue-200 flex items-center justify-center transition">
             <FaHandshake className="text-blue-600 text-2xl" />
@@ -45,7 +45,7 @@ const EventTypeModal = ({ onSelect, onClose }) => (
         <button
           type="button"
           onClick={() => onSelect("ticketed")}
-          className="group flex flex-col items-center gap-3 p-6 border-2 border-gray-200 rounded-xl hover:border-purple-500 hover:bg-purple-50 transition-all duration-200 cursor-pointer"
+          className="event-type-btn group flex flex-col items-center gap-3 p-6 border-2 border-gray-200 rounded-xl hover:border-purple-500 hover:bg-purple-50 transition-all duration-200 cursor-pointer"
         >
           <div className="w-14 h-14 rounded-full bg-purple-100 group-hover:bg-purple-200 flex items-center justify-center transition">
             <FaTicketAlt className="text-purple-600 text-2xl" />
@@ -903,10 +903,16 @@ const MerchantCreateEvent = () => {
       <style dangerouslySetInnerHTML={{ __html: `
         @media (max-width: 767px) {
           .responsive-btn { 
-            padding: 8px 12px !important; 
-            font-size: 14px !important; 
+            padding: 10px 16px !important; 
+            font-size: 14px !important;
+            min-width: 0 !important;
+            width: 100% !important;
           }
-          .btn-label { display: none; }
+          .btn-label { display: inline !important; }
+          .flex.gap-4.pt-4 {
+            flex-direction: column !important;
+            gap: 12px !important;
+          }
         }
       ` }} />
     </MerchantLayout>

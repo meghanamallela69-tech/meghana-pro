@@ -298,8 +298,8 @@ const EventDetailsModal = ({ isOpen, onClose, event, onBookNow }) => {
                     <p style={{ color: "#6b7280", fontSize: "14px" }}>{event.location || "Location TBD"}</p>
                   </div>
                 </div>
-                {/* Date — ticketed events */}
-                {event.date && (
+                {/* Date — ticketed only */}
+                {event.eventType === "ticketed" && event.date && (
                   <div style={{ display: "flex", alignItems: "center" }}>
                     <FaCalendarAlt style={{ color: "#2563eb", marginRight: "12px", fontSize: "16px", flexShrink: 0 }} />
                     <div>
@@ -310,8 +310,8 @@ const EventDetailsModal = ({ isOpen, onClose, event, onBookNow }) => {
                     </div>
                   </div>
                 )}
-                {/* Time — ticketed events */}
-                {event.time && (
+                {/* Time — ticketed only */}
+                {event.eventType === "ticketed" && event.time && (
                   <div style={{ display: "flex", alignItems: "center" }}>
                     <FaClock style={{ color: "#059669", marginRight: "12px", fontSize: "16px", flexShrink: 0 }} />
                     <div>

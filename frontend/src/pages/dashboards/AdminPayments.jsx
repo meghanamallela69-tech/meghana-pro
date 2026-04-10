@@ -5,6 +5,7 @@ import AdminLayout from "../../components/admin/AdminLayout";
 import { FaCreditCard, FaDollarSign, FaPercentage, FaStore, FaExchangeAlt, FaCheck, FaTimes, FaClock, FaWallet, FaCheckCircle, FaTimesCircle } from "react-icons/fa";
 import useAuth from "../../context/useAuth";
 import { API_BASE, authHeaders } from "../../lib/http";
+import AdminStatCard from "../../components/admin/AdminStatCard";
 
 const AdminPayments = () => {
   const { token } = useAuth();
@@ -164,122 +165,81 @@ const AdminPayments = () => {
 
         {/* Summary Cards */}
         {summary && (
-          <div className="grid grid-cols-4 gap-6 mb-6">
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 font-medium">Total Transactions</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{summary.count}</p>
-                </div>
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                  <FaCreditCard className="text-blue-600 text-xl" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 font-medium">Total Amount</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(summary.totalAmount)}</p>
-                </div>
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                  <FaDollarSign className="text-green-600 text-xl" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 font-medium">Total Commission</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(summary.totalCommission)}</p>
-                </div>
-                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                  <FaPercentage className="text-purple-600 text-xl" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 font-medium">Merchant Payouts</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(summary.totalMerchantPayout)}</p>
-                </div>
-                <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                  <FaStore className="text-orange-600 text-xl" />
-                </div>
-              </div>
+          <div className="mobile-card-fix">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+              <AdminStatCard label="Total Transactions" value={summary.count} icon={FaCreditCard} iconBg="bg-blue-100" iconColor="text-blue-600" />
+              <AdminStatCard label="Total Amount" value={formatCurrency(summary.totalAmount)} icon={FaDollarSign} iconBg="bg-green-100" iconColor="text-green-600" />
+              <AdminStatCard label="Total Commission" value={formatCurrency(summary.totalCommission)} icon={FaPercentage} iconBg="bg-purple-100" iconColor="text-purple-600" />
+              <AdminStatCard label="Merchant Payouts" value={formatCurrency(summary.totalMerchantPayout)} icon={FaStore} iconBg="bg-orange-100" iconColor="text-orange-600" />
             </div>
           </div>
         )}
 
         {/* Tabs */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
-          <div className="border-b border-gray-200">
-            <nav className="flex gap-4 px-4 pt-2">
+          <div className="border-b border-gray-200 overflow-x-auto">
+            <nav className="flex gap-1 md:gap-4 px-2 md:px-4 pt-2 min-w-max">
               <button
                 onClick={() => setActiveTab("transactions")}
-                className={`px-4 py-3 text-sm font-medium border-b-2 transition ${
+                className={`px-2 md:px-4 py-3 text-xs md:text-sm font-medium border-b-2 transition whitespace-nowrap ${
                   activeTab === "transactions"
                     ? "border-blue-600 text-blue-600"
                     : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 }`}
               >
-                <FaExchangeAlt className="inline mr-2" />
+                <FaExchangeAlt className="inline mr-1 md:mr-2" />
                 Transactions
               </button>
               <button
                 onClick={() => setActiveTab("commission")}
-                className={`px-4 py-3 text-sm font-medium border-b-2 transition ${
+                className={`px-2 md:px-4 py-3 text-xs md:text-sm font-medium border-b-2 transition whitespace-nowrap ${
                   activeTab === "commission"
                     ? "border-blue-600 text-blue-600"
                     : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 }`}
               >
-                <FaPercentage className="inline mr-2" />
+                <FaPercentage className="inline mr-1 md:mr-2" />
                 Commission
               </button>
               <button
                 onClick={() => setActiveTab("payouts")}
-                className={`px-4 py-3 text-sm font-medium border-b-2 transition ${
+                className={`px-2 md:px-4 py-3 text-xs md:text-sm font-medium border-b-2 transition whitespace-nowrap ${
                   activeTab === "payouts"
                     ? "border-blue-600 text-blue-600"
                     : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 }`}
               >
-                <FaStore className="inline mr-2" />
+                <FaStore className="inline mr-1 md:mr-2" />
                 Payouts
               </button>
               <button
                 onClick={() => setActiveTab("refunds")}
-                className={`px-4 py-3 text-sm font-medium border-b-2 transition ${
+                className={`px-2 md:px-4 py-3 text-xs md:text-sm font-medium border-b-2 transition whitespace-nowrap ${
                   activeTab === "refunds"
                     ? "border-blue-600 text-blue-600"
                     : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 }`}
               >
-                <FaClock className="inline mr-2" />
+                <FaClock className="inline mr-1 md:mr-2" />
                 Refunds
                 {refundRequests.length > 0 && (
-                  <span className="ml-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                  <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">
                     {refundRequests.length}
                   </span>
                 )}
               </button>
               <button
                 onClick={() => setActiveTab("withdrawals")}
-                className={`px-4 py-3 text-sm font-medium border-b-2 transition ${
+                className={`px-2 md:px-4 py-3 text-xs md:text-sm font-medium border-b-2 transition whitespace-nowrap ${
                   activeTab === "withdrawals"
                     ? "border-blue-600 text-blue-600"
                     : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 }`}
               >
-                <FaWallet className="inline mr-2" />
+                <FaWallet className="inline mr-1 md:mr-2" />
                 Withdrawals
                 {withdrawalStats.pending > 0 && (
-                  <span className="ml-2 bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full">
+                  <span className="ml-1 bg-orange-500 text-white text-xs px-1.5 py-0.5 rounded-full">
                     {withdrawalStats.pending}
                   </span>
                 )}
@@ -288,7 +248,7 @@ const AdminPayments = () => {
           </div>
 
           {/* Tab Content */}
-          <div className="p-6">
+          <div className="p-3 md:p-6">
             {/* Transactions Tab */}
             {activeTab === "transactions" && (
               <div className="overflow-x-auto">

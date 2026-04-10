@@ -1,4 +1,6 @@
 import express from "express";
+import { Booking } from "../models/bookingSchema.js";
+import { Event } from "../models/eventSchema.js";
 import {
   createBooking,
   getUserBookings,
@@ -65,5 +67,28 @@ router.post("/:id/rate", auth, submitRating);
 // Advance payment workflow routes (User)
 router.post("/:id/pay-advance", auth, payAdvance);
 router.post("/:id/pay-remaining", auth, payRemainingAmount);
+
+// Migration: backfill ticketTypePrices for existing ticketed bookings
+router.post("/admin/fix-ticket-prices", auth, ensureRole("admin"), async (req, res) => {
+  try {
+    const bookings = await Booking.find({ eventType: "ticketed" });
+    let fixed = 0;
+    for (const booking of bookings) {
+      const eventId = booking.eventId || booking.serviceId;
+      if (!eventId) continue;
+      try {
+        const event = await Event.findById(eventId);
+        if (!event?.ticketTypes?.length) continue;
+        const pricesMap = {};
+        event.ticketTypes.forEach(t => { pricesMap[t.name] = t.price; });
+        await Booking.findByIdAndUpdate(booking._id, { ticketTypePrices: pricesMap });
+        fixed++;
+      } catch {}
+    }
+    res.json({ success: true, fixed, total: bookings.length });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
 
 export default router;

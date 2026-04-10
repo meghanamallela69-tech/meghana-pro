@@ -73,23 +73,24 @@ const UserDashboard = () => {
         setNotifications([]);
       }
 
-      // Fetch recommended events (latest 4 upcoming events)
-      try {
-        const evRes = await axios.get(`${API_BASE}/events`, { headers });
-        const allEvents = evRes.data.events || [];
-        const now = new Date();
-        const upcoming = allEvents
-          .filter(e => e.date && new Date(e.date) >= now)
-          .sort((a, b) => new Date(a.date) - new Date(b.date))
-          .slice(0, 4);
-        // If fewer than 4 upcoming, fill with latest events
-        if (upcoming.length < 4) {
-          const rest = allEvents.filter(e => !upcoming.find(u => u._id === e._id)).slice(0, 4 - upcoming.length);
-          setRecommendedEvents([...upcoming, ...rest]);
-        } else {
-          setRecommendedEvents(upcoming);
-        }
-      } catch {}
+        // Fetch recommended events (latest 4 — ticketed upcoming first, then full-service)
+        try {
+          const evRes = await axios.get(`${API_BASE}/events`, { headers });
+          const allEvents = evRes.data.events || [];
+          const now = new Date();
+
+          // Ticketed events with future dates
+          const upcomingTicketed = allEvents
+            .filter(e => e.eventType === "ticketed" && e.date && new Date(e.date) >= now)
+            .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+          // Full-service events (no fixed date — always available)
+          const fullService = allEvents.filter(e => e.eventType !== "ticketed");
+
+          // Merge: ticketed first, then full-service, limit 4
+          const merged = [...upcomingTicketed, ...fullService];
+          setRecommendedEvents(merged.slice(0, 4));
+        } catch {}
     } catch (error) {
       console.error("Failed to load dashboard data", error);
     }
@@ -268,7 +269,11 @@ const UserDashboard = () => {
               const price = ev.price > 0
                 ? new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(ev.price)
                 : "Free";
-              const fmtDate = ev.date ? new Date(ev.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : null;
+              const fmtDate = ev.date
+                ? new Date(ev.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+                : ev.eventType === "full-service" || !ev.eventType
+                  ? null  // full-service: no fixed date
+                  : null;
               return (
                 <div key={ev._id} style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.07)', display: 'flex', flexDirection: 'column', transition: 'box-shadow 0.2s' }}
                   onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.12)'}
@@ -290,12 +295,18 @@ const UserDashboard = () => {
                   {/* Content */}
                   <div style={{ padding: '12px 14px', flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
                     <p style={{ fontWeight: 700, fontSize: 14, color: '#111827', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</p>
-                    {fmtDate && (
+                    {/* Date — only for ticketed events with a real date */}
+                    {ev.eventType === "ticketed" && ev.date ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#6b7280', fontSize: 12 }}>
                         <FiCalendar size={12} style={{ flexShrink: 0 }} />
-                        <span>{fmtDate}</span>
+                        <span>{new Date(ev.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>
                       </div>
-                    )}
+                    ) : ev.eventType !== "ticketed" ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#a2783a', fontSize: 12 }}>
+                        <FiCalendar size={12} style={{ flexShrink: 0 }} />
+                        <span>Date as per booking</span>
+                      </div>
+                    ) : null}
                     {ev.location && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#6b7280', fontSize: 12 }}>
                         <FiMapPin size={12} style={{ flexShrink: 0 }} />
@@ -471,10 +482,10 @@ const UserDashboard = () => {
 
       {/* Summary Cards - Side by Side (4 per row) */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }} className="mb-8">
-        <SummaryCard title="Total Bookings" value={stats.bookings} icon={FaTicketAlt} color="bg-blue-600" />
-        <SummaryCard title="Upcoming Events" value={stats.upcoming} icon={BsCalendar2Event} color="bg-emerald-600" />
-        <SummaryCard title="Saved Events" value={stats.saved} icon={BsBookmarkHeart} color="bg-pink-600" />
-        <SummaryCard title="Notifications" value={stats.notifications} icon={FaBell} color="bg-amber-600" />
+        <SummaryCard title="Total Bookings" value={stats.bookings} icon={FaTicketAlt} color="bg-blue-600" to="/dashboard/user/bookings" />
+        <SummaryCard title="Upcoming Events" value={stats.upcoming} icon={BsCalendar2Event} color="bg-emerald-600" to="/dashboard/user/bookings" />
+        <SummaryCard title="Saved Events" value={stats.saved} icon={BsBookmarkHeart} color="bg-pink-600" to="/dashboard/user/saved" />
+        <SummaryCard title="Notifications" value={stats.notifications} icon={FaBell} color="bg-amber-600" to="/dashboard/user/notifications" />
       </div>
 
       {/* Notifications Section */}

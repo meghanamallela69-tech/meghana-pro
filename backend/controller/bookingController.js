@@ -496,6 +496,19 @@ export const getUserBookings = async (req, res) => {
               if (event.time && (!bookingObj.eventTime || bookingObj.eventTime === "TBD")) {
                 updateData.eventTime = event.time;
               }
+
+              // Persist ticketTypePrices for existing bookings that don't have them
+              if (
+                bookingObj.eventType === "ticketed" &&
+                event.ticketTypes?.length > 0 &&
+                Object.keys(bookingObj.ticketTypePrices || {}).length === 0
+              ) {
+                const pricesMap = {};
+                event.ticketTypes.forEach(t => { pricesMap[t.name] = t.price; });
+                updateData.ticketTypePrices = pricesMap;
+                // Also update in-memory so frontend gets it immediately
+                bookingObj.ticketTypePrices = pricesMap;
+              }
               
               if (Object.keys(updateData).length > 0) {
                 await Booking.findByIdAndUpdate(booking._id, updateData);
@@ -506,17 +519,28 @@ export const getUserBookings = async (req, res) => {
               bookingObj.eventImages = event.images || [];
               bookingObj.eventImage = event.images && event.images.length > 0 ? event.images[0].url : null;
 
-              // Always include ticketTypes for price lookup on frontend
+              // Always build eventTicketTypes from live event data (most accurate)
               if (event.ticketTypes?.length > 0) {
                 bookingObj.eventTicketTypes = event.ticketTypes.map(t => ({
                   name: t.name,
                   price: t.price,
                 }));
               }
+            } else {
+              // Event not found for booking — skip silently
             }
           } catch (error) {
             console.error(`Error enhancing booking ${booking._id}:`, error.message);
           }
+        }
+
+        // Final fallback: build eventTicketTypes from ticketTypePrices if event lookup failed
+        if (
+          bookingObj.eventType === "ticketed" &&
+          !bookingObj.eventTicketTypes?.length &&
+          Object.keys(bookingObj.ticketTypePrices || {}).length > 0
+        ) {
+          bookingObj.eventTicketTypes = Object.entries(bookingObj.ticketTypePrices).map(([name, price]) => ({ name, price }));
         }
         
         // Ensure advance payment fields are always present
@@ -1374,37 +1398,56 @@ export const payAdvance = async (req, res) => {
     // Update booking with advance payment - use backend's stored amount
     booking.advancePaid = true;
     booking.advancePaymentDate = new Date();
-    // Use "partial_paid" to indicate advance paid but remaining still due
     booking.paymentStatus = "partial_paid";
-    booking.status = "advance_paid";
+    // Auto-confirm booking after advance payment — no manual merchant approval needed
+    booking.status = "confirmed";
+    booking.bookingConfirmed = true;
+    booking.merchantResponse = {
+      accepted: true,
+      responseDate: new Date(),
+      message: "Booking auto-confirmed after advance payment."
+    };
     booking.payment = {
       paid: true,
       paymentId: paymentId,
       paymentDate: new Date(),
-      amount: actualAdvanceAmount  // Use backend's stored amount
+      amount: actualAdvanceAmount
     };
     await booking.save();
-    // Create notification for merchant
+
+    // Notify merchant — advance received, booking confirmed
     try {
-      await Notification.create({
-        userId: booking.merchant || booking.serviceId,
-        title: "Advance Payment Received",
-        message: `Customer has paid the advance amount of ₹${actualAdvanceAmount} for booking "${booking.serviceTitle}". You can now accept or reject the booking.`,
-        type: "payment",
-        bookingId: booking._id
-      });
+      await NotificationService.notifyMerchantPaymentReceived(
+        booking.merchant,
+        booking._id,
+        actualAdvanceAmount,
+        booking.serviceTitle
+      );
     } catch (notifError) {
-      console.error("Failed to create notification:", notifError);
+      console.error("Failed to notify merchant:", notifError);
     }
+
+    // Notify user — booking confirmed
+    try {
+      await NotificationService.notifyBookingConfirmed(
+        booking.user,
+        booking._id,
+        booking.serviceTitle
+      );
+    } catch (notifError) {
+      console.error("Failed to notify user:", notifError);
+    }
+
     return res.status(200).json({
       success: true,
-      message: "Advance payment successful! Your booking is now awaiting merchant approval.",
+      message: "Advance payment successful! Your booking is confirmed. Pay the remaining amount after the event.",
       paymentId: paymentId,
       booking: {
         _id: booking._id,
         status: booking.status,
         advancePaid: booking.advancePaid,
-        paymentStatus: booking.paymentStatus
+        paymentStatus: booking.paymentStatus,
+        remainingAmount: booking.remainingAmount
       }
     });
   } catch (error) {
@@ -1576,40 +1619,64 @@ export const payRemainingAmount = async (req, res) => {
       });
     }
 
-    // Remaining payment is only allowed after merchant marks booking as completed
-    if (booking.status !== "completed" && booking.status !== "confirmed" && booking.status !== "advance_paid") {
+    // Remaining payment is only allowed after booking is confirmed or merchant marks complete
+    if (!['confirmed', 'completed', 'advance_paid', 'processing'].includes(booking.status)) {
       return res.status(400).json({
         success: false,
-        message: "Remaining payment is only available after the merchant completes the event"
+        message: "Remaining payment is only available after the booking is confirmed"
       });
     }
 
-    // For remaining payment, always use the stored remainingAmount
     const actualRemainingAmount = Number(booking.remainingAmount);
-    // Generate payment ID for remaining payment
     const paymentId = `REM_PAY_${uuidv4().substring(0, 8).toUpperCase()}`;
-    // Update booking with final payment - use backend's stored amount
+
+    // Mark fully paid and completed
     booking.paymentStatus = "paid";
+    booking.status = "completed";
     booking.payment = {
       ...booking.payment,
       paid: true,
       paymentId: paymentId,
       paymentDate: new Date(),
-      amount: Number(booking.payment?.amount || 0) + actualRemainingAmount  // Add remaining to existing payment
+      amount: Number(booking.payment?.amount || 0) + actualRemainingAmount
     };
     await booking.save();
-    // Create notification for merchant
+
+    // Process full payment distribution
     try {
-      await Notification.create({
-        userId: booking.merchant || booking.serviceId,
-        title: "Final Payment Received",
-        message: `Customer has paid the remaining amount of ₹${actualRemainingAmount} for booking "${booking.serviceTitle}". Total payment completed.`,
-        type: "payment",
-        bookingId: booking._id
+      const { processPaymentDistribution } = await import('../services/paymentDistributionService.js');
+      const { Event } = await import('../models/eventSchema.js');
+      const event = await Event.findById(booking.serviceId);
+      await processPaymentDistribution({
+        userId: booking.user,
+        merchantId: event ? event.createdBy : booking.merchant,
+        bookingId: booking._id,
+        eventId: booking.serviceId,
+        totalAmount: Number(booking.totalPrice || booking.finalAmount),
+        paymentMethod: 'Manual',
+        transactionId: paymentId,
+        paymentGateway: 'manual',
+        description: `Full payment for: ${booking.serviceTitle}`
       });
-    } catch (notifError) {
-      console.error("Failed to create notification:", notifError);
+    } catch (distErr) {
+      console.error("Payment distribution failed:", distErr.message);
     }
+
+    // Notify merchant
+    try {
+      await NotificationService.notifyMerchantPaymentReceived(
+        booking.merchant,
+        booking._id,
+        actualRemainingAmount,
+        booking.serviceTitle
+      );
+    } catch {}
+
+    // Notify user
+    try {
+      await NotificationService.notifyBookingCompleted(booking.user, booking._id, booking.serviceTitle);
+    } catch {}
+
     return res.status(200).json({
       success: true,
       message: "Final payment successful! Your booking is complete.",
@@ -1679,7 +1746,6 @@ export const validateTicket = async (req, res) => {
     }
 
     // Check if ticketId is a valid ObjectId or a ticket number
-    const mongoose = require("mongoose");
     const isValidObjectId = mongoose.Types.ObjectId.isValid(ticketId);
 
     // Find booking by ticket number or _id
@@ -1729,15 +1795,36 @@ export const validateTicket = async (req, res) => {
     const usedAt = booking.ticket?.usedAt;
     const ticketNumber = booking.ticket?.ticketNumber;
 
+    // Compute ticket summary from selectedTickets map
+    const selectedTicketsObj = booking.selectedTickets instanceof Map
+      ? Object.fromEntries(booking.selectedTickets)
+      : (booking.selectedTickets || {});
+    const ticketEntries = Object.entries(selectedTicketsObj).filter(([, v]) => Number(v) > 0);
+    const totalQty = ticketEntries.length > 0
+      ? ticketEntries.reduce((s, [, v]) => s + Number(v), 0)
+      : (booking.ticket?.quantity || booking.guestCount || 1);
+    const ticketTypeSummary = ticketEntries.length > 0
+      ? ticketEntries.map(([type, qty]) => `${qty}× ${type}`).join(', ')
+      : (typeof booking.ticket?.ticketType === 'string' ? booking.ticket.ticketType : 'Standard');
+
     if (isUsed) {
       return res.status(200).json({
-        success: true,
-        message: "Ticket already used",
-        ticket: {
+        success: false,
+        alreadyUsed: true,
+        message: "Ticket has already been used",
+        booking: {
           ticketNumber,
-          isUsed: true,
+          userName: booking.user?.name || "Unknown",
+          userEmail: booking.user?.email || "",
+          userPhone: booking.user?.phone || "",
+          eventTitle: event.title || booking.serviceTitle,
+          status: booking.status,
+          paymentStatus: booking.paymentStatus,
+          totalPrice: booking.totalPrice,
+          finalAmount: booking.finalAmount,
+          quantity: totalQty,
+          ticketType: ticketTypeSummary,
           usedAt,
-          status: "already_used"
         }
       });
     }
@@ -1746,14 +1833,23 @@ export const validateTicket = async (req, res) => {
     booking.ticket.isUsed = true;
     booking.ticket.usedAt = new Date();
     await booking.save();
+
     return res.status(200).json({
       success: true,
       message: "Ticket validated successfully",
-      ticket: {
+      booking: {
         ticketNumber,
-        isUsed: false,
-        justValidated: true,
-        status: "valid"
+        userName: booking.user?.name || "Unknown",
+        userEmail: booking.user?.email || "",
+        userPhone: booking.user?.phone || "",
+        eventTitle: event.title || booking.serviceTitle,
+        status: booking.status,
+        paymentStatus: booking.paymentStatus,
+        totalPrice: booking.totalPrice,
+        finalAmount: booking.finalAmount,
+        quantity: totalQty,
+        ticketType: ticketTypeSummary,
+        validatedAt: new Date().toISOString(),
       }
     });
   } catch (error) {

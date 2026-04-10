@@ -83,14 +83,14 @@ const MerchantDashboard = () => {
   return (
     <MerchantLayout>
       <section className="mb-6">
-        <div className="flex items-center justify-between">
+        <div className="create-event-mobile-fix flex items-center justify-between">
           <div>
             <h2 className="text-2xl md:text-3xl font-semibold">Welcome back, {user?.name || "Merchant"}</h2>
             <p className="text-gray-600 mt-1">Here is your business overview</p>
           </div>
           <button
             onClick={createEvent}
-            className="px-4 py-2 rounded-lg bg-gray-900 text-white hover:bg-black transition responsive-btn"
+            className="create-btn px-4 py-2 rounded-lg bg-gray-900 text-white hover:bg-black transition responsive-btn"
           >
             <span className="btn-label">Create Event</span>
           </button>
@@ -98,17 +98,17 @@ const MerchantDashboard = () => {
       </section>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }}>
-        <SummaryCard title="Total Events" value={stats.totalEvents} icon={BsCalendar2Event} color="bg-indigo-600" />
-        <SummaryCard title="Total Bookings" value={stats.totalBookings} icon={FaListAlt} color="bg-emerald-600" />
-        <SummaryCard title="Total Revenue" value={`₹${stats.totalRevenue.toLocaleString()}`} icon={FaDollarSign} color="bg-amber-600" />
-        <SummaryCard title="Upcoming Events" value={stats.upcoming} icon={LuCalendarClock} color="bg-blue-600" />
+        <SummaryCard title="Total Events" value={stats.totalEvents} icon={BsCalendar2Event} color="bg-indigo-600" to="/dashboard/merchant/events" />
+        <SummaryCard title="Total Bookings" value={stats.totalBookings} icon={FaListAlt} color="bg-emerald-600" to="/dashboard/merchant/bookings" />
+        <SummaryCard title="Total Revenue" value={`₹${stats.totalRevenue.toLocaleString()}`} icon={FaDollarSign} color="bg-amber-600" to="/dashboard/merchant/earnings" />
+        <SummaryCard title="Upcoming Events" value={stats.upcoming} icon={LuCalendarClock} color="bg-blue-600" to="/dashboard/merchant/events" />
       </div>
 
       <div className="mt-8 rounded-xl bg-white shadow-sm ring-1 ring-gray-200 overflow-hidden">
         <div className="p-5 border-b border-gray-100 flex items-center justify-between">
           <h3 className="text-lg font-medium">My Events</h3>
         </div>
-        <div className="overflow-x-auto">
+        <div className="events-table-mobile-fix overflow-x-auto">
           <table className="w-full text-sm table-fixed">
             <thead className="bg-gray-50 text-xs font-medium text-gray-500 uppercase">
               <tr>

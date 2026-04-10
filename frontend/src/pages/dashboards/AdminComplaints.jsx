@@ -5,6 +5,7 @@ import useAuth from "../../context/useAuth";
 import { API_BASE, authHeaders } from "../../lib/http";
 import { FaExclamationTriangle, FaUser, FaCalendarAlt, FaCheckCircle, FaTimesCircle, FaEye, FaCommentDollar, FaSearch, FaFilter } from "react-icons/fa";
 import toast from "react-hot-toast";
+import AdminStatCard from "../../components/admin/AdminStatCard";
 
 const AdminComplaints = () => {
   const { token } = useAuth();
@@ -188,59 +189,12 @@ const AdminComplaints = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-4 gap-6 mb-6">
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 font-medium">Total Complaints</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{totalCount}</p>
-            </div>
-            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-              <FaExclamationTriangle className="text-blue-600 text-xl" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 font-medium">Pending</p>
-              <p className="text-2xl font-bold text-yellow-600 mt-1">
-                {complaints.filter(c => c.status === 'pending').length}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
-              <FaExclamationTriangle className="text-yellow-600 text-xl" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 font-medium">In Review</p>
-              <p className="text-2xl font-bold text-blue-600 mt-1">
-                {complaints.filter(c => c.status === 'in_review').length}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-              <FaEye className="text-blue-600 text-xl" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 font-medium">Resolved</p>
-              <p className="text-2xl font-bold text-green-600 mt-1">
-                {complaints.filter(c => c.status === 'resolved').length}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-              <FaCheckCircle className="text-green-600 text-xl" />
-            </div>
-          </div>
+      <div className="mobile-card-fix">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+          <AdminStatCard label="Total Complaints" value={totalCount} icon={FaExclamationTriangle} iconBg="bg-blue-100" iconColor="text-blue-600" />
+          <AdminStatCard label="Pending" value={complaints.filter(c => c.status === 'pending').length} icon={FaExclamationTriangle} iconBg="bg-yellow-100" iconColor="text-yellow-600" valueColor="text-yellow-600" />
+          <AdminStatCard label="In Review" value={complaints.filter(c => c.status === 'in_review').length} icon={FaEye} iconBg="bg-blue-100" iconColor="text-blue-600" valueColor="text-blue-600" />
+          <AdminStatCard label="Resolved" value={complaints.filter(c => c.status === 'resolved').length} icon={FaCheckCircle} iconBg="bg-green-100" iconColor="text-green-600" valueColor="text-green-600" />
         </div>
       </div>
 

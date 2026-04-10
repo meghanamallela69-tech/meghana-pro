@@ -11,6 +11,7 @@ const MerchantTicketValidation = () => {
   const [ticketCode, setTicketCode] = useState("");
   const [validationResult, setValidationResult] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [recentValidations, setRecentValidations] = useState([]);
 
   const handleValidateTicket = async (e) => {
     e.preventDefault();
@@ -21,84 +22,86 @@ const MerchantTicketValidation = () => {
     }
 
     setLoading(true);
-    
+
+    // Helper: extract only safe primitive fields from a booking object
+    const extractBooking = (b, valid, extra = {}) => ({
+      valid,
+      ticketNumber: typeof b?.ticketNumber === 'string' ? b.ticketNumber : null,
+      userName: typeof b?.userName === 'string' ? b.userName : null,
+      userEmail: typeof b?.userEmail === 'string' ? b.userEmail : null,
+      userPhone: typeof b?.userPhone === 'string' ? b.userPhone : null,
+      eventTitle: typeof b?.eventTitle === 'string' ? b.eventTitle : null,
+      status: typeof b?.status === 'string' ? b.status : null,
+      paymentStatus: typeof b?.paymentStatus === 'string' ? b.paymentStatus : null,
+      totalPrice: typeof b?.totalPrice === 'number' ? String(b.totalPrice) : null,
+      finalAmount: typeof b?.finalAmount === 'number' ? String(b.finalAmount) : null,
+      quantity: (typeof b?.quantity === 'number' && b.quantity > 0) ? String(b.quantity) : null,
+      guestCount: (typeof b?.guestCount === 'number' && b.guestCount > 0) ? String(b.guestCount) : null,
+      ticketType: typeof b?.ticketType === 'string' ? b.ticketType : null,
+      validatedAt: typeof b?.validatedAt === 'string' ? b.validatedAt : new Date().toISOString(),
+      ...extra,
+    });
+
     try {
-      console.log(`🎫 Validating ticket: ${ticketCode.trim()}`);
-      
       const response = await axios.get(
         `${API_BASE}/bookings/merchant/validate-ticket/${encodeURIComponent(ticketCode.trim())}`,
         { headers: authHeaders(token) }
       );
 
-      console.log(`🎫 Validation response:`, response.data);
       const data = response.data;
-      
-      // Debug: Log the exact structure we're receiving
-      console.log('🔍 Raw response data:', JSON.stringify(data, null, 2));
-      console.log('🔍 Booking object:', JSON.stringify(data.booking, null, 2));
-      
-      if (data.success && data.booking) {
-        // Extract clean data from the booking object
-        const cleanResult = {
-          valid: true,
-          ticketNumber: data.booking.ticketNumber,
-          userName: data.booking.userName,
-          userEmail: data.booking.userEmail,
-          userPhone: data.booking.userPhone,
-          eventTitle: data.booking.eventTitle,
-          status: data.booking.status,
-          paymentStatus: data.booking.paymentStatus,
-          totalPrice: data.booking.totalPrice,
-          finalAmount: data.booking.finalAmount,
-          quantity: data.booking.quantity,
-          guestCount: data.booking.guestCount,
-          ticketType: data.booking.ticketType,
-          validatedAt: data.booking.validatedAt || new Date().toISOString()
-        };
-        
-        setValidationResult(cleanResult);
-        toast.success("✅ Ticket validated successfully! Attendee can enter.");
+
+      if (data.booking) {
+        const result = extractBooking(data.booking, !!data.success);
+        setValidationResult(result);
+        // Add to recent validations table
+        setRecentValidations(prev => [{
+          ticketNumber: result.ticketNumber || ticketCode.trim(),
+          eventTitle: result.eventTitle || '—',
+          userName: result.userName || '—',
+          status: data.success ? 'Valid' : result.alreadyUsed ? 'Already Used' : 'Invalid',
+          validatedAt: result.validatedAt || new Date().toISOString(),
+        }, ...prev].slice(0, 20));
+        if (data.success) toast.success("✅ Ticket validated successfully!");
+        else toast.error(data.message || "Ticket validation failed");
       } else {
-        setValidationResult({
-          valid: false,
-          error: data.message || "Ticket validation failed"
-        });
+        setValidationResult({ valid: false, error: data.message || "Ticket validation failed" });
+        setRecentValidations(prev => [{
+          ticketNumber: ticketCode.trim(),
+          eventTitle: '—',
+          userName: '—',
+          status: 'Invalid',
+          validatedAt: new Date().toISOString(),
+        }, ...prev].slice(0, 20));
         toast.error(data.message || "Ticket validation failed");
       }
     } catch (error) {
-      console.error("Validation error:", error);
-      
       const errorData = error.response?.data;
       const errorMessage = errorData?.message || error.message || "Failed to validate ticket";
-      
-      // Check if it's an error with booking details (like already used or invalid)
+
       if (errorData?.booking) {
-        const cleanErrorResult = {
-          valid: false,
-          alreadyUsed: errorData.alreadyUsed || errorData.message?.includes('already been used'),
-          ticketNumber: errorData.booking.ticketNumber,
-          userName: errorData.booking.userName,
-          userEmail: errorData.booking.userEmail,
-          userPhone: errorData.booking.userPhone,
-          eventTitle: errorData.booking.eventTitle,
-          status: errorData.booking.status,
-          paymentStatus: errorData.booking.paymentStatus,
-          totalPrice: errorData.booking.totalPrice,
-          finalAmount: errorData.booking.finalAmount,
-          quantity: errorData.booking.quantity,
-          guestCount: errorData.booking.guestCount,
-          ticketType: errorData.booking.ticketType,
-          usedAt: errorData.usedAt,
-          error: errorMessage
-        };
-        setValidationResult(cleanErrorResult);
-      } else {
-        setValidationResult({
-          valid: false,
-          error: errorMessage
+        const result = extractBooking(errorData.booking, false, {
+          alreadyUsed: !!errorData.alreadyUsed,
+          error: errorMessage,
         });
+        setValidationResult(result);
+        setRecentValidations(prev => [{
+          ticketNumber: result.ticketNumber || ticketCode.trim(),
+          eventTitle: result.eventTitle || '—',
+          userName: result.userName || '—',
+          status: errorData.alreadyUsed ? 'Already Used' : 'Invalid',
+          validatedAt: new Date().toISOString(),
+        }, ...prev].slice(0, 20));
+      } else {
+        setValidationResult({ valid: false, error: errorMessage });
+        setRecentValidations(prev => [{
+          ticketNumber: ticketCode.trim(),
+          eventTitle: '—',
+          userName: '—',
+          status: 'Invalid',
+          validatedAt: new Date().toISOString(),
+        }, ...prev].slice(0, 20));
       }
-      
+
       toast.error(errorMessage);
     } finally {
       setLoading(false);
@@ -207,230 +210,77 @@ const MerchantTicketValidation = () => {
               <p className="text-sm">Enter a ticket code to validate</p>
             </div>
           ) : (
-            <div className={`rounded-lg border-2 p-6 ${
-              validationResult.valid 
-                ? 'border-green-200 bg-green-50' 
-                : 'border-red-200 bg-red-50'
-            }`}>
-              <div className="flex items-center gap-3 mb-4">
-                {validationResult.valid ? (
-                  <FaCheckCircle className="text-green-600 text-3xl" />
-                ) : (
-                  <FaTimesCircle className="text-red-600 text-3xl" />
-                )}
+            <div className={`rounded-lg border-2 p-6 ${validationResult.valid ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
+              {/* Header */}
+              <div className="flex items-center gap-3 mb-5">
+                {validationResult.valid
+                  ? <FaCheckCircle className="text-green-600 text-3xl" />
+                  : <FaTimesCircle className="text-red-600 text-3xl" />}
                 <div>
-                  <h4 className={`font-bold text-lg ${
-                    validationResult.valid ? 'text-green-800' : 'text-red-800'
-                  }`}>
-                    {validationResult.valid ? 'VALID TICKET' : 'INVALID TICKET'}
+                  <h4 className={`font-bold text-lg ${validationResult.valid ? 'text-green-800' : 'text-red-800'}`}>
+                    {validationResult.valid ? 'VALID TICKET' : validationResult.alreadyUsed ? 'ALREADY USED' : 'INVALID TICKET'}
                   </h4>
-                  <p className={`text-sm ${
-                    validationResult.valid ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    {validationResult.alreadyUsed ? 'Ticket already validated' : 
-                     validationResult.error ? validationResult.error : 
-                     validationResult.valid ? 'Entry approved' : 'Entry denied'}
+                  <p className={`text-sm ${validationResult.valid ? 'text-green-600' : 'text-red-600'}`}>
+                    {validationResult.valid ? 'Entry approved' : validationResult.error || 'Entry denied'}
                   </p>
                 </div>
               </div>
 
-              {/* Only show ticket details if we have clean data */}
-              {(validationResult.ticketNumber || validationResult.userName || validationResult.eventTitle) ? (
-                <>
-                  {/* Clean ticket information display */}
-                  <div className="space-y-4">
-                    {/* Ticket Number - Always show if available */}
-                    {validationResult.ticketNumber && (
-                      <div className="bg-white p-3 rounded-lg border">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium text-gray-700">Ticket Number:</span>
-                          <span className="text-sm font-mono font-bold text-blue-600">
-                            {String(validationResult.ticketNumber)}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Attendee Information */}
-                    {validationResult.userName && (
-                      <div className="bg-white p-3 rounded-lg border">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                            <FaUser className="text-gray-400" />
-                            Attendee:
-                          </span>
-                          <span className="text-sm font-semibold text-gray-900">
-                            {String(validationResult.userName)}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Event Information */}
-                    {validationResult.eventTitle && (
-                      <div className="bg-white p-3 rounded-lg border">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                            <FaCalendarAlt className="text-gray-400" />
-                            Event:
-                          </span>
-                          <span className="text-sm font-semibold text-gray-900 text-right max-w-xs truncate">
-                            {String(validationResult.eventTitle)}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Ticket Type */}
-                    {validationResult.ticketType && (
-                      <div className="bg-white p-3 rounded-lg border">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                            <FaHashtag className="text-gray-400" />
-                            Ticket Type:
-                          </span>
-                          <span className="text-sm font-semibold text-gray-900">
-                            {String(validationResult.ticketType)}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Quantity */}
-                    {(validationResult.quantity || validationResult.guestCount) && (
-                      <div className="bg-white p-3 rounded-lg border">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium text-gray-700">Quantity:</span>
-                          <span className="text-sm font-semibold text-gray-900">
-                            {validationResult.quantity || validationResult.guestCount} person(s)
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Total Price */}
-                    {(validationResult.totalPrice || validationResult.finalAmount) && (
-                      <div className="bg-white p-3 rounded-lg border">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium text-gray-700">Total Price:</span>
-                          <span className="text-sm font-bold text-green-600">
-                            ₹{Number(validationResult.totalPrice || validationResult.finalAmount || 0).toLocaleString()}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Status Information */}
-                    {(validationResult.status || validationResult.paymentStatus) && (
-                      <div className="bg-white p-3 rounded-lg border">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium text-gray-700">Status:</span>
-                          <div className="flex gap-2">
-                            {validationResult.status && (
-                              <span className={`text-xs font-medium px-3 py-1 rounded-full ${
-                                (validationResult.status === 'confirmed' || validationResult.status === 'paid') ? 'bg-green-100 text-green-700' :
-                                validationResult.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                                'bg-gray-100 text-gray-700'
-                              }`}>
-                                {String(validationResult.status).toUpperCase()}
-                              </span>
-                            )}
-                            {validationResult.paymentStatus && (
-                              <span className={`text-xs font-medium px-3 py-1 rounded-full ${
-                                validationResult.paymentStatus === 'paid' ? 'bg-green-100 text-green-700' :
-                                'bg-red-100 text-red-700'
-                              }`}>
-                                {String(validationResult.paymentStatus).toUpperCase()}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Contact Information */}
-                    {validationResult.userPhone && (
-                      <div className="bg-white p-3 rounded-lg border">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium text-gray-700">Phone:</span>
-                          <span className="text-sm font-semibold text-gray-900">
-                            {String(validationResult.userPhone)}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {validationResult.userEmail && (
-                      <div className="bg-white p-3 rounded-lg border">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium text-gray-700">Email:</span>
-                          <span className="text-sm font-semibold text-gray-900 truncate max-w-xs">
-                            {String(validationResult.userEmail)}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Validation Time */}
-                    {validationResult.validatedAt && (
-                      <div className="bg-white p-3 rounded-lg border">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium text-gray-700">Validated At:</span>
-                          <span className="text-sm font-semibold text-gray-900">
-                            {new Date(validationResult.validatedAt).toLocaleString()}
-                          </span>
-                        </div>
-                      </div>
-                    )}
+              {/* Details — only safe string/number fields */}
+              <div className="space-y-2">
+                {[
+                  { label: 'Ticket Number', value: validationResult.ticketNumber, mono: true },
+                  { label: 'Attendee', value: validationResult.userName, icon: <FaUser className="text-gray-400" /> },
+                  { label: 'Event', value: validationResult.eventTitle, icon: <FaCalendarAlt className="text-gray-400" /> },
+                  { label: 'Ticket Type', value: validationResult.ticketType, icon: <FaHashtag className="text-gray-400" /> },
+                  { label: 'Quantity', value: (validationResult.quantity || validationResult.guestCount) ? `${validationResult.quantity || validationResult.guestCount} ticket(s)` : null },
+                  { label: 'Total Price', value: (validationResult.totalPrice || validationResult.finalAmount) ? `₹${Number(validationResult.totalPrice || validationResult.finalAmount).toLocaleString('en-IN')}` : null, green: true },
+                  { label: 'Email', value: validationResult.userEmail },
+                  { label: 'Phone', value: validationResult.userPhone },
+                  { label: 'Validated At', value: validationResult.validatedAt ? new Date(validationResult.validatedAt).toLocaleString() : null },
+                ].filter(row => row.value && typeof row.value === 'string').map(row => (
+                  <div key={row.label} className="bg-white p-3 rounded-lg border flex justify-between items-center gap-3">
+                    <span className="text-sm font-medium text-gray-700 flex items-center gap-2 flex-shrink-0">
+                      {row.icon}{row.label}:
+                    </span>
+                    <span className={`text-sm font-semibold text-right truncate ${row.mono ? 'font-mono text-blue-600' : row.green ? 'text-green-600' : 'text-gray-900'}`}>
+                      {row.value}
+                    </span>
                   </div>
-                </>
-              ) : (
-                /* Fallback for cases where we don't have clean data */
-                <div className="bg-white p-4 rounded-lg border">
-                  <p className="text-sm text-gray-600">
-                    {validationResult.valid ? 
-                      "✅ Ticket validation successful - Entry approved" : 
-                      `❌ ${validationResult.error || 'Ticket validation failed'}`
-                    }
-                  </p>
-                </div>
-              )}
+                ))}
 
-              {/* Success message for valid tickets */}
-              {validationResult.valid && !validationResult.alreadyUsed && (
+                {/* Booking status badges */}
+                {(validationResult.status || validationResult.paymentStatus) && (
+                  <div className="bg-white p-3 rounded-lg border flex justify-between items-center">
+                    <span className="text-sm font-medium text-gray-700">Status:</span>
+                    <div className="flex gap-2">
+                      {validationResult.status && typeof validationResult.status === 'string' && (
+                        <span className={`text-xs font-medium px-3 py-1 rounded-full ${['confirmed','paid','completed'].includes(validationResult.status) ? 'bg-green-100 text-green-700' : validationResult.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}>
+                          {validationResult.status.toUpperCase()}
+                        </span>
+                      )}
+                      {validationResult.paymentStatus && typeof validationResult.paymentStatus === 'string' && (
+                        <span className={`text-xs font-medium px-3 py-1 rounded-full ${validationResult.paymentStatus === 'paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                          {validationResult.paymentStatus.toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer message */}
+              {validationResult.valid && (
                 <div className="mt-4 pt-4 border-t border-green-200">
                   <p className="text-sm text-green-700 flex items-center gap-2">
-                    <FaCheckCircle className="text-lg" />
-                    <strong>✓ Valid Entry Approved</strong> - Attendee can enter the event
-                  </p>
-                  <p className="text-xs text-green-600 mt-2">
-                    This ticket has been marked as used and cannot be used again.
+                    <FaCheckCircle /> <strong>Entry Approved</strong> — Ticket marked as used.
                   </p>
                 </div>
               )}
-              
-              {/* Already validated message */}
               {validationResult.alreadyUsed && (
                 <div className="mt-4 pt-4 border-t border-red-200">
                   <p className="text-sm text-red-700 flex items-center gap-2">
-                    <FaTimesCircle className="text-lg" />
-                    <strong>⚠ Ticket Already Validated</strong>
-                  </p>
-                  <p className="text-xs text-red-600 mt-2">
-                    This ticket was previously validated{validationResult.usedAt ? ` on ${validationResult.usedAt.toLocaleString()}` : ''}. Entry denied.
-                  </p>
-                </div>
-              )}
-
-              {/* Error message for invalid tickets */}
-              {!validationResult.valid && !validationResult.alreadyUsed && validationResult.error && (
-                <div className="mt-4 pt-4 border-t border-red-200">
-                  <p className="text-sm text-red-700 flex items-center gap-2">
-                    <FaTimesCircle className="text-lg" />
-                    <strong>❌ Validation Failed</strong>
-                  </p>
-                  <p className="text-xs text-red-600 mt-2">
-                    {validationResult.error}
+                    <FaTimesCircle /> <strong>Already Validated</strong> — Entry denied.
                   </p>
                 </div>
               )}
@@ -441,8 +291,11 @@ const MerchantTicketValidation = () => {
 
       {/* Recent Validations Table */}
       <div className="mt-6 bg-white rounded-xl shadow-sm border">
-        <div className="px-6 py-4 border-b">
+        <div className="px-6 py-4 border-b flex items-center justify-between">
           <h3 className="font-semibold text-lg">Recent Validations</h3>
+          {recentValidations.length > 0 && (
+            <span className="text-xs text-gray-500">{recentValidations.length} this session</span>
+          )}
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -455,12 +308,30 @@ const MerchantTicketValidation = () => {
                 <th className="text-left px-6 py-3">Validated At</th>
               </tr>
             </thead>
-            <tbody>
-              <tr>
-                <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
-                  No validations yet. Start validating tickets above.
-                </td>
-              </tr>
+            <tbody className="divide-y divide-gray-100">
+              {recentValidations.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                    No validations yet. Start validating tickets above.
+                  </td>
+                </tr>
+              ) : recentValidations.map((v, i) => (
+                <tr key={i} className="hover:bg-gray-50 transition">
+                  <td className="px-6 py-3 font-mono text-blue-600 text-xs">{v.ticketNumber}</td>
+                  <td className="px-6 py-3 text-gray-800 max-w-[180px] truncate">{v.eventTitle}</td>
+                  <td className="px-6 py-3 text-gray-700">{v.userName}</td>
+                  <td className="px-6 py-3">
+                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                      v.status === 'Valid' ? 'bg-green-100 text-green-700' :
+                      v.status === 'Already Used' ? 'bg-yellow-100 text-yellow-700' :
+                      'bg-red-100 text-red-700'
+                    }`}>
+                      {v.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-3 text-gray-500 text-xs">{new Date(v.validatedAt).toLocaleString()}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

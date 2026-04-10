@@ -274,7 +274,7 @@ const UserMessages = () => {
       <div style={{ height: "calc(100vh - 80px)", display: "flex", background: "#f0f2f5", borderRadius: 12, overflow: "hidden", boxShadow: "0 2px 16px rgba(0,0,0,0.08)" }}>
 
         {/* ── Left: Chat List ── */}
-        <div style={{ width: 320, flexShrink: 0, display: "flex", flexDirection: "column", background: "#fff", borderRight: "1px solid #e5e7eb" }}>
+        <div className="um-list-panel" style={{ width: 320, flexShrink: 0, display: "flex", flexDirection: "column", background: "#fff", borderRight: "1px solid #e5e7eb" }}>
           <div style={{ padding: "16px", borderBottom: "1px solid #e5e7eb", background: "#f8fafc" }}>
             <h2 style={{ color: "#111827", fontWeight: 700, fontSize: 18, marginBottom: 10 }}>Messages</h2>
             <div style={{ position: "relative" }}>
@@ -312,11 +312,15 @@ const UserMessages = () => {
         </div>
 
         {/* ── Right: Conversation ── */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+        <div className="um-conversation-panel" style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
           {selectedChat ? (
             <>
               {/* Header */}
               <div style={{ padding: "10px 16px", background: "#fff", borderBottom: "1px solid #e5e7eb", display: "flex", alignItems: "center", gap: 12 }}>
+                <button className="um-back-btn" onClick={() => setSelectedChat(null)}
+                  style={{ display: "none", background: "none", border: "none", cursor: "pointer", padding: "4px 8px 4px 0", color: "#374151" }}>
+                  <FaArrowLeft style={{ fontSize: 18 }} />
+                </button>
                 <img src={selectedChat.otherUser?.profileImage || `https://ui-avatars.com/api/?name=${selectedChat.otherUser?.name}&background=random`}
                   alt={selectedChat.otherUser?.name} style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover" }} />
                 <div>
@@ -400,6 +404,24 @@ const UserMessages = () => {
           )}
         </div>
       </div>
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media (max-width: 767px) {
+          .um-list-panel {
+            width: 100% !important;
+            flex-shrink: unset !important;
+            display: ${selectedChat ? "none" : "flex"} !important;
+          }
+          .um-conversation-panel {
+            display: ${selectedChat ? "flex" : "none"} !important;
+            width: 100% !important;
+          }
+          .um-back-btn {
+            display: flex !important;
+            align-items: center !important;
+          }
+        }
+      `}} />
     </UserLayout>
   );
 };

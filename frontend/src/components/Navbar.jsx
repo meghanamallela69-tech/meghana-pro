@@ -24,7 +24,7 @@ const Navbar = () => {
       width: "100%",
     }}>
       {/* ── Single row: logo | links + buttons ── */}
-      <div style={{
+      <div className="nb-header-row" style={{
         width: "100%",
         padding: "14px 24px",
         display: "flex",
@@ -36,9 +36,9 @@ const Navbar = () => {
 
         {/* Logo */}
         <Link to="/home" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none", flexShrink: 0 }}>
-          <BsCalendarEvent style={{ fontSize: 28, color: "#2563eb" }} />
-          <span style={{ fontSize: 36, fontWeight: 900, fontStyle: "italic", color: "#2563eb", letterSpacing: "-1px", lineHeight: 1 }}>Event</span>
-          <span style={{ fontSize: 36, fontWeight: 900, fontStyle: "italic", color: "#7c3aed", letterSpacing: "-1px", lineHeight: 1 }}>Hub</span>
+          <BsCalendarEvent className="nb-logo-icon" style={{ fontSize: 28, color: "#2563eb" }} />
+          <span className="nb-logo-text" style={{ fontSize: 36, fontWeight: 900, fontStyle: "italic", color: "#2563eb", letterSpacing: "-1px", lineHeight: 1 }}>Event</span>
+          <span className="nb-logo-text" style={{ fontSize: 36, fontWeight: 900, fontStyle: "italic", color: "#7c3aed", letterSpacing: "-1px", lineHeight: 1 }}>Hub</span>
         </Link>
 
         {/* Desktop: links + auth — hidden on mobile */}
@@ -122,6 +122,20 @@ const Navbar = () => {
         @media (max-width: 899px) {
           .nb-desktop { display: none !important; }
           .nb-mobile  { display: flex !important; }
+          .nb-header-row {
+            padding: 8px 12px !important;
+          }
+          .nb-logo-icon {
+            font-size: 18px !important;
+          }
+          .nb-logo-text {
+            font-size: 18px !important;
+            letter-spacing: -0.5px !important;
+          }
+          .nb-mobile button {
+            font-size: 18px !important;
+            padding: 4px !important;
+          }
         }
       `}</style>
     </header>

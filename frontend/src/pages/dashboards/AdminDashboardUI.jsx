@@ -13,26 +13,29 @@ const AdminDashboardUI = () => {
   const [users, setUsers] = useState([]);
   const [events, setEvents] = useState([]);
   const [registrations, setRegistrations] = useState([]);
+  const [merchantsCount, setMerchantsCount] = useState(0);
 
   const load = useCallback(async () => {
     const headers = authHeaders(token);
-    const [u, e, r] = await Promise.all([
+    const [u, e, b, m] = await Promise.all([
       axios.get(`${API_BASE}/admin/users`, { headers }),
       axios.get(`${API_BASE}/admin/events`, { headers }),
-      axios.get(`${API_BASE}/admin/registrations`, { headers }),
+      axios.get(`${API_BASE}/admin/bookings/all`, { headers }),
+      axios.get(`${API_BASE}/admin/merchants`, { headers }),
     ]);
     setUsers(u.data.users || []);
     setEvents(e.data.events || []);
-    setRegistrations(r.data.registrations || []);
+    setRegistrations(b.data.bookings || []);
+    // Store merchant count separately
+    setMerchantsCount((m.data.merchants || []).length);
   }, [token]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  const merchantsCount = users.filter((u) => u.role === "merchant").length;
   const stats = {
-    users: users.length,
+    users: users.filter(u => u.role === "user").length,
     merchants: merchantsCount,
     events: events.length,
     bookings: registrations.length,
@@ -50,12 +53,12 @@ const AdminDashboardUI = () => {
     }));
 
   const recentRegs = [...registrations]
-    .sort((a, b) => new Date(b.createdAt || b.updatedAt || 0) - new Date(a.createdAt || a.updatedAt || 0))
+    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
     .slice(0, 6)
     .map((rg) => ({
       id: rg._id,
-      user: rg.user?.name || "User",
-      event: rg.event?.title || "Event",
+      user: rg.user?.name || rg.userName || "User",
+      event: rg.serviceTitle || rg.eventTitle || rg.event?.title || "Event",
       date: new Date(rg.createdAt || Date.now()).toLocaleString(),
     }));
 
@@ -67,10 +70,10 @@ const AdminDashboardUI = () => {
       </section>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }}>
-        <SummaryCard title="Total Users" value={stats.users} icon={FaUsers} color="bg-emerald-600" />
-        <SummaryCard title="Total Merchants" value={stats.merchants} icon={FaStore} color="bg-orange-600" />
-        <SummaryCard title="Total Events" value={stats.events} icon={BsCalendar2Event} color="bg-indigo-600" />
-        <SummaryCard title="Total Bookings" value={stats.bookings} icon={FaListAlt} color="bg-blue-600" />
+        <SummaryCard title="Total Users" value={stats.users} icon={FaUsers} color="bg-emerald-600" to="/dashboard/admin/users" />
+        <SummaryCard title="Total Merchants" value={stats.merchants} icon={FaStore} color="bg-orange-600" to="/dashboard/admin/merchants" />
+        <SummaryCard title="Total Events" value={stats.events} icon={BsCalendar2Event} color="bg-indigo-600" to="/dashboard/admin/events" />
+        <SummaryCard title="Total Bookings" value={stats.bookings} icon={FaListAlt} color="bg-blue-600" to="/dashboard/admin/registrations" />
       </div>
 
       <div className="mt-8 grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -79,23 +82,23 @@ const AdminDashboardUI = () => {
             <h3 className="text-lg font-medium">Recent Events</h3>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm table-fixed">
+            <table className="min-w-full text-sm">
               <thead className="bg-gray-50 text-xs font-medium text-gray-500 uppercase">
                 <tr>
-                  <th className="text-left px-6 py-3">Event Name</th>
-                  <th className="text-left px-6 py-3">Date</th>
-                  <th className="text-left px-6 py-3">Merchant</th>
-                  <th className="text-left px-6 py-3">Status</th>
+                  <th className="text-left px-4 py-3 whitespace-nowrap">Event Name</th>
+                  <th className="text-left px-4 py-3 whitespace-nowrap">Date</th>
+                  <th className="text-left px-4 py-3 whitespace-nowrap">Merchant</th>
+                  <th className="text-left px-4 py-3 whitespace-nowrap">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {recentEvents.map((ev) => (
                   <tr key={ev.id} className="hover:bg-gray-50 transition">
-                    <td className="px-6 py-4 whitespace-nowrap">{ev.name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{ev.date}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{ev.merchant}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 rounded text-xs ${ev.status === "Upcoming" ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-700"}`}>
+                    <td className="px-4 py-3 whitespace-nowrap font-medium text-gray-900">{ev.name}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-gray-600">{ev.date}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-gray-600">{ev.merchant}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${ev.status === "Upcoming" ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-700"}`}>
                         {ev.status}
                       </span>
                     </td>

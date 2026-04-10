@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from "uuid";
 import { processPaymentDistribution } from "../services/paymentDistributionService.js";
 import { Event } from "../models/eventSchema.js";
 import NotificationService from "../services/notificationService.js";
+import { emitToUser, emitToMerchant, emitToAdmins } from "../util/socketIO.js";
 
 const hasRazorpay = () =>
   Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET);
@@ -263,6 +264,15 @@ export const payForService = async (req, res) => {
         // Don't fail the payment if coupon recording fails
       }
     }
+
+    // Emit real-time payment event to user, merchant, and admins
+    try {
+      const paidEvent = await Event.findById(booking.serviceId);
+      const merchantId = paidEvent ? paidEvent.createdBy : booking.merchant;
+      emitToUser(booking.user, 'paymentConfirmed', { bookingId: booking._id, amount: paymentAmount });
+      if (merchantId) emitToMerchant(merchantId, 'paymentReceived', { bookingId: booking._id, amount: paymentAmount });
+      emitToAdmins('paymentReceived', { bookingId: booking._id, amount: paymentAmount });
+    } catch {}
 
     return res.status(200).json({
       success: true,

@@ -29,7 +29,7 @@ const UserTopbar = ({ onToggleSidebar, onLogout }) => {
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b">
-      <div className="flex items-center justify-between px-4 py-3">
+      <div className="tb-header-row flex items-center justify-between px-4 py-3">
 
         {/* Left: Hamburger + Logo */}
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -43,9 +43,9 @@ const UserTopbar = ({ onToggleSidebar, onLogout }) => {
         </div>
 
         {/* Right side icons */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div className="tb-right" style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <NotificationDropdown viewAllPath="/dashboard/user/notifications" />
-          <LanguageSwitcher />
+          <span className="tb-lang"><LanguageSwitcher /></span>
 
           {/* Profile — avatar always, name desktop only */}
           <div style={{ position: "relative" }} ref={profileRef}>
@@ -77,6 +77,12 @@ const UserTopbar = ({ onToggleSidebar, onLogout }) => {
 
       <style>{`
         .tb-name { display: inline !important; }
+        @media (max-width: 768px) {
+          .tb-name { display: none !important; }
+          .tb-lang { display: none !important; }
+          .tb-header-row { padding: 6px 12px !important; gap: 4px !important; }
+          .tb-right { gap: 4px !important; }
+        }
       `}</style>
     </header>
   );

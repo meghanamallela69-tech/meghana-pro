@@ -2,6 +2,21 @@ import { Review } from "../models/reviewSchema.js";
 import { Event } from "../models/eventSchema.js";
 import { Booking } from "../models/bookingSchema.js";
 
+// Helper: recalculate and sync Event.rating from Review collection
+const syncEventRating = async (eventId) => {
+  const reviews = await Review.find({ event: eventId });
+  if (reviews.length === 0) {
+    await Event.findByIdAndUpdate(eventId, {
+      $set: { "rating.average": 0, "rating.totalRatings": 0 }
+    });
+  } else {
+    const avg = Math.round((reviews.reduce((s, r) => s + r.rating, 0) / reviews.length) * 10) / 10;
+    await Event.findByIdAndUpdate(eventId, {
+      $set: { "rating.average": avg, "rating.totalRatings": reviews.length }
+    });
+  }
+};
+
 // Create review
 export const createReview = async (req, res) => {
   try {
@@ -52,6 +67,7 @@ export const createReview = async (req, res) => {
       existingReview.rating = rating;
       existingReview.reviewText = reviewText || "";
       await existingReview.save();
+      await syncEventRating(eventId);
 
       return res.status(200).json({
         success: true,
@@ -66,6 +82,7 @@ export const createReview = async (req, res) => {
         rating: rating,
         reviewText: reviewText || ""
       });
+      await syncEventRating(eventId);
 
       return res.status(201).json({
         success: true,
@@ -155,7 +172,9 @@ export const deleteReview = async (req, res) => {
       });
     }
 
+    const eventId = review.event;
     await Review.deleteOne({ _id: reviewId });
+    await syncEventRating(eventId);
 
     return res.status(200).json({
       success: true,

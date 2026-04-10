@@ -5,6 +5,7 @@ import useAuth from "../../context/useAuth";
 import { API_BASE, authHeaders } from "../../lib/http";
 import { FaStore, FaEnvelope, FaCheckCircle, FaBan, FaEdit, FaTrash, FaKey, FaPlus, FaSearch } from "react-icons/fa";
 import toast from "react-hot-toast";
+import AdminStatCard from "../../components/admin/AdminStatCard";
 
 const AdminMerchants = () => {
   const { token } = useAuth();
@@ -194,45 +195,11 @@ const AdminMerchants = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-3 gap-6 mb-6">
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 font-medium">Total Merchants</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{merchants.length}</p>
-            </div>
-            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-              <FaStore className="text-blue-600 text-xl" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 font-medium">Active</p>
-              <p className="text-2xl font-bold text-green-600 mt-1">
-                {merchants.filter(m => m.status === 'active').length}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-              <FaCheckCircle className="text-green-600 text-xl" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 font-medium">Inactive</p>
-              <p className="text-2xl font-bold text-red-600 mt-1">
-                {merchants.filter(m => m.status !== 'active').length}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-              <FaBan className="text-red-600 text-xl" />
-            </div>
-          </div>
+      <div className="mobile-card-fix">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
+          <AdminStatCard label="Total Merchants" value={merchants.length} icon={FaStore} iconBg="bg-blue-100" iconColor="text-blue-600" />
+          <AdminStatCard label="Active" value={merchants.filter(m => m.status === 'active').length} icon={FaCheckCircle} iconBg="bg-green-100" iconColor="text-green-600" valueColor="text-green-600" />
+          <AdminStatCard label="Inactive" value={merchants.filter(m => m.status !== 'active').length} icon={FaBan} iconBg="bg-red-100" iconColor="text-red-600" valueColor="text-red-600" />
         </div>
       </div>
 
