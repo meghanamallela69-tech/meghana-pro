@@ -5,6 +5,7 @@ import AdminLayout from "../../components/admin/AdminLayout";
 import useAuth from "../../context/useAuth";
 import { API_BASE, authHeaders } from "../../lib/http";
 import { FaCalendarAlt, FaMapMarkerAlt, FaUser, FaTag } from "react-icons/fa";
+import { getEventStatus } from "../../lib/utils";
 
 const AdminEvents = () => {
   const { token } = useAuth();
@@ -33,15 +34,9 @@ const AdminEvents = () => {
   };
 
   const getStatusBadge = (event) => {
-    const now = new Date();
-    const eventDate = event.date ? new Date(event.date) : null;
-    
-    if (eventDate && eventDate < now) {
-      return { label: "Completed", className: "bg-gray-100 text-gray-700" };
-    }
-    if (event.status === "inactive") {
-      return { label: "Inactive", className: "bg-red-100 text-red-700" };
-    }
+    const s = getEventStatus(event);
+    if (s.label === "Completed") return { label: "Completed", className: "bg-gray-100 text-gray-700" };
+    if (event.status === "inactive")  return { label: "Inactive",  className: "bg-red-100 text-red-700" };
     return { label: "Active", className: "bg-green-100 text-green-700" };
   };
 
@@ -68,7 +63,7 @@ const AdminEvents = () => {
           <p className="text-gray-500">No events found</p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }}>
+        <div className="admin-events-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }}>
           {events.map((ev) => {
             const imageSrc = ev.images && ev.images.length > 0 ? ev.images[0].url : null;
             const status = getStatusBadge(ev);

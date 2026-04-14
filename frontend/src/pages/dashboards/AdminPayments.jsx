@@ -165,13 +165,11 @@ const AdminPayments = () => {
 
         {/* Summary Cards */}
         {summary && (
-          <div className="mobile-card-fix">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-              <AdminStatCard label="Total Transactions" value={summary.count} icon={FaCreditCard} iconBg="bg-blue-100" iconColor="text-blue-600" />
-              <AdminStatCard label="Total Amount" value={formatCurrency(summary.totalAmount)} icon={FaDollarSign} iconBg="bg-green-100" iconColor="text-green-600" />
-              <AdminStatCard label="Total Commission" value={formatCurrency(summary.totalCommission)} icon={FaPercentage} iconBg="bg-purple-100" iconColor="text-purple-600" />
-              <AdminStatCard label="Merchant Payouts" value={formatCurrency(summary.totalMerchantPayout)} icon={FaStore} iconBg="bg-orange-100" iconColor="text-orange-600" />
-            </div>
+          <div className="admin-grid-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
+            <AdminStatCard label="Total Transactions" value={summary.count} icon={FaCreditCard} iconBg="bg-blue-100" iconColor="text-blue-600" />
+            <AdminStatCard label="Total Amount" value={formatCurrency(summary.totalAmount)} icon={FaDollarSign} iconBg="bg-green-100" iconColor="text-green-600" />
+            <AdminStatCard label="Total Commission" value={formatCurrency(summary.totalCommission)} icon={FaPercentage} iconBg="bg-purple-100" iconColor="text-purple-600" />
+            <AdminStatCard label="Merchant Payouts" value={formatCurrency(summary.totalMerchantPayout)} icon={FaStore} iconBg="bg-orange-100" iconColor="text-orange-600" />
           </div>
         )}
 
@@ -255,10 +253,10 @@ const AdminPayments = () => {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Booking ID</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase hide-mobile">Booking ID</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase hide-mobile">User</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Commission</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase hide-mobile">Commission</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Merchant Gets</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
@@ -267,17 +265,17 @@ const AdminPayments = () => {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {transactions.map((tx) => (
                       <tr key={tx._id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 text-xs font-mono text-gray-600">
+                        <td className="px-4 py-3 text-xs font-mono text-gray-600 hide-mobile">
                           {tx.eventName || tx.bookingId?.serviceTitle || tx.eventId?.title || tx.description || 'N/A'}
                         </td>
-                        <td className="px-4 py-3 text-sm">
+                        <td className="px-4 py-3 text-sm hide-mobile">
                           <div className="text-gray-900">{tx.userName || tx.userId?.name || 'Unknown'}</div>
                           <div className="text-xs text-gray-500">{tx.userEmail || tx.userId?.email || ''}</div>
                         </td>
                         <td className="px-4 py-3 text-sm font-medium text-gray-900">
                           {formatCurrency(tx.totalAmount)}
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-600">
+                        <td className="px-4 py-3 text-sm text-gray-600 hide-mobile">
                           {formatCurrency(tx.adminCommission)}
                         </td>
                         <td className="px-4 py-3 text-sm text-green-600 font-medium">
@@ -288,7 +286,7 @@ const AdminPayments = () => {
                             {tx.paymentStatus}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-600">
+                        <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                           {formatDate(tx.createdAt)}
                         </td>
                       </tr>

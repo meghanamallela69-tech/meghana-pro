@@ -91,7 +91,7 @@ const UserReviews = () => {
       </section>
 
       {/* Stats */}
-      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+      <section className="user-reviews-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <p className="text-gray-500 text-sm">Total Reviews</p>
           <p className="text-2xl font-bold text-gray-900">{reviews.length}</p>
@@ -189,6 +189,15 @@ const UserReviews = () => {
           ))}
         </section>
       )}
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media (max-width: 767px) {
+          .user-reviews-stats {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 12px !important;
+          }
+        }
+      ` }} />
     </UserLayout>
   );
 };

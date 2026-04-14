@@ -44,6 +44,17 @@ const BookingModal = ({ service, isOpen, onClose, onSuccess, coupons = [] }) => 
     }
   }, [isOpen]);
 
+  // ── Coupon hook — must be before any conditional return ──────────────────
+  const couponHook = useCoupon({
+    token,
+    eventId: service?._id,
+    getAmount: () => {
+      const base = service?.price || 0;
+      const addons = selectedAddons.reduce((s, a) => s + (a.price || 0), 0);
+      return base + addons;
+    },
+  });
+
   // ── Route full-service events to the new FullServiceBookingModal ──────────
   // This return must come AFTER all hooks
   if (isFullService && isOpen) {
@@ -128,12 +139,7 @@ const BookingModal = ({ service, isOpen, onClose, onSuccess, coupons = [] }) => 
   const addonsTotal = selectedAddons.reduce((sum, addon) => sum + (addon.price || 0), 0);
   const fullServiceSubtotal = basePrice + addonsTotal;
 
-  // ── Coupon hook — single source of truth ──────────────────────────────────
-  const couponHook = useCoupon({
-    token,
-    eventId: service?._id,
-    getAmount: () => isTicketed ? (ticketedSubtotal || basePrice) : (fullServiceSubtotal || basePrice),
-  });
+  // ── Coupon hook values ────────────────────────────────────────────────────
   const discount = couponHook.discount;
 
   const ticketedTotal    = Math.max(0, ticketedSubtotal - discount);

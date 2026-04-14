@@ -90,12 +90,10 @@ const AdminRegistrations = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="mobile-card-fix">
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
-          <AdminStatCard label="Total Bookings" value={bookings.length} icon={FaBook} iconBg="bg-blue-100" iconColor="text-blue-600" />
-          <AdminStatCard label="Total Revenue" value={formatCurrency(bookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0))} icon={FaDollarSign} iconBg="bg-green-100" iconColor="text-green-600" />
-          <AdminStatCard label="Paid Bookings" value={bookings.filter(b => b.paymentStatus === 'paid').length} icon={FaCheck} iconBg="bg-purple-100" iconColor="text-purple-600" />
-        </div>
+      <div className="admin-grid-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
+        <AdminStatCard label="Total Bookings" value={bookings.length} icon={FaBook} iconBg="bg-blue-100" iconColor="text-blue-600" />
+        <AdminStatCard label="Total Revenue" value={formatCurrency(bookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0))} icon={FaDollarSign} iconBg="bg-green-100" iconColor="text-green-600" />
+        <AdminStatCard label="Paid Bookings" value={bookings.filter(b => b.paymentStatus === 'paid').length} icon={FaCheck} iconBg="bg-purple-100" iconColor="text-purple-600" />
       </div>
 
       {/* Bookings Table */}

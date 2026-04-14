@@ -254,7 +254,7 @@ const MerchantMarketing = () => {
       </div>
 
       {/* Stats Overview - 4 cards per row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="merchant-mkt-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px', marginBottom: '32px' }}>
         <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl shadow-lg p-6 border border-blue-200 hover:shadow-xl transition-shadow">
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 bg-blue-500 rounded-lg">
@@ -303,7 +303,7 @@ const MerchantMarketing = () => {
       {/* Marketing Tools Menu - 4 cards per row */}
       <div className="mb-8">
         <h3 className="font-semibold text-lg mb-4">Marketing Tools</h3>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="merchant-mkt-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
           {marketingTools.map((tool) => (
             <div
               key={tool.id}
@@ -712,6 +712,36 @@ const MerchantMarketing = () => {
           </div>
         )}
       </div>  {/* Close Tab Content div */}
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media (max-width: 767px) {
+          .merchant-mkt-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 12px !important;
+          }
+          .merchant-mkt-grid > div {
+            padding: 12px !important;
+          }
+          .merchant-mkt-grid > div .p-3 {
+            padding: 6px !important;
+          }
+          .merchant-mkt-grid > div svg {
+            font-size: 14px !important;
+            width: 14px !important;
+            height: 14px !important;
+          }
+          .merchant-mkt-grid > div h3 {
+            font-size: 20px !important;
+            margin-bottom: 2px !important;
+          }
+          .merchant-mkt-grid > div p {
+            font-size: 11px !important;
+          }
+          .merchant-mkt-grid > div .mb-4 {
+            margin-bottom: 8px !important;
+          }
+        }
+      ` }} />
     </MerchantLayout>
   );
 };

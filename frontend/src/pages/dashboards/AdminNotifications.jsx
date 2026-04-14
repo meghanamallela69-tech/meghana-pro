@@ -193,12 +193,10 @@ const AdminNotifications = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="mobile-card-fix">
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
-          <AdminStatCard label="Total Notifications" value={totalCount} icon={FaBell} iconBg="bg-blue-100" iconColor="text-blue-600" />
-          <AdminStatCard label="Unread" value={unreadCount} icon={FaEnvelope} iconBg="bg-red-100" iconColor="text-red-600" valueColor="text-red-600" />
-          <AdminStatCard label="Read" value={totalCount - unreadCount} icon={FaCheck} iconBg="bg-green-100" iconColor="text-green-600" valueColor="text-green-600" />
-        </div>
+      <div className="admin-grid-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
+        <AdminStatCard label="Total Notifications" value={totalCount} icon={FaBell} iconBg="bg-blue-100" iconColor="text-blue-600" />
+        <AdminStatCard label="Unread" value={unreadCount} icon={FaEnvelope} iconBg="bg-red-100" iconColor="text-red-600" valueColor="text-red-600" />
+        <AdminStatCard label="Read" value={totalCount - unreadCount} icon={FaCheck} iconBg="bg-green-100" iconColor="text-green-600" valueColor="text-green-600" />
       </div>
 
       {/* Filter Tabs */}

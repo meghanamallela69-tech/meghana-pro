@@ -78,8 +78,8 @@ const About = () => {
 
       <style>{`
         @media (max-width: 767px) {
-          .about-features-grid { grid-template-columns: 1fr !important; }
-          .about-stats-grid    { grid-template-columns: 1fr !important; }
+          .about-features-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .about-stats-grid    { grid-template-columns: repeat(2, 1fr) !important; }
         }
         @media (min-width: 768px) and (max-width: 1023px) {
           .about-features-grid { grid-template-columns: repeat(2, 1fr) !important; }

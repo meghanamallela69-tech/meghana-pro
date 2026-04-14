@@ -51,7 +51,7 @@ const MerchantRatings = () => {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="merchant-ratings-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
         <div className="bg-white rounded-xl shadow-sm border p-5">
           <p className="text-sm text-gray-500 mb-1">Overall Rating</p>
           <p className="text-3xl font-bold text-yellow-500">{data?.overallAverage ?? "—"}</p>
@@ -147,6 +147,15 @@ const MerchantRatings = () => {
           </div>
         </div>
       )}
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media (max-width: 767px) {
+          .merchant-ratings-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 12px !important;
+          }
+        }
+      ` }} />
     </MerchantLayout>
   );
 };

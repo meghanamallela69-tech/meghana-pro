@@ -327,10 +327,18 @@ const UserPayments = () => {
 
       {/* Receipt Modal */}
       {showReceiptModal && selectedPayment && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={closeReceiptModal}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto relative" onClick={e => e.stopPropagation()}>
+            {/* Always-visible floating close button */}
+            <button
+              onClick={closeReceiptModal}
+              style={{ position: 'sticky', top: 12, float: 'right', marginRight: 12, zIndex: 20 }}
+              className="bg-red-500 hover:bg-red-600 text-white rounded-full w-9 h-9 flex items-center justify-center shadow-lg transition text-lg font-bold"
+            >
+              ✕
+            </button>
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-t-2xl">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-t-2xl sticky top-0 z-10">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-2xl font-bold">Payment Receipt</h3>
@@ -510,10 +518,10 @@ const UserPayments = () => {
                 </div>
                 <div className="flex gap-3">
                   <button
-                    onClick={() => setSelectedPayment(null)}
+                    onClick={closeReceiptModal}
                     className="px-6 py-3 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 transition font-medium"
                   >
-                    Cancel
+                    Close
                   </button>
                   <button
                     onClick={() => window.print()}

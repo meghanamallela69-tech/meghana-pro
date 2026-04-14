@@ -41,7 +41,8 @@ app.use(
         'http://localhost:5174',
         'http://127.0.0.1:5173',
         'http://127.0.0.1:5174',
-        'http://192.168.1.16:5173'
+        'http://192.168.1.16:5173',
+        'http://192.168.1.6:5173',
       ];
       
       if (allowedOrigins.indexOf(origin) !== -1 || !origin) {

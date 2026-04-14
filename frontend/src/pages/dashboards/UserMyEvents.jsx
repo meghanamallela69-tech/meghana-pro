@@ -302,7 +302,7 @@ const UserMyEvents = () => {
       </section>
 
       {/* Stats Summary */}
-      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+      <section className="user-myevents-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <p className="text-gray-500 text-sm">Total Bookings</p>
           <p className="text-2xl font-bold text-gray-900">{bookings.length}</p>
@@ -365,22 +365,23 @@ const UserMyEvents = () => {
             return (
               <article
                 key={booking._id}
-                className="bg-white rounded-xl shadow-sm p-4 md:p-6 hover:shadow-md transition"
+                className="bg-white rounded-xl shadow-sm p-4 md:p-6 hover:shadow-md transition relative"
               >
+                {/* Status badge — top right corner, never overlaps */}
+                <span className={`absolute top-3 right-3 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium text-center leading-tight ${statusConfig.color}`}
+                  style={{ maxWidth: '120px', whiteSpace: 'normal', wordBreak: 'break-word', textAlign: 'center' }}>
+                  {statusConfig.icon}
+                  {statusConfig.label}
+                </span>
+
                 <div className="flex flex-col md:flex-row gap-4">
                   {/* Event Info */}
                   <div className="flex-1">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          {booking.serviceTitle}
-                        </h3>
-                        <p className="text-sm text-gray-500">{booking.serviceCategory}</p>
-                      </div>
-                      <span className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${statusConfig.color}`}>
-                        {statusConfig.icon}
-                        {statusConfig.label}
-                      </span>
+                    <div className="mb-2 pr-36 md:pr-0">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {booking.serviceTitle}
+                      </h3>
+                      <p className="text-sm text-gray-500">{booking.serviceCategory}</p>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4">
@@ -582,6 +583,15 @@ const UserMyEvents = () => {
           onSuccess={handleRatingSuccess}
         />
       )}
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media (max-width: 767px) {
+          .user-myevents-stats {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 12px !important;
+          }
+        }
+      ` }} />
     </UserLayout>
   );
 };

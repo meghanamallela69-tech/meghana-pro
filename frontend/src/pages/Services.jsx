@@ -23,6 +23,7 @@ import useAuth from "../context/useAuth";
 import BookingModal from "../components/BookingModal";
 import EventDetailsModal from "../components/EventDetailsModal";
 import { API_BASE } from "../lib/http";
+import { getEventStatus } from "../lib/utils";
 
 const Services = () => {
   const { token, user } = useAuth();
@@ -434,6 +435,7 @@ const Services = () => {
                     const colorClass = categoryColorMap[s.category] || "bg-gray-50 text-gray-600";
                     const imgSrc = s.images?.[0]?.url || s.image || s.bannerImage || null;
                     const isBooked = bookedServiceId === s._id || bookedServiceId === s.id;
+                    const isExpired = getEventStatus(s).label === 'Completed';
                     return (
                       <div key={s._id} style={{
                         backgroundColor: 'white',
@@ -520,6 +522,23 @@ const Services = () => {
                               <FaCheckCircle /> Booked
                             </div>
                           )}
+                          {/* Completed Badge */}
+                          {!isBooked && isExpired && (
+                            <div style={{
+                              position: 'absolute',
+                              top: '12px',
+                              left: '12px',
+                              backgroundColor: '#4b5563',
+                              padding: '4px 8px',
+                              borderRadius: '6px',
+                              fontSize: '11px',
+                              fontWeight: '700',
+                              color: 'white',
+                              letterSpacing: '0.5px',
+                            }}>
+                              COMPLETED
+                            </div>
+                          )}
                         </div>
                         <div style={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
                           <h3 style={{ 
@@ -538,26 +557,26 @@ const Services = () => {
                           </p>
                           <button
                             onClick={() => handleBookClick(s)}
-                            disabled={isBooked}
+                            disabled={isBooked || isExpired}
                             style={{
                               display: 'inline-block',
                               width: '100%',
                               padding: '10px 0',
-                              backgroundColor: isBooked ? '#10b981' : '#a2783a',
-                              color: 'white',
+                              backgroundColor: isBooked ? '#10b981' : isExpired ? '#e5e7eb' : '#a2783a',
+                              color: isExpired ? '#9ca3af' : 'white',
                               textAlign: 'center',
                               borderRadius: '8px',
                               textDecoration: 'none',
                               fontWeight: '500',
                               transition: 'background-color 0.3s',
-                              border: 'none',
-                              cursor: isBooked ? 'default' : 'pointer',
+                              border: isExpired ? '1px solid #d1d5db' : 'none',
+                              cursor: isBooked || isExpired ? 'not-allowed' : 'pointer',
                               marginBottom: '8px',
                             }}
-                            onMouseEnter={(e) => { if (!isBooked) e.target.style.backgroundColor = '#8b6a30'; }}
-                            onMouseLeave={(e) => { if (!isBooked) e.target.style.backgroundColor = '#a2783a'; }}
+                            onMouseEnter={(e) => { if (!isBooked && !isExpired) e.target.style.backgroundColor = '#8b6a30'; }}
+                            onMouseLeave={(e) => { if (!isBooked && !isExpired) e.target.style.backgroundColor = '#a2783a'; }}
                           >
-                            {isBooked ? 'Booked ✓' : 'Book Now'}
+                            {isBooked ? 'Booked ✓' : isExpired ? '🚫 Event Completed' : 'Book Now'}
                           </button>
                           <button
                             onClick={() => handleViewDetailsClick(s)}

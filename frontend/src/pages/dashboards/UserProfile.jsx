@@ -9,13 +9,10 @@ import toast from "react-hot-toast";
 const UserProfile = () => {
   const { token, user, login } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    address: "",
-    bio: "",
+    name: "", email: "", phone: "", address: "", bio: "",
   });
 
   useEffect(() => {
@@ -35,27 +32,56 @@ const UserProfile = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handlePhotoChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { toast.error("Please select an image file"); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error("Image must be under 5MB"); return; }
+
+    setUploadingPhoto(true);
+    try {
+      const fd = new FormData();
+      fd.append("profileImage", file);
+      // Also send current profile fields so they aren't cleared
+      fd.append("name", user?.name || "");
+      fd.append("email", user?.email || "");
+
+      const res = await axios.put(`${API_BASE}/auth/profile`, fd, {
+        headers: { ...authHeaders(token), "Content-Type": "multipart/form-data" },
+      });
+
+      if (res.data.success) {
+        const updatedUser = { ...user, profileImage: res.data.user?.profileImage || user?.profileImage };
+        login(token, updatedUser);
+        toast.success("Profile photo updated!");
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Failed to upload photo");
+    } finally {
+      setUploadingPhoto(false);
+      e.target.value = "";
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-
     try {
-      const response = await axios.put(
-        `${API_BASE}/auth/profile`,
-        formData,
-        { headers: authHeaders(token) }
-      );
+      const fd = new FormData();
+      Object.entries(formData).forEach(([k, v]) => fd.append(k, v));
+
+      const response = await axios.put(`${API_BASE}/auth/profile`, fd, {
+        headers: { ...authHeaders(token), "Content-Type": "multipart/form-data" },
+      });
 
       if (response.data.success) {
-        // Update local user data
-        const updatedUser = { ...user, ...formData };
+        const updatedUser = { ...user, ...formData, profileImage: response.data.user?.profileImage || user?.profileImage };
         login(token, updatedUser);
         toast.success("Profile updated successfully!");
         setIsEditing(false);
       }
     } catch (error) {
-      const msg = error?.response?.data?.message || "Failed to update profile";
-      toast.error(msg);
+      toast.error(error?.response?.data?.message || "Failed to update profile");
     } finally {
       setLoading(false);
     }
@@ -84,12 +110,28 @@ const UserProfile = () => {
         <section className="lg:col-span-1">
           <div className="bg-white rounded-xl shadow-sm p-6 text-center">
             <div className="relative inline-block mb-4">
-              <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-4xl font-bold">
-                {user?.name?.charAt(0).toUpperCase() || "U"}
+              <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-4xl font-bold overflow-hidden">
+                {user?.profileImage
+                  ? <img src={user.profileImage} alt={user.name} className="w-full h-full object-cover" />
+                  : (user?.name?.charAt(0).toUpperCase() || "U")}
               </div>
-              <button className="absolute bottom-0 right-0 p-2 bg-gray-900 text-white rounded-full hover:bg-gray-700 transition">
-                <FiCamera />
-              </button>
+              <label
+                htmlFor="profile-photo-input"
+                className="absolute bottom-0 right-0 p-2 bg-gray-900 text-white rounded-full hover:bg-gray-700 transition cursor-pointer"
+                title="Change profile photo"
+              >
+                {uploadingPhoto
+                  ? <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                  : <FiCamera />}
+              </label>
+              <input
+                id="profile-photo-input"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handlePhotoChange}
+                disabled={uploadingPhoto}
+              />
             </div>
             <h3 className="text-xl font-semibold text-gray-900">{user?.name}</h3>
             <p className="text-gray-500">{user?.email}</p>

@@ -79,7 +79,7 @@ const Reviews = () => {
 
       {/* Stats */}
       <section style={{ padding: "40px 24px", maxWidth: "1200px", margin: "0 auto" }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '40px' }}>
+        <div className="reviews-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '40px' }}>
           <div style={{ background: "#fff", borderRadius: "12px", padding: "24px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
             <p style={{ color: "#6b7280", fontSize: "14px", marginBottom: "8px" }}>Total Reviews</p>
             <p style={{ fontSize: "32px", fontWeight: "bold", color: "#1f2937" }}>{reviews.length}</p>
@@ -224,6 +224,12 @@ const Reviews = () => {
       <style>{`
         @keyframes spin {
           to { transform: rotate(360deg); }
+        }
+        @media (max-width: 767px) {
+          .reviews-stats-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 12px !important;
+          }
         }
       `}</style>
     </div>

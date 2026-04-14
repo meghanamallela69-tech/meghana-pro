@@ -13,20 +13,29 @@ const FeaturedServices = () => {
     <section className="py-16">
       <div className="max-w-6xl mx-auto px-6">
         <h2 className="text-3xl md:text-4xl font-semibold mb-8">Our Services</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 items-stretch">
+        <div className="featured-services-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', alignItems: 'stretch' }}>
           {items.map((i) => (
             <div
               key={i.title}
-              className="bg-white rounded-xl shadow-sm ring-1 ring-gray-200 p-4 hover:shadow-md hover:-translate-y-0.5 transition group h-full flex flex-col items-center text-center"
+              className="bg-white rounded-xl shadow-sm ring-1 ring-gray-200 p-4 hover:shadow-md hover:-translate-y-0.5 transition group flex flex-col items-center text-center"
             >
               <div className={`h-10 w-10 ${i.color} rounded-lg flex items-center justify-center mb-3 group-hover:scale-105 transition`}>
                 <i.icon />
               </div>
               <h4 className="font-medium text-sm">{i.title}</h4>
-              <p className="text-xs text-gray-600 mt-0.5 hidden md:block">{i.desc}</p>
+              <p className="text-xs text-gray-600 mt-0.5">{i.desc}</p>
             </div>
           ))}
         </div>
+
+        <style dangerouslySetInnerHTML={{ __html: `
+          @media (min-width: 1024px) {
+            .featured-services-grid { grid-template-columns: repeat(6, 1fr) !important; }
+          }
+          @media (max-width: 767px) {
+            .featured-services-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 12px !important; }
+          }
+        ` }} />
       </div>
     </section>
   );

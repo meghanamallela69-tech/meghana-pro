@@ -122,11 +122,13 @@ const EventDetailsModal = ({ isOpen, onClose, event, onBookNow }) => {
           flexDirection: "column",
           position: "relative"
         }}>
-          {/* Main Banner Image - 50% height */}
+          {/* Main Banner Image */}
           <div style={{ 
-            height: "50%", // Reduced from 60% to 50%
+            height: "320px",
             position: "relative",
-            overflow: "hidden"
+            overflow: "hidden",
+            background: "#000",
+            flexShrink: 0,
           }}>
             <img 
               src={eventImages[0]} 
@@ -134,17 +136,19 @@ const EventDetailsModal = ({ isOpen, onClose, event, onBookNow }) => {
               style={{
                 width: "100%",
                 height: "100%",
-                objectFit: "cover"
+                objectFit: "cover",
+                objectPosition: "center center",
+                display: "block",
               }}
             />
-            {/* Overlay with Event Info */}
+            {/* Overlay with Event Info — lighter so image stays clear */}
             <div style={{
               position: "absolute",
               bottom: 0,
               left: 0,
               right: 0,
-              background: "linear-gradient(transparent, rgba(0,0,0,0.8))",
-              padding: "30px 20px 20px",
+              background: "linear-gradient(transparent, rgba(0,0,0,0.55))",
+              padding: "30px 20px 16px",
               color: "white"
             }}>
               <div style={{
@@ -171,13 +175,13 @@ const EventDetailsModal = ({ isOpen, onClose, event, onBookNow }) => {
             </div>
           </div>
 
-          {/* Image Gallery Thumbnails - 50% height */}
+          {/* Image Gallery Thumbnails */}
           <div style={{ 
-            height: "50%", // Increased from 40% to 50%
-            padding: "24px",
+            flex: 1,
+            padding: "20px 24px",
             backgroundColor: "white",
             borderTop: "1px solid #e5e7eb",
-            overflow: "hidden"
+            overflowY: "auto",
           }}>
             <h3 style={{ 
               fontSize: "18px", 
@@ -190,10 +194,8 @@ const EventDetailsModal = ({ isOpen, onClose, event, onBookNow }) => {
             {eventImages.length > 0 ? (
               <div style={{ 
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
-                gap: "16px",
-                height: "calc(100% - 50px)",
-                overflowY: "auto"
+                gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))",
+                gap: "12px",
               }}>
                 {eventImages.map((image, index) => (
                   <img

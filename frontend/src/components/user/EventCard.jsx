@@ -16,7 +16,7 @@ const ShareIcon = () => (
   </svg>
 );
 
-const EventCard = ({ image, title, date, location, status, actionText = "View", onAction, eventId }) => {
+const EventCard = ({ image, title, date, location, status, actionText = "View", onAction, eventId, expired = false }) => {
   const handleShare = (e) => {
     e.stopPropagation();
     const url = eventId
@@ -32,8 +32,13 @@ const EventCard = ({ image, title, date, location, status, actionText = "View", 
 
   return (
     <div className="bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-md transition">
-      <div className="h-36 w-full overflow-hidden">
+      <div className="h-36 w-full overflow-hidden relative">
         <img src={image} alt={title} className="w-full h-full object-cover" />
+        {expired && (
+          <span style={{ position: 'absolute', top: 8, right: 8, background: '#4b5563', color: '#fff', fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 20, letterSpacing: '0.5px' }}>
+            COMPLETED
+          </span>
+        )}
       </div>
       <div className="p-4 space-y-2">
         <div className="flex items-center justify-between">
@@ -51,12 +56,18 @@ const EventCard = ({ image, title, date, location, status, actionText = "View", 
         </div>
         <div className="text-sm text-gray-600">{date}</div>
         <div className="text-sm text-gray-600">{location}</div>
-        <button
-          className="mt-2 w-full px-3 py-2 rounded-lg bg-gray-900 text-white hover:bg-black transition"
-          onClick={onAction}
-        >
-          {actionText}
-        </button>
+        {expired ? (
+          <div className="mt-2 w-full px-3 py-2 rounded-lg bg-gray-100 text-gray-400 text-center font-medium text-sm cursor-not-allowed border border-gray-200">
+            🚫 Event Completed
+          </div>
+        ) : (
+          <button
+            className="mt-2 w-full px-3 py-2 rounded-lg bg-gray-900 text-white hover:bg-black transition"
+            onClick={onAction}
+          >
+            {actionText}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -71,6 +82,7 @@ EventCard.propTypes = {
   actionText: PropTypes.string,
   onAction: PropTypes.func,
   eventId: PropTypes.string,
+  expired: PropTypes.bool,
 };
 
 export default EventCard;

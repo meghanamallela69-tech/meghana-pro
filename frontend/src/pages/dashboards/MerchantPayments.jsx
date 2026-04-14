@@ -55,7 +55,7 @@ const MerchantPayments = () => {
               <p className="text-sm text-gray-500">Total Earnings</p>
               <p className="text-3xl font-bold text-gray-900">{formatCurrency(stats.total)}</p>
             </div>
-            <div className="h-12 w-12 bg-green-600 text-white flex items-center justify-center rounded-lg">
+            <div className="stat-icon-box h-12 w-12 bg-green-600 text-white flex items-center justify-center rounded-lg">
               <FaRupeeSign className="responsive-icon" />
             </div>
           </div>
@@ -66,7 +66,7 @@ const MerchantPayments = () => {
               <p className="text-sm text-gray-500">Total Transactions</p>
               <p className="text-3xl font-bold text-gray-900">{stats.count}</p>
             </div>
-            <div className="h-12 w-12 bg-blue-600 text-white flex items-center justify-center rounded-lg">
+            <div className="stat-icon-box h-12 w-12 bg-blue-600 text-white flex items-center justify-center rounded-lg">
               <FaCreditCard className="responsive-icon" />
             </div>
           </div>
@@ -131,7 +131,12 @@ const MerchantPayments = () => {
       <style dangerouslySetInnerHTML={{ __html: `
         @media (max-width: 767px) {
           .responsive-icon { 
-            font-size: 18px !important; 
+            font-size: 14px !important; 
+          }
+          .stat-icon-box {
+            height: 36px !important;
+            width: 36px !important;
+            border-radius: 8px !important;
           }
         }
       ` }} />

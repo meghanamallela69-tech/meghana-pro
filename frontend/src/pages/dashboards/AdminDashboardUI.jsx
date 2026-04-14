@@ -69,7 +69,7 @@ const AdminDashboardUI = () => {
         <p className="text-gray-600 mt-1">Here is an overview of your platform today</p>
       </section>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }}>
+      <div className="admin-grid-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px', marginBottom: '8px' }}>
         <SummaryCard title="Total Users" value={stats.users} icon={FaUsers} color="bg-emerald-600" to="/dashboard/admin/users" />
         <SummaryCard title="Total Merchants" value={stats.merchants} icon={FaStore} color="bg-orange-600" to="/dashboard/admin/merchants" />
         <SummaryCard title="Total Events" value={stats.events} icon={BsCalendar2Event} color="bg-indigo-600" to="/dashboard/admin/events" />

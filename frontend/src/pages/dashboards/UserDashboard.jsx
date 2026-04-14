@@ -11,6 +11,7 @@ import { FaTicketAlt, FaBell, FaCalendarCheck, FaMapMarkerAlt, FaEye, FaCheck } 
 import { FiCalendar, FiMapPin } from "react-icons/fi";
 import { API_BASE, authHeaders } from "../../lib/http";
 import toast from "react-hot-toast";
+import { getEventStatus } from "../../lib/utils";
 
 const UserDashboard = () => {
   const { user, token } = useAuth();
@@ -27,9 +28,11 @@ const UserDashboard = () => {
   const [detailsEvent, setDetailsEvent] = useState(null);
   const [bookingEvent, setBookingEvent] = useState(null);
 
-  // Load saved events from localStorage
+  // Load saved events from localStorage (user-scoped)
   const loadSavedEvents = useCallback(() => {
-    const saved = localStorage.getItem('savedEvents');
+    const id = user?.userId || user?.id || user?._id;
+    const key = id ? `savedEvents_${id}` : 'savedEvents';
+    const saved = localStorage.getItem(key);
     if (saved) {
       setSavedEvents(JSON.parse(saved));
     }
@@ -323,14 +326,23 @@ const UserDashboard = () => {
                       >
                         View Details
                       </button>
-                      <button
-                        onClick={() => { setDetailsEvent(null); setBookingEvent(ev); }}
-                        style={{ flex: 1, padding: '7px 0', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
-                        onMouseEnter={e => { e.currentTarget.style.background = '#1d4ed8'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = '#2563eb'; }}
-                      >
-                        Book Now
-                      </button>
+                      {(() => {
+                        const expired = getEventStatus(ev).label === 'Completed';
+                        return expired ? (
+                          <div style={{ flex: 1, padding: '7px 0', background: '#f3f4f6', color: '#9ca3af', border: '1.5px solid #e5e7eb', borderRadius: 7, fontSize: 11, fontWeight: 600, textAlign: 'center', cursor: 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                            🚫 Ended
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => { setDetailsEvent(null); setBookingEvent(ev); }}
+                            style={{ flex: 1, padding: '7px 0', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                            onMouseEnter={e => { e.currentTarget.style.background = '#1d4ed8'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = '#2563eb'; }}
+                          >
+                            Book Now
+                          </button>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -481,7 +493,7 @@ const UserDashboard = () => {
       </section>
 
       {/* Summary Cards - Side by Side (4 per row) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }} className="mb-8">
+      <div className="user-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px', marginBottom: '32px' }}>
         <SummaryCard title="Total Bookings" value={stats.bookings} icon={FaTicketAlt} color="bg-blue-600" to="/dashboard/user/bookings" />
         <SummaryCard title="Upcoming Events" value={stats.upcoming} icon={BsCalendar2Event} color="bg-emerald-600" to="/dashboard/user/bookings" />
         <SummaryCard title="Saved Events" value={stats.saved} icon={BsBookmarkHeart} color="bg-pink-600" to="/dashboard/user/saved" />
@@ -545,6 +557,15 @@ const UserDashboard = () => {
           </div>
         </section>
       )}
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media (max-width: 767px) {
+          .user-stats-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 12px !important;
+          }
+        }
+      ` }} />
     </UserLayout>
   );
 };

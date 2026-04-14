@@ -487,25 +487,38 @@ const TicketModal = ({ booking, isOpen, onClose }) => {
                 if (entries.length > 1) {
                   return (
                     <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "16px" }}>
-                      {entries.map(([type, qty]) => (
-                        <div key={type} style={{
-                          display: "flex", justifyContent: "space-between", alignItems: "center",
-                          background: "#ffffff", borderRadius: "12px", padding: "12px 16px",
-                          boxShadow: "0 2px 8px rgba(0,0,0,0.1)", border: "2px solid #e5e7eb"
-                        }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                            <span style={{ fontSize: "18px" }}>🎟</span>
-                            <div>
-                              <p style={{ fontSize: "11px", color: "#374151", textTransform: "uppercase", letterSpacing: "1px", margin: 0, fontWeight: "700" }}>Ticket Type</p>
-                              <p style={{ fontWeight: "800", fontSize: "16px", margin: "2px 0 0 0", color: "#000" }}>{type}</p>
+                      {entries.map(([type, qty]) => {
+                        const typeInfo = cleanedBooking.eventTicketTypes?.find(
+                          t => t.name?.toLowerCase() === type?.toLowerCase()
+                        );
+                        const unitPrice = typeInfo?.price ?? cleanedBooking.ticketTypePrices?.[type] ?? 0;
+                        const lineTotal = unitPrice * Number(qty);
+                        return (
+                          <div key={type} style={{
+                            display: "flex", justifyContent: "space-between", alignItems: "center",
+                            background: "#ffffff", borderRadius: "12px", padding: "12px 16px",
+                            boxShadow: "0 2px 8px rgba(0,0,0,0.1)", border: "2px solid #e5e7eb"
+                          }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <span style={{ fontSize: "18px" }}>🎟</span>
+                              <div>
+                                <p style={{ fontSize: "11px", color: "#374151", textTransform: "uppercase", letterSpacing: "1px", margin: 0, fontWeight: "700" }}>Ticket Type</p>
+                                <p style={{ fontWeight: "800", fontSize: "16px", margin: "2px 0 0 0", color: "#000" }}>{type}</p>
+                                {unitPrice > 0 && (
+                                  <p style={{ fontSize: "11px", color: "#6b7280", margin: "2px 0 0 0", fontWeight: "600" }}>{formatPrice(unitPrice)}/ticket</p>
+                                )}
+                              </div>
+                            </div>
+                            <div style={{ textAlign: "right" }}>
+                              <p style={{ fontSize: "11px", color: "#374151", textTransform: "uppercase", letterSpacing: "1px", margin: 0, fontWeight: "700" }}>Qty</p>
+                              <p style={{ fontWeight: "800", fontSize: "20px", margin: "2px 0 0 0", color: "#667eea" }}>{qty}</p>
+                              {lineTotal > 0 && (
+                                <p style={{ fontSize: "12px", color: "#059669", margin: "2px 0 0 0", fontWeight: "700" }}>{formatPrice(lineTotal)}</p>
+                              )}
                             </div>
                           </div>
-                          <div style={{ textAlign: "right" }}>
-                            <p style={{ fontSize: "11px", color: "#374151", textTransform: "uppercase", letterSpacing: "1px", margin: 0, fontWeight: "700" }}>Qty</p>
-                            <p style={{ fontWeight: "800", fontSize: "20px", margin: "2px 0 0 0", color: "#667eea" }}>{qty}</p>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   );
                 }

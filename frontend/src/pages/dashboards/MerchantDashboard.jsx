@@ -97,7 +97,7 @@ const MerchantDashboard = () => {
         </div>
       </section>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }}>
+      <div className="merchant-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }}>
         <SummaryCard title="Total Events" value={stats.totalEvents} icon={BsCalendar2Event} color="bg-indigo-600" to="/dashboard/merchant/events" />
         <SummaryCard title="Total Bookings" value={stats.totalBookings} icon={FaListAlt} color="bg-emerald-600" to="/dashboard/merchant/bookings" />
         <SummaryCard title="Total Revenue" value={`₹${stats.totalRevenue.toLocaleString()}`} icon={FaDollarSign} color="bg-amber-600" to="/dashboard/merchant/earnings" />
@@ -180,6 +180,11 @@ const MerchantDashboard = () => {
             font-size: 14px !important; 
           }
           .btn-label { display: none; }
+          .merchant-stats-grid {
+            display: grid !important;
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 12px !important;
+          }
         }
       ` }} />
     </MerchantLayout>

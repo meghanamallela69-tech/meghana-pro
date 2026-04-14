@@ -279,7 +279,7 @@ const MerchantBookings = () => {
       </section>
 
       {/* Stats */}
-      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
+      <section className="merchant-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <p className="text-gray-500 text-sm">Total Bookings</p>
           <p className="text-2xl font-bold text-gray-900">{bookings.length}</p>
@@ -715,6 +715,16 @@ const MerchantBookings = () => {
           </div>
         </div>
       )}
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media (max-width: 767px) {
+          .merchant-stats-grid {
+            display: grid !important;
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 12px !important;
+          }
+        }
+      ` }} />
     </MerchantLayout>
   );
 };

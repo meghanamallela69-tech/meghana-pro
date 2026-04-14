@@ -189,13 +189,11 @@ const AdminComplaints = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="mobile-card-fix">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-          <AdminStatCard label="Total Complaints" value={totalCount} icon={FaExclamationTriangle} iconBg="bg-blue-100" iconColor="text-blue-600" />
-          <AdminStatCard label="Pending" value={complaints.filter(c => c.status === 'pending').length} icon={FaExclamationTriangle} iconBg="bg-yellow-100" iconColor="text-yellow-600" valueColor="text-yellow-600" />
-          <AdminStatCard label="In Review" value={complaints.filter(c => c.status === 'in_review').length} icon={FaEye} iconBg="bg-blue-100" iconColor="text-blue-600" valueColor="text-blue-600" />
-          <AdminStatCard label="Resolved" value={complaints.filter(c => c.status === 'resolved').length} icon={FaCheckCircle} iconBg="bg-green-100" iconColor="text-green-600" valueColor="text-green-600" />
-        </div>
+      <div className="admin-grid-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
+        <AdminStatCard label="Total Complaints" value={totalCount} icon={FaExclamationTriangle} iconBg="bg-blue-100" iconColor="text-blue-600" />
+        <AdminStatCard label="Pending" value={complaints.filter(c => c.status === 'pending').length} icon={FaExclamationTriangle} iconBg="bg-yellow-100" iconColor="text-yellow-600" valueColor="text-yellow-600" />
+        <AdminStatCard label="In Review" value={complaints.filter(c => c.status === 'in_review').length} icon={FaEye} iconBg="bg-blue-100" iconColor="text-blue-600" valueColor="text-blue-600" />
+        <AdminStatCard label="Resolved" value={complaints.filter(c => c.status === 'resolved').length} icon={FaCheckCircle} iconBg="bg-green-100" iconColor="text-green-600" valueColor="text-green-600" />
       </div>
 
       {/* Filters */}

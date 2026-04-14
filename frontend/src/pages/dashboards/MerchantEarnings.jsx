@@ -387,21 +387,28 @@ const MerchantEarnings = () => {
             font-size: 18px !important; 
           }
           .earnings-mobile-fix {
+            display: grid !important;
             grid-template-columns: repeat(2, 1fr) !important;
             gap: 12px !important;
           }
           .ec-card {
-            padding: 14px !important;
+            padding: 12px !important;
           }
           .ec-title {
-            font-size: 14px !important;
+            font-size: 12px !important;
           }
           .ec-value {
-            font-size: 20px !important;
-            margin-top: 6px !important;
+            font-size: 16px !important;
+            margin-top: 4px !important;
           }
           .ec-subtext {
-            font-size: 12px !important;
+            font-size: 11px !important;
+          }
+          .ec-icon {
+            padding: 8px !important;
+          }
+          .ec-icon svg, .ec-icon * {
+            font-size: 14px !important;
           }
           .ec-icon {
             padding: 10px !important;

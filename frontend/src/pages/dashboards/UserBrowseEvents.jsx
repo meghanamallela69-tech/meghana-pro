@@ -12,7 +12,7 @@ import EventDetailsModal from "../../components/EventDetailsModal";
 import { getEventStatus } from "../../lib/utils";
 
 const UserBrowseEvents = () => {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const navigate = useNavigate();
   const [events, setEvents] = useState([]);
   const [filteredEvents, setFilteredEvents] = useState([]);
@@ -27,37 +27,41 @@ const UserBrowseEvents = () => {
 
   const categories = ["all", "Conference", "Music", "Food", "Tech", "Wedding", "Party", "Outdoor"];
 
+  const getUserId = (u) => u?.userId || u?.id || u?._id || null;
+  const savedKey = getUserId(user) ? `savedEvents_${getUserId(user)}` : 'savedEvents';
+
   useEffect(() => {
     fetchEvents();
-    loadSavedEvents();
   }, []);
 
+  useEffect(() => {
+    loadSavedEvents();
+  }, [user]);
+
   const loadSavedEvents = () => {
-    const saved = localStorage.getItem('savedEvents');
-    if (saved) {
-      setSavedEvents(JSON.parse(saved));
-    }
+    const id = getUserId(user);
+    const key = id ? `savedEvents_${id}` : 'savedEvents';
+    const saved = localStorage.getItem(key);
+    setSavedEvents(saved ? JSON.parse(saved) : []);
   };
 
   const toggleSaveEvent = (event) => {
+    const id = getUserId(user);
+    const key = id ? `savedEvents_${id}` : 'savedEvents';
     let updatedSaved = [...savedEvents];
     const isSaved = savedEvents.some(e => e._id === event._id);
-    
     if (isSaved) {
       updatedSaved = updatedSaved.filter(e => e._id !== event._id);
       toast.success("Event removed from saved");
     } else {
       updatedSaved.push(event);
-      toast.success("Event saved successfully!");
+      toast.success("Event saved!");
     }
-    
-    localStorage.setItem('savedEvents', JSON.stringify(updatedSaved));
+    localStorage.setItem(key, JSON.stringify(updatedSaved));
     setSavedEvents(updatedSaved);
   };
 
-  const isEventSaved = (eventId) => {
-    return savedEvents.some(e => e._id === eventId);
-  };
+  const isEventSaved = (eventId) => savedEvents.some(e => e._id === eventId);
 
   useEffect(() => {
     filterEvents();

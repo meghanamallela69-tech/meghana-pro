@@ -223,7 +223,7 @@ const AdminCoupons = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="admin-grid-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }}>
           <div className="bg-white rounded-xl p-6 shadow-sm">
             <div className="flex items-center gap-3">
               <FaTicketAlt className="text-2xl text-blue-600" />

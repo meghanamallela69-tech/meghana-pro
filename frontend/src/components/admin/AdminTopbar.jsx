@@ -45,7 +45,7 @@ const AdminTopbar = ({ onToggleSidebar, profileName = "Admin", onLogout }) => {
           <NotificationDropdown viewAllPath="/dashboard/admin/notifications" />
           <span className="tb-lang"><LanguageSwitcher /></span>
 
-          <div style={{ position: "relative" }} ref={profileRef}>
+          <div className="tb-profile" style={{ position: "relative" }} ref={profileRef}>
             <button type="button" onClick={() => setOpen(p => !p)}
               style={{ display: "flex", alignItems: "center", gap: 6, padding: 4, border: "none", background: "transparent", cursor: "pointer", borderRadius: 6 }}>
               <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#2563eb", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0, fontSize: 14, fontWeight: 700 }}>
@@ -77,6 +77,7 @@ const AdminTopbar = ({ onToggleSidebar, profileName = "Admin", onLogout }) => {
         @media (max-width: 768px) {
           .tb-name { display: none !important; }
           .tb-lang { display: none !important; }
+          .tb-profile { display: none !important; }
           .tb-header-row { padding: 6px 12px !important; gap: 4px !important; }
           .tb-right { gap: 4px !important; }
         }

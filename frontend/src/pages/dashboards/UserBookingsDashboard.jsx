@@ -64,7 +64,7 @@ const UserBookingsDashboard = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
+        <div className="user-booking-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px', marginBottom: '32px' }}>
           <div className="bg-white rounded-lg shadow p-4">
             <p className="text-gray-600 text-sm">Total Bookings</p>
             <p className="text-3xl font-bold text-blue-600">{stats.total}</p>
@@ -169,6 +169,15 @@ const UserBookingsDashboard = () => {
           </div>
         </div>
       </div>
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media (max-width: 767px) {
+          .user-booking-stats {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 12px !important;
+          }
+        }
+      ` }} />
     </div>
   );
 };

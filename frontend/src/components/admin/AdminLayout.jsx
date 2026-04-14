@@ -42,6 +42,17 @@ const AdminLayout = ({ children }) => {
         <AdminTopbar onToggleSidebar={() => setSidebarOpen(p => !p)} onLogout={handleLogout} />
         <main style={{ padding: "24px", flex: 1 }}>{children}</main>
       </div>
+
+      <style>{`
+        @media (max-width: 767px) {
+          main { padding: 12px !important; }
+          .admin-grid-4 { grid-template-columns: repeat(2, 1fr) !important; gap: 12px !important; }
+          .admin-grid-stats { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
+          .admin-events-grid { grid-template-columns: repeat(1, 1fr) !important; gap: 12px !important; }
+          h1.text-3xl, h2.text-3xl { font-size: 20px !important; }
+          h2.text-2xl { font-size: 18px !important; }
+        }
+      `}</style>
     </div>
   );
 };
