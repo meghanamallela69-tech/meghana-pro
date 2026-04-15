@@ -82,7 +82,7 @@ const MerchantEvents = () => {
           </button>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
+        <div className="event-cards-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
           {events.map((ev) => {
             // Get image - use first image from images array or fallback
             const eventImage = ev.images && ev.images.length > 0 
@@ -142,8 +142,9 @@ const MerchantEvents = () => {
                   <div className="flex items-center gap-2">
                     <button 
                       onClick={() => navigate(`/dashboard/merchant/events/edit/${ev._id}`)}
-                      className="flex-1 px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition text-sm responsive-btn"
+                      className="flex-1 px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition text-sm responsive-btn flex items-center justify-center gap-1"
                     >
+                      <FaEdit className="responsive-icon" />
                       <span className="btn-label">Edit</span>
                     </button>
                     <button

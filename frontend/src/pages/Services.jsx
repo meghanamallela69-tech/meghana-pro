@@ -28,6 +28,13 @@ import { getEventStatus } from "../lib/utils";
 const Services = () => {
   const { token, user } = useAuth();
   const navigate = useNavigate();
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -221,199 +228,91 @@ const Services = () => {
 
       {/* Main Content with Filters and Services Grid */}
       <section className="max-w-7xl mx-auto px-6 py-8" style={{ backgroundColor: '#f3f4f6' }}>
-        {/* Responsive layout: side-by-side on desktop, stacked on mobile */}
-        <div className="services-layout" style={{ display: 'flex', gap: '32px' }}>
-          
-          {/* Filters Sidebar */}
-          <div className="services-sidebar" style={{
-            width: '280px',
-            flexShrink: 0,
-            backgroundColor: 'white',
-            borderRadius: '16px',
-            padding: '24px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-            height: 'fit-content',
-            position: 'sticky',
-            top: '20px',
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <h3 style={{ fontSize: '20px', fontWeight: '600', color: '#1e40af' }}>Filters</h3>
-              {hasActiveFilters && (
-                <button
-                  onClick={clearAllFilters}
-                  style={{
-                    fontSize: '12px',
-                    color: '#a2783a',
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    textDecoration: 'underline',
-                  }}
-                >
-                  Clear All
-                </button>
-              )}
-            </div>
 
-            {/* Search Input */}
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                Search
-              </label>
+        {/* ── Top Filter Bar ── */}
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '16px',
+          padding: '20px 24px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+          marginBottom: '24px',
+        }}>
+          {/* Row 1: Search + Price + Rating + Clear */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-end', marginBottom: '16px' }}>
+            {/* Search */}
+            <div style={{ flex: '1 1 200px', minWidth: '160px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>Search</label>
               <div style={{ position: 'relative' }}>
-                <FaSearch style={{
-                  position: 'absolute',
-                  left: '12px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: '#9ca3af',
-                  fontSize: '14px',
-                }} />
+                <FaSearch style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', fontSize: '13px' }} />
                 <input
                   type="text"
                   placeholder="Service name..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px 10px 38px',
-                    fontSize: '14px',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                    outline: 'none',
-                    backgroundColor: '#f9fafb',
-                    transition: 'border-color 0.2s, box-shadow 0.2s',
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = '#a2783a';
-                    e.target.style.boxShadow = '0 0 0 2px rgba(162, 120, 58, 0.1)';
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = '#e5e7eb';
-                    e.target.style.boxShadow = 'none';
-                  }}
+                  style={{ width: '100%', padding: '8px 10px 8px 32px', fontSize: '13px', border: '1px solid #e5e7eb', borderRadius: '8px', outline: 'none', backgroundColor: '#f9fafb' }}
+                  onFocus={(e) => { e.target.style.borderColor = '#a2783a'; }}
+                  onBlur={(e) => { e.target.style.borderColor = '#e5e7eb'; }}
                 />
               </div>
             </div>
 
-            {/* Price Range Slider */}
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                Price Range
+            {/* Price Range */}
+            <div style={{ flex: '1 1 180px', minWidth: '160px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                Price: up to <span style={{ color: '#a2783a', fontWeight: '600' }}>{formatPrice(priceRange[1])}</span>
+                {priceRange[1] === maxPrice && <span style={{ color: '#9ca3af', fontWeight: '400', marginLeft: '4px' }}>(all)</span>}
               </label>
-              <div style={{ marginBottom: '8px' }}>
-                <input
-                  type="range"
-                  min="0"
-                  max={maxPrice}
-                  step={Math.max(10000, Math.floor(maxPrice / 100) * 5000)}
-                  value={priceRange[1]}
-                  onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
-                  style={{
-                    width: '100%',
-                    height: '6px',
-                    borderRadius: '3px',
-                    background: `linear-gradient(to right, #a2783a 0%, #a2783a ${(priceRange[1] / maxPrice) * 100}%, #e5e7eb ${(priceRange[1] / maxPrice) * 100}%, #e5e7eb 100%)`,
-                    outline: 'none',
-                    cursor: 'pointer',
-                    WebkitAppearance: 'none',
-                  }}
-                />
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#6b7280' }}>
-                <span>₹0</span>
-                <span style={{ fontWeight: '500', color: '#a2783a' }}>{formatPrice(priceRange[1])}</span>
-                <span>{formatPrice(maxPrice)}</span>
+              <input
+                type="range" min="0" max={maxPrice}
+                step={Math.round(maxPrice / 100)}
+                value={priceRange[1]}
+                onChange={(e) => setPriceRange([0, parseInt(e.target.value)])}
+                style={{ width: '100%', height: '6px', borderRadius: '3px', outline: 'none', cursor: 'pointer', WebkitAppearance: 'none', appearance: 'none', background: `linear-gradient(to right, #a2783a 0%, #a2783a ${(priceRange[1] / maxPrice) * 100}%, #e5e7eb ${(priceRange[1] / maxPrice) * 100}%, #e5e7eb 100%)` }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#9ca3af', marginTop: '4px' }}>
+                <span>₹0</span><span>{formatPrice(maxPrice)}</span>
               </div>
             </div>
 
-            {/* Rating Filter */}
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '12px' }}>
-                Rating
-              </label>
-              {[
-                { value: "5", label: "5+ Stars" },
-                { value: "4", label: "4+ Stars" },
-                { value: "3", label: "3+ Stars" },
-              ].map((rating) => (
-                <label
-                  key={rating.value}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    marginBottom: '8px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    color: '#374151',
-                  }}
-                >
-                  <input
-                    type="radio"
-                    name="rating"
-                    value={rating.value}
-                    checked={selectedRating === rating.value}
-                    onChange={(e) => setSelectedRating(e.target.value)}
-                    style={{
-                      marginRight: '10px',
-                      accentColor: '#a2783a',
-                      width: '16px',
-                      height: '16px',
-                      cursor: 'pointer',
-                    }}
-                  />
-                  <FaStar style={{ color: '#fbbf24', marginRight: '6px', fontSize: '12px' }} />
-                  {rating.label}
-                </label>
-              ))}
-            </div>
-
-            {/* Category Filter — derived from real DB data */}
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '12px' }}>
-                Category
-              </label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                {categories.map((cat) => (
-                  <button
-                    key={cat.value}
-                    onClick={() => setSelectedCategory(selectedCategory === cat.value ? "" : cat.value)}
-                    style={{
-                      padding: '6px 12px',
-                      fontSize: '12px',
-                      borderRadius: '20px',
-                      border: selectedCategory === cat.value ? '2px solid #a2783a' : '1px solid #e5e7eb',
-                      backgroundColor: selectedCategory === cat.value ? '#fef3e6' : 'white',
-                      color: selectedCategory === cat.value ? '#a2783a' : '#6b7280',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      fontWeight: selectedCategory === cat.value ? '500' : '400',
-                    }}
-                  >
-                    {cat.label}
+            {/* Rating */}
+            <div style={{ flex: '0 1 auto' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>Rating</label>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {[{ value: "5", label: "5★" }, { value: "4", label: "4★+" }, { value: "3", label: "3★+" }].map((r) => (
+                  <button key={r.value} onClick={() => setSelectedRating(selectedRating === r.value ? "" : r.value)}
+                    style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '20px', border: selectedRating === r.value ? '2px solid #a2783a' : '1px solid #e5e7eb', backgroundColor: selectedRating === r.value ? '#fef3e6' : 'white', color: selectedRating === r.value ? '#a2783a' : '#6b7280', cursor: 'pointer', fontWeight: selectedRating === r.value ? '600' : '400' }}>
+                    {r.label}
                   </button>
                 ))}
               </div>
             </div>
+
+            {/* Clear */}
+            {hasActiveFilters && (
+              <button onClick={clearAllFilters}
+                style={{ padding: '8px 16px', fontSize: '13px', borderRadius: '8px', border: '1px solid #e5e7eb', backgroundColor: 'white', color: '#a2783a', cursor: 'pointer', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <FaTimes size={12} /> Clear
+              </button>
+            )}
           </div>
 
-          {/* Services Grid */}
-          <div style={{ flex: 1 }}>
+          {/* Row 2: Category chips */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+            {categories.map((cat) => (
+              <button key={cat.value} onClick={() => setSelectedCategory(selectedCategory === cat.value ? "" : cat.value)}
+                style={{ padding: '5px 14px', fontSize: '12px', borderRadius: '20px', border: selectedCategory === cat.value ? '2px solid #a2783a' : '1px solid #e5e7eb', backgroundColor: selectedCategory === cat.value ? '#fef3e6' : 'white', color: selectedCategory === cat.value ? '#a2783a' : '#6b7280', cursor: 'pointer', fontWeight: selectedCategory === cat.value ? '500' : '400', transition: 'all 0.2s' }}>
+                {cat.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Services Grid (full width) ── */}
+        <div>
             {/* Results count */}
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '20px',
-            }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <p style={{ color: '#6b7280', fontSize: '14px' }}>
-                {loading ? 'Loading events...' :
-                  filteredItems.length > 0 
-                    ? `Showing ${filteredItems.length} of ${services.length} events`
-                    : services.length === 0 
-                      ? 'No events have been created yet'
-                      : 'No events found'
-                }
+                {loading ? 'Loading events...' : filteredItems.length > 0 ? `Showing ${filteredItems.length} of ${services.length} events` : services.length === 0 ? 'No events have been created yet' : 'No events found'}
               </p>
             </div>
 
@@ -426,8 +325,8 @@ const Services = () => {
             ) : (
               <div className="services-grid" style={{ 
                 display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
-                gap: '24px' 
+                gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', 
+                gap: isMobile ? '12px' : '16px'
               }}>
                 {filteredItems.length > 0 ? (
                   filteredItems.map((s) => {
@@ -446,7 +345,7 @@ const Services = () => {
                         display: 'flex',
                         flexDirection: 'column'
                       }} className="service-card">
-                        <div style={{ 
+                        <div className="service-card-img" style={{ 
                           position: 'relative', 
                           width: '100%', 
                           height: '180px',
@@ -540,14 +439,14 @@ const Services = () => {
                             </div>
                           )}
                         </div>
-                        <div style={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                          <h3 style={{ 
+                        <div className="service-card-body" style={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                          <h3 className="service-card-title" style={{ 
                             fontSize: '18px', 
                             fontWeight: '600', 
                             marginBottom: '8px',
                             color: '#1f2937'
                           }}>{s.title}</h3>
-                          <p style={{ 
+                          <p className="service-card-price" style={{ 
                             fontSize: '16px', 
                             fontWeight: '600', 
                             color: '#a2783a',
@@ -689,48 +588,62 @@ const Services = () => {
               </div>
             )}
           </div>
-        </div>
       </section>
 
       {/* ── Responsive styles for Services page ── */}
       <style>{`
-        /* Mobile: stack sidebar above grid, full-width cards */
         @media (max-width: 767px) {
-          .services-layout {
-            flex-direction: column !important;
-            gap: 16px !important;
-          }
-          .services-sidebar {
-            width: 100% !important;
-            position: static !important;
-          }
           .services-grid {
-            grid-template-columns: 1fr !important;
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 12px !important;
+          }
+          .service-card .service-card-img {
+            height: 120px !important;
+          }
+          .service-card .service-card-body {
+            padding: 12px !important;
+          }
+          .service-card .service-card-title {
+            font-size: 14px !important;
+          }
+          .service-card .service-card-price {
+            font-size: 13px !important;
           }
         }
-        /* Tablet: 2 columns */
         @media (min-width: 768px) and (max-width: 1023px) {
-          .services-layout {
-            flex-direction: column !important;
-            gap: 20px !important;
-          }
-          .services-sidebar {
-            width: 100% !important;
-            position: static !important;
-          }
           .services-grid {
             grid-template-columns: repeat(2, 1fr) !important;
           }
         }
-        /* Desktop: unchanged — sidebar left, 3-4 col grid */
         @media (min-width: 1024px) {
-          .services-sidebar {
-            width: 280px !important;
-            position: sticky !important;
-          }
           .services-grid {
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
           }
+        }
+        input[type=range]::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          background: #a2783a;
+          cursor: pointer;
+          border: 3px solid white;
+          box-shadow: 0 0 0 2px #a2783a, 0 2px 6px rgba(0,0,0,0.25);
+          margin-top: -7px;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+          height: 6px;
+          border-radius: 3px;
+        }
+        input[type=range]::-moz-range-thumb {
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          background: #a2783a;
+          cursor: pointer;
+          border: 3px solid white;
+          box-shadow: 0 0 0 2px #a2783a, 0 2px 6px rgba(0,0,0,0.25);
         }
       `}</style>
 

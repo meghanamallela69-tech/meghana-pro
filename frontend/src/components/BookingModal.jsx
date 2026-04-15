@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { FaTimes, FaCalendarAlt, FaClock, FaMapMarkerAlt, FaPercent, FaCheckSquare, FaSquare, FaTicketAlt, FaUsers, FaPlus, FaMinus } from "react-icons/fa";
@@ -286,6 +286,15 @@ const BookingModal = ({ service, isOpen, onClose, onSuccess, coupons = [] }) => 
   }
 
   const today = new Date().toISOString().split("T")[0];
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia("(max-width: 767px)").matches);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const handler = (e) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    setIsMobile(mq.matches);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   if (showPayment && createdBooking) {
     return (
@@ -299,14 +308,99 @@ const BookingModal = ({ service, isOpen, onClose, onSuccess, coupons = [] }) => 
   }
 
   return (
-    <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "white", zIndex: 9999, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 24px", borderBottom: "1px solid #e5e7eb", backgroundColor: "#f8fafc" }}>
-          <h1 style={{ fontSize: "24px", fontWeight: "700", color: "#1f2937", margin: 0 }}>{service.title}</h1>
-          <button onClick={onClose} style={{ background: "#ef4444", border: "none", borderRadius: "50%", width: "40px", height: "40px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: "18px", fontWeight: "bold" }}>✕</button>
+    <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "white", zIndex: 9999, display: "flex", flexDirection: "column", overflow: isMobile ? "auto" : "hidden" }}>
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid #e5e7eb", backgroundColor: "#f8fafc", flexShrink: 0 }}>
+        <h1 style={{ fontSize: isMobile ? "18px" : "24px", fontWeight: "700", color: "#1f2937", margin: 0 }}>{service.title}</h1>
+        <button onClick={onClose} style={{ background: "#ef4444", border: "none", borderRadius: "50%", width: "36px", height: "36px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: "16px", fontWeight: "bold", flexShrink: 0 }}>✕</button>
+      </div>
+
+      {isMobile ? (
+        /* ── MOBILE: images on top, form below ── */
+        <div style={{ flex: 1, overflowY: "auto" }}>
+          {/* Banner */}
+          <div style={{ height: "220px", position: "relative", overflow: "hidden", flexShrink: 0 }}>
+            <img src={service.images?.[0]?.url || "/party.jpg"} alt={service.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(transparent, rgba(0,0,0,0.7))", padding: "20px 16px 12px", color: "white" }}>
+              <p style={{ fontSize: "13px", margin: 0 }}>{service.category} • {service.location}</p>
+            </div>
+          </div>
+          {/* Gallery */}
+          {service.images && service.images.length > 1 && (
+            <div style={{ padding: "16px", backgroundColor: "white", borderBottom: "1px solid #e5e7eb" }}>
+              <h3 style={{ fontSize: "15px", fontWeight: "600", marginBottom: "12px", color: "#374151" }}>Event Gallery</h3>
+              <div className="bm-mobile-gallery-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "8px" }}>
+                {service.images.slice(1).map((image, index) => (
+                  <img key={index} src={image.url} alt={`${service.title} ${index + 1}`} style={{ width: "100%", height: "80px", objectFit: "cover", borderRadius: "8px" }} />
+                ))}
+              </div>
+            </div>
+          )}
+          {/* Form */}
+          <div style={{ padding: "20px", backgroundColor: "white" }}>
+            <h2 style={{ fontSize: "18px", fontWeight: "700", color: "#1f2937", marginBottom: "4px" }}>Book Now</h2>
+            <p style={{ color: "#6b7280", fontSize: "13px", marginBottom: "20px" }}>{isTicketed ? "Select your tickets and complete payment" : "Fill in your details for booking request"}</p>
+            <form onSubmit={isTicketed ? handleTicketedSubmit : handleFullServiceSubmit}>
+              {isTicketed ? (
+                <div>
+                  <h3 style={{ fontSize: "16px", fontWeight: "600", color: "#1f2937", marginBottom: "12px" }}>Select Tickets</h3>
+                  {ticketTypes.map((ticket) => (
+                    <div key={ticket.name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px", border: "1px solid #e5e7eb", borderRadius: "8px", marginBottom: "10px" }}>
+                      <div>
+                        <div style={{ fontWeight: "600", color: "#374151", fontSize: "14px" }}>{ticket.name}</div>
+                        <div style={{ color: "#6b7280", fontSize: "12px" }}>₹{ticket.price.toLocaleString("en-IN")} • Available: {ticket.quantityAvailable}</div>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <button type="button" onClick={() => decrementTicket(ticket.name)} style={{ width: "28px", height: "28px", borderRadius: "50%", border: "1px solid #d1d5db", backgroundColor: "white", cursor: "pointer", fontSize: "16px" }}>-</button>
+                        <span style={{ fontSize: "15px", fontWeight: "600", minWidth: "24px", textAlign: "center" }}>{selectedTickets[ticket.name] || 0}</span>
+                        <button type="button" onClick={() => incrementTicket(ticket.name)} disabled={selectedTickets[ticket.name] >= ticket.quantityAvailable} style={{ width: "28px", height: "28px", borderRadius: "50%", border: "1px solid #d1d5db", backgroundColor: "white", cursor: "pointer", fontSize: "16px" }}>+</button>
+                      </div>
+                    </div>
+                  ))}
+                  <CouponSection token={token} eventId={service?._id} couponHook={couponHook} compact />
+                  <div style={{ padding: "14px", backgroundColor: "#fef3e6", borderRadius: "10px", marginBottom: "16px", border: "1px solid #a2783a" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", color: "#92400e", fontSize: "13px", marginBottom: "4px" }}><span>Tickets ({totalSelectedTickets})</span><span>₹{ticketedSubtotal.toLocaleString("en-IN")}</span></div>
+                    {discount > 0 && <div style={{ display: "flex", justifyContent: "space-between", color: "#059669", fontSize: "13px" }}><span>Discount</span><span>-₹{discount.toLocaleString("en-IN")}</span></div>}
+                    <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "700", color: "#78350f", fontSize: "16px", borderTop: "1px solid rgba(162,120,58,0.3)", paddingTop: "8px", marginTop: "8px" }}><span>Total</span><span>₹{ticketedTotal.toLocaleString("en-IN")}</span></div>
+                  </div>
+                  <button type="submit" disabled={loading || totalSelectedTickets === 0} style={{ width: "100%", padding: "14px", backgroundColor: loading || totalSelectedTickets === 0 ? "#9ca3af" : "#a2783a", color: "white", fontSize: "15px", fontWeight: "600", border: "none", borderRadius: "8px", cursor: loading || totalSelectedTickets === 0 ? "not-allowed" : "pointer", marginBottom: "10px" }}>{loading ? "Processing..." : totalSelectedTickets === 0 ? "Select Tickets" : "Book Now"}</button>
+                </div>
+              ) : (
+                <div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "14px" }}>
+                    <div>
+                      <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#374151", marginBottom: "6px" }}>SERVICE DATE *</label>
+                      <input type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} min={today} required style={{ width: "100%", padding: "10px", border: "1px solid #e5e7eb", borderRadius: "8px", fontSize: "13px" }} />
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#374151", marginBottom: "6px" }}>SERVICE TIME *</label>
+                      <input type="time" value={timeSlot} onChange={(e) => setTimeSlot(e.target.value)} required style={{ width: "100%", padding: "10px", border: "1px solid #e5e7eb", borderRadius: "8px", fontSize: "13px" }} />
+                    </div>
+                  </div>
+                  <div style={{ marginBottom: "14px" }}>
+                    <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#374151", marginBottom: "6px" }}>NUMBER OF GUESTS *</label>
+                    <input type="number" value={guestCount} onChange={(e) => setGuestCount(e.target.value)} min="1" required style={{ width: "100%", padding: "10px", border: "1px solid #e5e7eb", borderRadius: "8px", fontSize: "13px" }} />
+                  </div>
+                  <div style={{ marginBottom: "14px" }}>
+                    <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#374151", marginBottom: "6px" }}>EVENT LOCATION</label>
+                    <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Enter event location" style={{ width: "100%", padding: "10px", border: "1px solid #e5e7eb", borderRadius: "8px", fontSize: "13px" }} />
+                  </div>
+                  <div style={{ padding: "12px", backgroundColor: "#f9fafb", borderRadius: "8px", marginBottom: "14px", fontSize: "13px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}><span style={{ color: "#6b7280" }}>Base Price</span><span>₹{(service.price || 0).toLocaleString("en-IN")}</span></div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "700", fontSize: "15px", borderTop: "1px solid #e5e7eb", paddingTop: "8px", marginTop: "8px" }}><span>Estimated Total</span><span style={{ color: "#a2783a" }}>₹{fullServiceTotal.toLocaleString("en-IN")}</span></div>
+                  </div>
+                  <button type="submit" disabled={loading} style={{ width: "100%", padding: "14px", backgroundColor: loading ? "#9ca3af" : "#a2783a", color: "white", fontSize: "15px", fontWeight: "600", border: "none", borderRadius: "8px", cursor: loading ? "not-allowed" : "pointer", marginBottom: "10px" }}>{loading ? "Submitting..." : `Request Booking - ₹${fullServiceTotal.toLocaleString("en-IN")}`}</button>
+                </div>
+              )}
+              <button type="button" onClick={onClose} style={{ width: "100%", padding: "12px", backgroundColor: "transparent", border: "1px solid #e5e7eb", borderRadius: "8px", color: "#6b7280", fontSize: "14px", cursor: "pointer" }}>Cancel</button>
+            </form>
+          </div>
         </div>
+      ) : (
+        /* ── DESKTOP: 50/50 split layout ── */
         <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-          <div style={{ width: "50%", backgroundColor: "#f8fafc", display: "flex", flexDirection: "column" }}>
-            <div style={{ height: "50%", position: "relative", overflow: "hidden" }}>
+          <div className="bm-left" style={{ width: "50%", backgroundColor: "#f8fafc", display: "flex", flexDirection: "column" }}>
+            <div className="bm-banner" style={{ height: "50%", position: "relative", overflow: "hidden" }}>
               <img src={service.images?.[0]?.url || "/party.jpg"} alt={service.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(transparent, rgba(0,0,0,0.8))", padding: "30px 20px 20px", color: "white" }}>
                 <p style={{ fontSize: "16px", opacity: 0.9, marginBottom: "12px", margin: "0 0 12px 0" }}>{service.category} • {service.location}</p>
@@ -316,7 +410,7 @@ const BookingModal = ({ service, isOpen, onClose, onSuccess, coupons = [] }) => 
                 </div>
               </div>
             </div>
-            <div style={{ height: "50%", padding: "24px", backgroundColor: "white", borderTop: "1px solid #e5e7eb", overflow: "hidden" }}>
+            <div className="bm-gallery" style={{ height: "50%", padding: "24px", backgroundColor: "white", borderTop: "1px solid #e5e7eb", overflow: "hidden" }}>
               <h3 style={{ fontSize: "18px", fontWeight: "600", marginBottom: "16px", color: "#374151", margin: "0 0 16px 0" }}>Event Gallery</h3>
               {service.images && service.images.length > 0 ? (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: "16px", height: "calc(100% - 50px)", overflowY: "auto" }}>
@@ -329,7 +423,7 @@ const BookingModal = ({ service, isOpen, onClose, onSuccess, coupons = [] }) => 
               )}
             </div>
           </div>
-          <div style={{ width: "50%", backgroundColor: "white", display: "flex", flexDirection: "column", borderLeft: "1px solid #e5e7eb" }}>
+          <div className="bm-right" style={{ width: "50%", backgroundColor: "white", display: "flex", flexDirection: "column", borderLeft: "1px solid #e5e7eb" }}>
             <div style={{ padding: "20px 32px", borderBottom: "1px solid #e5e7eb", backgroundColor: "#fafafa" }}>
               <h2 style={{ fontSize: "20px", fontWeight: "700", color: "#1f2937", marginBottom: "4px", margin: "0 0 4px 0" }}>Book Now</h2>
               <p style={{ color: "#6b7280", fontSize: "14px", margin: 0 }}>{isTicketed ? "Select your tickets and complete payment" : "Fill in your details for booking request"}</p>
@@ -423,7 +517,8 @@ const BookingModal = ({ service, isOpen, onClose, onSuccess, coupons = [] }) => 
             </div>
           </div>
         </div>
-      </div>
+      )}
+    </div>
   );
 };
 

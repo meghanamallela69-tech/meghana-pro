@@ -253,7 +253,7 @@ const FullServiceBookingModal = ({ isOpen, onClose, event, onSuccess }) => {
       <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(6px)", zIndex: 0 }} />
 
       {/* Full-page modal */}
-      <div style={{
+      <div className="fsbm-wrapper" style={{
         position: "relative", zIndex: 1,
         display: "flex", width: "100%", height: "100%",
         background: "#fff",
@@ -261,7 +261,7 @@ const FullServiceBookingModal = ({ isOpen, onClose, event, onSuccess }) => {
       }}>
 
         {/* ── LEFT: Event Banner & Info ── */}
-        <div style={{
+        <div className="fsbm-left" style={{
           width: "45%", flexShrink: 0,
           display: "flex", flexDirection: "column",
           background: "#0f172a",
@@ -310,7 +310,7 @@ const FullServiceBookingModal = ({ isOpen, onClose, event, onSuccess }) => {
               <p style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.45)", margin: "0 0 8px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                 Event Gallery
               </p>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 5 }}>
+              <div className="fsbm-gallery-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 5 }}>
                 {images.map((img, i) => (
                   <button key={i} onClick={() => setActiveImg(i)}
                     style={{
@@ -342,7 +342,7 @@ const FullServiceBookingModal = ({ isOpen, onClose, event, onSuccess }) => {
         </div>
 
         {/* ── RIGHT: Booking Form ── */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: "#fff" }}>
+        <div className="fsbm-right" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: "#fff" }}>
           {/* Header */}
           <div style={{ padding: "20px 28px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fff", flexShrink: 0 }}>
             <div>
@@ -597,6 +597,35 @@ const FullServiceBookingModal = ({ isOpen, onClose, event, onSuccess }) => {
             </p>
           </div>
         </div>
+
+        <style dangerouslySetInnerHTML={{ __html: `
+          @media (max-width: 767px) {
+            .fsbm-wrapper {
+              flex-direction: column !important;
+              overflow-y: auto !important;
+            }
+            .fsbm-left {
+              width: 100% !important;
+              height: auto !important;
+              min-height: 280px !important;
+              flex-shrink: 0 !important;
+            }
+            .fsbm-left > div:first-child {
+              min-height: 220px !important;
+              flex: none !important;
+              height: 220px !important;
+            }
+            .fsbm-right {
+              flex: none !important;
+              overflow: visible !important;
+              height: auto !important;
+            }
+            .fsbm-right > div:last-child {
+              overflow-y: visible !important;
+              flex: none !important;
+            }
+          }
+        `}} />
       </div>
     </div>
   );

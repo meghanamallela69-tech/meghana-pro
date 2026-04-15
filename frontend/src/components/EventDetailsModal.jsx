@@ -62,6 +62,7 @@ const EventDetailsModal = ({ isOpen, onClose, event, onBookNow }) => {
       
       {/* Modal positioned as full screen */}
       <div
+        className="edm-modal-wrapper"
         style={{
           position: "fixed",
           top: 0,
@@ -69,7 +70,7 @@ const EventDetailsModal = ({ isOpen, onClose, event, onBookNow }) => {
           right: 0,
           bottom: 0,
           backgroundColor: "white",
-          zIndex: 10000, // Higher than overlay
+          zIndex: 10000,
           overflow: "hidden",
           display: "flex",
           flexDirection: "column"
@@ -112,11 +113,11 @@ const EventDetailsModal = ({ isOpen, onClose, event, onBookNow }) => {
           </button>
         </div>
       {/* Modal Content - Full Height with flex layout */}
-      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+      <div className="edm-content" style={{ flex: 1, display: "flex", overflow: "hidden" }}>
         
         {/* LEFT SIDE - Image Gallery */}
-        <div style={{ 
-          width: "50%", // Fixed 50% width
+        <div className="edm-left" style={{ 
+          width: "50%",
           backgroundColor: "#f8fafc",
           display: "flex",
           flexDirection: "column",
@@ -196,7 +197,8 @@ const EventDetailsModal = ({ isOpen, onClose, event, onBookNow }) => {
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))",
                 gap: "12px",
-              }}>
+              }}
+              className="event-gallery-grid">
                 {eventImages.map((image, index) => (
                   <img
                     key={index}
@@ -241,8 +243,8 @@ const EventDetailsModal = ({ isOpen, onClose, event, onBookNow }) => {
         </div>
 
         {/* RIGHT SIDE - Event Details */}
-        <div style={{ 
-          width: "50%", // Fixed 50% width
+        <div className="edm-right" style={{ 
+          width: "50%",
           backgroundColor: "white",
           display: "flex",
           flexDirection: "column",
@@ -576,6 +578,46 @@ const EventDetailsModal = ({ isOpen, onClose, event, onBookNow }) => {
       </div>
 
       {/* Login Modal */}
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media (max-width: 767px) {
+          .edm-content {
+            flex-direction: column !important;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+            height: auto !important;
+            flex: 1 !important;
+          }
+          .edm-left {
+            width: 100% !important;
+            flex-shrink: 0 !important;
+            height: auto !important;
+            overflow: visible !important;
+            min-height: 0 !important;
+          }
+          .edm-left > div:last-child {
+            flex: none !important;
+            overflow-y: visible !important;
+            max-height: none !important;
+            height: auto !important;
+          }
+          .edm-right {
+            width: 100% !important;
+            border-left: none !important;
+            border-top: 1px solid #e5e7eb !important;
+            overflow-y: visible !important;
+            flex-shrink: 0 !important;
+            height: auto !important;
+            min-height: 0 !important;
+          }
+          /* Make the outer modal scrollable on mobile */
+          .edm-modal-wrapper {
+            overflow-y: auto !important;
+            display: flex !important;
+            flex-direction: column !important;
+          }
+        }
+      `}} />
     </>
   );
 };

@@ -325,7 +325,7 @@ const UserBrowseEvents = () => {
           </button>
         </div>
       ) : (
-        <section style={{ 
+        <section className="event-cards-grid" style={{ 
           display: 'grid', 
           gridTemplateColumns: 'repeat(4, 1fr)', 
           gap: '24px' 
@@ -461,7 +461,7 @@ const UserBrowseEvents = () => {
                 }}>{event.title}</h3>
                 {/* Only show date for non-full-service events */}
                 {(!event.eventType || (event.eventType !== 'fullService' && event.eventType !== 'full-service')) && (
-                  <div style={{ 
+                  <div className="event-card-meta" style={{ 
                     display: 'flex', 
                     alignItems: 'center', 
                     gap: '6px',
@@ -473,7 +473,7 @@ const UserBrowseEvents = () => {
                     {formatDate(event.date)}
                   </div>
                 )}
-                <div style={{ 
+                <div className="event-card-meta" style={{ 
                   display: 'flex', 
                   alignItems: 'center', 
                   gap: '6px',
@@ -487,7 +487,7 @@ const UserBrowseEvents = () => {
                 
                 {/* Show ticket availability for ticketed events — moved to View Details modal */}
 
-                <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                <div className="event-card-actions" style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
                   <button 
                     onClick={() => handleViewDetails(event)}
                     style={{
