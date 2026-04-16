@@ -19,6 +19,13 @@ const UserSavedEvents = () => {
   const { user, token, loading: authLoading } = useAuth();
   const [savedEvents, setSavedEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   useEffect(() => {
     if (authLoading) return;
@@ -117,7 +124,8 @@ const UserSavedEvents = () => {
           </button>
         </div>
       ) : (
-        <div className="event-cards-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-5"
+          style={{ gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)' }}>
           {savedEvents.map((event) => (
             <div key={event._id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition">
               <div className="relative h-40 overflow-hidden">

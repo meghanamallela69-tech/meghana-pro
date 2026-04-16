@@ -68,17 +68,17 @@ const Reviews = () => {
   return (
     <div style={{ minHeight: "100vh", background: "#f9fafb" }}>
       {/* Header */}
-      <section style={{ background: "#fff", padding: "60px 24px", textAlign: "center", borderBottom: "1px solid #e5e7eb" }}>
-        <h1 style={{ fontSize: "48px", fontWeight: 900, color: "#1f2937", marginBottom: "12px" }}>
+      <section style={{ background: "#fff", padding: "30px 16px", textAlign: "center", borderBottom: "1px solid #e5e7eb" }}>
+        <h1 style={{ fontSize: "28px", fontWeight: 900, color: "#1f2937", marginBottom: "8px" }}>
           Customer Reviews
         </h1>
-        <p style={{ fontSize: "18px", color: "#6b7280", maxWidth: "600px", margin: "0 auto" }}>
+        <p style={{ fontSize: "15px", color: "#6b7280", maxWidth: "600px", margin: "0 auto" }}>
           See what our customers say about their event experiences
         </p>
       </section>
 
       {/* Stats */}
-      <section style={{ padding: "40px 24px", maxWidth: "1200px", margin: "0 auto" }}>
+      <section style={{ padding: "20px 16px", maxWidth: "1200px", margin: "0 auto" }}>
         <div className="reviews-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '40px' }}>
           <div style={{ background: "#fff", borderRadius: "12px", padding: "24px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
             <p style={{ color: "#6b7280", fontSize: "14px", marginBottom: "8px" }}>Total Reviews</p>
@@ -148,14 +148,14 @@ const Reviews = () => {
             <p style={{ fontSize: "18px", color: "#6b7280" }}>No reviews found</p>
           </div>
         ) : (
-          <div style={{ display: "grid", gap: "24px" }}>
+          <div className="reviews-list-grid" style={{ display: "grid", gap: "16px", gridTemplateColumns: "repeat(2, 1fr)" }}>
             {filteredReviews.map((review) => (
               <article
                 key={review._id}
                 style={{
                   background: "#fff",
                   borderRadius: "12px",
-                  padding: "24px",
+                  padding: "16px",
                   boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
                   border: "1px solid #e5e7eb",
                 }}
@@ -229,6 +229,24 @@ const Reviews = () => {
           .reviews-stats-grid {
             grid-template-columns: repeat(2, 1fr) !important;
             gap: 12px !important;
+          }
+          .reviews-list-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 12px !important;
+          }
+          .reviews-list-grid article {
+            padding: 12px !important;
+          }
+          .reviews-list-grid h3 {
+            font-size: 13px !important;
+          }
+          .reviews-list-grid p {
+            font-size: 11px !important;
+          }
+        }
+        @media (min-width: 768px) {
+          .reviews-list-grid {
+            grid-template-columns: 1fr !important;
           }
         }
       `}</style>

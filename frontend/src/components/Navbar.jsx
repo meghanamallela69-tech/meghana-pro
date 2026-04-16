@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { BsCalendarEvent } from "react-icons/bs";
+import { MdEventNote } from "react-icons/md";
 import LanguageSwitcher from "./shared/LanguageSwitcher";
 
 const NAV_LINKS = [
@@ -35,10 +35,10 @@ const Navbar = () => {
       }}>
 
         {/* Logo */}
-        <Link to="/home" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none", flexShrink: 0 }}>
-          <BsCalendarEvent className="nb-logo-icon" style={{ fontSize: 28, color: "#2563eb" }} />
-          <span className="nb-logo-text" style={{ fontSize: 36, fontWeight: 900, fontStyle: "italic", color: "#2563eb", letterSpacing: "-1px", lineHeight: 1 }}>Event</span>
-          <span className="nb-logo-text" style={{ fontSize: 36, fontWeight: 900, fontStyle: "italic", color: "#7c3aed", letterSpacing: "-1px", lineHeight: 1 }}>Hub</span>
+        <Link to="/home" style={{ display: "flex", alignItems: "center", gap: 4, textDecoration: "none", flexShrink: 0 }}>
+          <MdEventNote className="nb-logo-icon" style={{ fontSize: 28, color: "#2563eb" }} />
+          <span className="nb-logo-text" style={{ fontSize: 36, fontWeight: 900, fontStyle: "italic", color: "#2563eb", letterSpacing: "-1px", lineHeight: 1.2 }}>Event</span>
+          <span className="nb-logo-text" style={{ fontSize: 36, fontWeight: 900, fontStyle: "italic", color: "#7c3aed", letterSpacing: "-1px", lineHeight: 1.2 }}>Hub</span>
         </Link>
 
         {/* Desktop: links + auth — hidden on mobile */}
@@ -78,9 +78,8 @@ const Navbar = () => {
           </Link>
         </div>
 
-        {/* Mobile: language + hamburger */}
-        <div className="nb-mobile" style={{ display: "none", alignItems: "center", gap: 8, flexShrink: 0 }}>
-          <LanguageSwitcher />
+        {/* Mobile: hamburger only */}
+        <div className="nb-mobile" style={{ display: "none", alignItems: "center", gap: 4, flexShrink: 0 }}>
           <button
             onClick={() => setMobileOpen(p => !p)}
             style={{ padding: 8, border: "none", background: "transparent", cursor: "pointer", fontSize: 24, color: "#374151", lineHeight: 1 }}
@@ -102,6 +101,9 @@ const Navbar = () => {
             </Link>
           ))}
           <div style={{ borderTop: "1px solid #f3f4f6", marginTop: 8, paddingTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ paddingBottom: 4 }}>
+              <LanguageSwitcher />
+            </div>
             <Link to="/login" onClick={() => setMobileOpen(false)}
               style={{ display: "block", padding: "10px 12px", border: "2px solid #2563eb", color: "#2563eb", borderRadius: 8, fontWeight: 600, textDecoration: "none", textAlign: "center" }}>
               Login
@@ -126,10 +128,10 @@ const Navbar = () => {
             padding: 8px 12px !important;
           }
           .nb-logo-icon {
-            font-size: 18px !important;
+            font-size: 16px !important;
           }
           .nb-logo-text {
-            font-size: 18px !important;
+            font-size: 16px !important;
             letter-spacing: -0.5px !important;
           }
           .nb-mobile button {

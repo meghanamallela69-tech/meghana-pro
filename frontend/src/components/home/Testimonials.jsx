@@ -13,7 +13,7 @@ const Testimonials = () => {
       const valid = reviews.filter(r => {
         const text = (r.reviewText || r.comment || r.text || r.review || "").trim();
         return text.length > 0;
-      });
+      }).slice(0, 4);
       if (valid.length > 0) setItems(valid);
     }).catch(() => {});
   }, []);

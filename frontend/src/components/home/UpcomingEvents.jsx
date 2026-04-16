@@ -29,8 +29,8 @@ const UpcomingEvents = () => {
         const fullService = events
           .filter((e) => e.eventType !== "ticketed" && e.status !== "inactive");
 
-        // Merge: ticketed first, then full-service, take up to 3
-        const upcoming = [...ticketed, ...fullService].slice(0, 3);
+        // Merge: ticketed first, then full-service, take up to 4
+        const upcoming = [...ticketed, ...fullService].slice(0, 4);
         setItems(upcoming);
       })
       .catch(() => {});

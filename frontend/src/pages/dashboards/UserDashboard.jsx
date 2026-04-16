@@ -23,6 +23,13 @@ const UserDashboard = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [recentBookings, setRecentBookings] = useState([]);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
   const [isSearching, setIsSearching] = useState(false);
   const [recommendedEvents, setRecommendedEvents] = useState([]);
   const [detailsEvent, setDetailsEvent] = useState(null);
@@ -266,7 +273,8 @@ const UserDashboard = () => {
               Browse All
             </button>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4"
+            style={{ gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)' }}>
             {recommendedEvents.map(ev => {
               const img = ev.images?.[0]?.url || ev.image || "/party.jpg";
               const price = ev.price > 0
@@ -296,31 +304,28 @@ const UserDashboard = () => {
                   </div>
 
                   {/* Content */}
-                  <div style={{ padding: '12px 14px', flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <p style={{ fontWeight: 700, fontSize: 14, color: '#111827', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</p>
-                    {/* Date — only for ticketed events with a real date */}
-                    {ev.eventType === "ticketed" && ev.date ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#6b7280', fontSize: 12 }}>
-                        <FiCalendar size={12} style={{ flexShrink: 0 }} />
-                        <span>{new Date(ev.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>
-                      </div>
-                    ) : ev.eventType !== "ticketed" ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#a2783a', fontSize: 12 }}>
-                        <FiCalendar size={12} style={{ flexShrink: 0 }} />
-                        <span>Date as per booking</span>
-                      </div>
-                    ) : null}
+                  <div style={{ padding: '12px 14px', flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <p style={{ fontWeight: 700, fontSize: 13, color: '#111827', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</p>
+                    {/* Date row — fixed height always */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, minHeight: 18 }}>
+                      <FiCalendar size={11} style={{ flexShrink: 0, color: ev.eventType !== 'ticketed' ? '#a2783a' : '#6b7280' }} />
+                      <span style={{ color: ev.eventType !== 'ticketed' ? '#a2783a' : '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {ev.eventType === "ticketed" && ev.date
+                          ? new Date(ev.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+                          : "Date as per booking"}
+                      </span>
+                    </div>
                     {ev.location && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#6b7280', fontSize: 12 }}>
-                        <FiMapPin size={12} style={{ flexShrink: 0 }} />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#6b7280', fontSize: 11, minHeight: 18 }}>
+                        <FiMapPin size={11} style={{ flexShrink: 0 }} />
                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.location}</span>
                       </div>
                     )}
-                    {/* Buttons */}
-                    <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                    {/* Buttons — always at bottom */}
+                    <div style={{ display: 'flex', gap: 5, marginTop: 'auto', paddingTop: 6 }}>
                       <button
                         onClick={() => setDetailsEvent(ev)}
-                        style={{ flex: 1, padding: '7px 0', background: '#fff', color: '#2563eb', border: '1.5px solid #2563eb', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                        style={{ flex: 1, padding: '6px 0', background: '#fff', color: '#2563eb', border: '1.5px solid #2563eb', borderRadius: 6, fontSize: 10, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
                         onMouseEnter={e => { e.currentTarget.style.background = '#eff6ff'; }}
                         onMouseLeave={e => { e.currentTarget.style.background = '#fff'; }}
                       >
@@ -329,13 +334,13 @@ const UserDashboard = () => {
                       {(() => {
                         const expired = getEventStatus(ev).label === 'Completed';
                         return expired ? (
-                          <div style={{ flex: 1, padding: '7px 0', background: '#f3f4f6', color: '#9ca3af', border: '1.5px solid #e5e7eb', borderRadius: 7, fontSize: 11, fontWeight: 600, textAlign: 'center', cursor: 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                            🚫 Ended
+                          <div style={{ flex: 1, padding: '6px 0', background: '#f3f4f6', color: '#9ca3af', border: '1.5px solid #e5e7eb', borderRadius: 6, fontSize: 10, fontWeight: 600, textAlign: 'center', cursor: 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            Ended
                           </div>
                         ) : (
                           <button
                             onClick={() => { setDetailsEvent(null); setBookingEvent(ev); }}
-                            style={{ flex: 1, padding: '7px 0', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                            style={{ flex: 1, padding: '6px 0', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, fontSize: 10, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
                             onMouseEnter={e => { e.currentTarget.style.background = '#1d4ed8'; }}
                             onMouseLeave={e => { e.currentTarget.style.background = '#2563eb'; }}
                           >

@@ -215,10 +215,10 @@ const Services = () => {
   return (
     <>
       <section className="bg-gray-100">
-        <div className="max-w-7xl mx-auto px-6 py-16">
-          <div className="rounded-2xl bg-gray-50 ring-1 ring-gray-200 px-8 py-12">
-            <h1 className="text-3xl md:text-5xl font-semibold text-gray-900">Our Event Services</h1>
-            <p className="mt-3 text-gray-600 max-w-2xl">
+        <div className="max-w-7xl mx-auto px-4 py-6 md:px-6 md:py-16">
+          <div className="rounded-2xl bg-gray-50 ring-1 ring-gray-200 px-4 py-6 md:px-8 md:py-12">
+            <h1 className="text-2xl md:text-5xl font-semibold text-gray-900">Our Event Services</h1>
+            <p className="mt-2 text-gray-600 max-w-2xl text-sm md:text-base">
               Discover a full range of services to plan, manage, and elevate your
               events with ease and confidence.
             </p>
@@ -227,7 +227,7 @@ const Services = () => {
       </section>
 
       {/* Main Content with Filters and Services Grid */}
-      <section className="max-w-7xl mx-auto px-6 py-8" style={{ backgroundColor: '#f3f4f6' }}>
+      <section className="max-w-7xl mx-auto px-3 py-4 md:px-6 md:py-8" style={{ backgroundColor: '#f3f4f6' }}>
 
         {/* ── Top Filter Bar ── */}
         <div style={{
@@ -323,11 +323,8 @@ const Services = () => {
                 <p style={{ fontSize: '16px' }}>Loading events...</p>
               </div>
             ) : (
-              <div className="services-grid" style={{ 
-                display: 'grid', 
-                gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', 
-                gap: isMobile ? '12px' : '16px'
-              }}>
+              <div className="services-grid grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4"
+                style={{ gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)' }}>
                 {filteredItems.length > 0 ? (
                   filteredItems.map((s) => {
                     const Icon = categoryIconMap[s.category] || FaGlassCheers;
@@ -454,44 +451,46 @@ const Services = () => {
                           }}>
                             Starting from {formatPrice(s.price)}
                           </p>
+                          <div className="service-btn-row" style={{ display: 'flex', gap: '6px', marginTop: 'auto' }}>
                           <button
                             onClick={() => handleBookClick(s)}
                             disabled={isBooked || isExpired}
                             style={{
-                              display: 'inline-block',
-                              width: '100%',
+                              flex: 1,
                               padding: '10px 0',
                               backgroundColor: isBooked ? '#10b981' : isExpired ? '#e5e7eb' : '#a2783a',
                               color: isExpired ? '#9ca3af' : 'white',
                               textAlign: 'center',
                               borderRadius: '8px',
-                              textDecoration: 'none',
                               fontWeight: '500',
                               transition: 'background-color 0.3s',
                               border: isExpired ? '1px solid #d1d5db' : 'none',
                               cursor: isBooked || isExpired ? 'not-allowed' : 'pointer',
-                              marginBottom: '8px',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
                             }}
                             onMouseEnter={(e) => { if (!isBooked && !isExpired) e.target.style.backgroundColor = '#8b6a30'; }}
                             onMouseLeave={(e) => { if (!isBooked && !isExpired) e.target.style.backgroundColor = '#a2783a'; }}
                           >
-                            {isBooked ? 'Booked ✓' : isExpired ? '🚫 Event Completed' : 'Book Now'}
+                            {isBooked ? 'Booked ✓' : isExpired ? 'Completed' : 'Book Now'}
                           </button>
                           <button
                             onClick={() => handleViewDetailsClick(s)}
                             style={{
-                              display: 'inline-block',
-                              width: '100%',
+                              flex: 1,
                               padding: '10px 0',
                               backgroundColor: 'white',
                               color: '#a2783a',
                               textAlign: 'center',
                               borderRadius: '8px',
-                              textDecoration: 'none',
                               fontWeight: '500',
                               transition: 'all 0.3s',
                               border: '2px solid #a2783a',
                               cursor: 'pointer',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
                             }}
                             onMouseEnter={(e) => {
                               e.target.style.backgroundColor = '#a2783a';
@@ -504,7 +503,9 @@ const Services = () => {
                           >
                             View Details
                           </button>
+                          </div>
                           <button
+                            className="service-share-btn"
                             onClick={() => {
                               const url = `${window.location.origin}/service/${s._id}`;
                               if (navigator.share) {
@@ -598,16 +599,27 @@ const Services = () => {
             gap: 12px !important;
           }
           .service-card .service-card-img {
-            height: 120px !important;
+            height: 110px !important;
           }
           .service-card .service-card-body {
-            padding: 12px !important;
+            padding: 8px !important;
+            min-height: 120px !important;
+            justify-content: space-between !important;
           }
           .service-card .service-card-title {
-            font-size: 14px !important;
+            font-size: 12px !important;
+            margin-bottom: 3px !important;
           }
           .service-card .service-card-price {
-            font-size: 13px !important;
+            font-size: 11px !important;
+            margin-bottom: 6px !important;
+          }
+          .service-card .service-card-body button,
+          .service-card .service-card-body a {
+            padding: 6px 0 !important;
+            font-size: 10px !important;
+            margin-bottom: 4px !important;
+            border-radius: 6px !important;
           }
         }
         @media (min-width: 768px) and (max-width: 1023px) {

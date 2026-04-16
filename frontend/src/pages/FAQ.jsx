@@ -12,17 +12,17 @@ export default function FAQ() {
   return (
     <>
       <section className="bg-white">
-        <div className="max-w-4xl mx-auto px-6 py-16">
-          <div className="rounded-2xl bg-gray-50 ring-1 ring-gray-200 px-8 py-12 text-center">
-            <h1 className="text-3xl md:text-5xl font-semibold text-gray-900">Frequently Asked Questions</h1>
-            <p className="mt-3 text-gray-600 max-w-2xl mx-auto">
+        <div className="max-w-4xl mx-auto px-4 py-6 md:px-6 md:py-16">
+          <div className="rounded-2xl bg-gray-50 ring-1 ring-gray-200 px-4 py-6 md:px-8 md:py-12 text-center">
+            <h1 className="text-2xl md:text-5xl font-semibold text-gray-900">Frequently Asked Questions</h1>
+            <p className="mt-2 text-gray-600 max-w-2xl mx-auto text-sm md:text-base">
               Find quick answers to common questions about booking, vendors, payments, and more.
             </p>
           </div>
         </div>
       </section>
 
-      <section className="max-w-4xl mx-auto px-6 py-16">
+      <section className="max-w-4xl mx-auto px-4 py-4 md:px-6 md:py-16">
         <div className="space-y-4">
           {items.map((it, i) => {
             const isOpen = open === i;

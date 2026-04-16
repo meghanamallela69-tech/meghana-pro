@@ -14,17 +14,17 @@ const Blogs = () => {
   return (
     <>
       <section className="bg-white">
-        <div className="max-w-7xl mx-auto px-6 py-16">
-          <div className="rounded-2xl bg-gray-50 ring-1 ring-gray-200 px-8 py-12">
-            <h1 className="text-3xl md:text-5xl font-semibold text-gray-900">Event Planning Blogs</h1>
-            <p className="mt-3 text-gray-600 max-w-2xl">
+        <div className="max-w-7xl mx-auto px-4 py-6 md:px-6 md:py-16">
+          <div className="rounded-2xl bg-gray-50 ring-1 ring-gray-200 px-4 py-6 md:px-8 md:py-12">
+            <h1 className="text-2xl md:text-5xl font-semibold text-gray-900">Event Planning Blogs</h1>
+            <p className="mt-2 text-gray-600 max-w-2xl text-sm md:text-base">
               Insights, guides, and tips from the EventHub team to help you plan unforgettable events.
             </p>
           </div>
         </div>
       </section>
 
-      <section className="max-w-7xl mx-auto px-6 py-16" style={{ backgroundColor: '#fff7ea' }}>
+      <section className="max-w-7xl mx-auto px-3 py-4 md:px-6 md:py-16" style={{ backgroundColor: '#fff7ea' }}>
         <div className="blogs-grid" style={{ 
           display: 'grid', 
           gridTemplateColumns: 'repeat(4, 1fr)', 
@@ -118,7 +118,11 @@ const Blogs = () => {
 
       <style>{`
         @media (max-width: 767px) {
-          .blogs-grid { grid-template-columns: 1fr !important; gap: 16px !important; }
+          .blogs-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 12px !important; }
+          .blog-card > div:first-child { height: 120px !important; }
+          .blog-card h3 { font-size: 13px !important; margin-bottom: 6px !important; }
+          .blog-card p { font-size: 11px !important; margin-bottom: 10px !important; }
+          .blog-card a { padding: 8px 0 !important; font-size: 12px !important; }
         }
         @media (min-width: 768px) and (max-width: 1023px) {
           .blogs-grid { grid-template-columns: repeat(2, 1fr) !important; }

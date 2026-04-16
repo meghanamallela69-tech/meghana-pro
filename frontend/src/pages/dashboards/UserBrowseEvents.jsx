@@ -24,6 +24,13 @@ const UserBrowseEvents = () => {
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   const categories = ["all", "Conference", "Music", "Food", "Tech", "Wedding", "Party", "Outdoor"];
 
@@ -325,11 +332,8 @@ const UserBrowseEvents = () => {
           </button>
         </div>
       ) : (
-        <section className="event-cards-grid" style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(4, 1fr)', 
-          gap: '24px' 
-        }}>
+        <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6"
+          style={{ gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)' }}>
           {filteredEvents.map((event) => {
             const eventStatus = getEventStatus(event);
             const isCompleted = eventStatus.label === 'Completed';
@@ -452,71 +456,77 @@ const UserBrowseEvents = () => {
                   )}
                 </button>
               </div>
-              <div style={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                <h3 style={{ 
+              <div className="event-card-body" style={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                <h3 className="event-card-title" style={{ 
                   fontSize: '18px', 
                   fontWeight: '600', 
-                  marginBottom: '8px',
-                  color: '#1f2937'
+                  marginBottom: '6px',
+                  color: '#1f2937',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
                 }}>{event.title}</h3>
-                {/* Only show date for non-full-service events */}
-                {(!event.eventType || (event.eventType !== 'fullService' && event.eventType !== 'full-service')) && (
-                  <div className="event-card-meta" style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '6px',
-                    marginBottom: '8px',
-                    color: '#6b7280',
-                    fontSize: '14px'
-                  }}>
-                    <FiCalendar />
-                    {formatDate(event.date)}
-                  </div>
-                )}
+                {/* Date row — always rendered for consistent height */}
                 <div className="event-card-meta" style={{ 
                   display: 'flex', 
                   alignItems: 'center', 
                   gap: '6px',
-                  marginBottom: '16px',
+                  marginBottom: '4px',
                   color: '#6b7280',
-                  fontSize: '14px'
+                  fontSize: '13px',
+                  minHeight: '20px'
                 }}>
-                  <FiMapPin />
-                  {event.location || "Location TBD"}
+                  <FiCalendar style={{ flexShrink: 0 }} />
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {event.eventType === 'ticketed' && event.date
+                      ? formatDate(event.date)
+                      : 'Date as per booking'}
+                  </span>
+                </div>
+                {/* Location row — always rendered */}
+                <div className="event-card-meta" style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '6px',
+                  marginBottom: '0',
+                  color: '#6b7280',
+                  fontSize: '13px',
+                  minHeight: '20px'
+                }}>
+                  <FiMapPin style={{ flexShrink: 0 }} />
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {event.location || "Location TBD"}
+                  </span>
                 </div>
                 
                 {/* Show ticket availability for ticketed events — moved to View Details modal */}
 
-                <div className="event-card-actions" style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                <div className="event-card-actions" style={{ display: 'flex', gap: '6px', marginTop: 'auto', paddingTop: '8px' }}>
                   <button 
                     onClick={() => handleViewDetails(event)}
                     style={{
                       flex: 1,
-                      padding: '14px 18px',
+                      padding: '10px 8px',
                       backgroundColor: 'white',
                       color: '#a2783a',
                       textAlign: 'center',
-                      borderRadius: '10px',
-                      fontWeight: '700',
-                      fontSize: '15px',
+                      borderRadius: '8px',
+                      fontWeight: '600',
+                      fontSize: '13px',
                       transition: 'all 0.3s',
                       border: '2px solid #a2783a',
                       cursor: 'pointer',
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
                     }}
                     onMouseEnter={(e) => {
                       e.target.style.backgroundColor = '#a2783a';
                       e.target.style.color = 'white';
-                      e.target.style.transform = 'translateY(-2px)';
-                      e.target.style.boxShadow = '0 4px 12px rgba(162, 120, 58, 0.3)';
                     }}
                     onMouseLeave={(e) => {
                       e.target.style.backgroundColor = 'white';
                       e.target.style.color = '#a2783a';
-                      e.target.style.transform = 'translateY(0)';
-                      e.target.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
                     }}
                   >
                     View Details
@@ -527,53 +537,47 @@ const UserBrowseEvents = () => {
                     return isCompleted ? (
                       <div style={{
                         flex: 1,
-                        padding: '14px 18px',
+                        padding: '10px 8px',
                         backgroundColor: '#f3f4f6',
                         color: '#9ca3af',
                         textAlign: 'center',
-                        borderRadius: '10px',
-                        fontWeight: '700',
-                        fontSize: '13px',
+                        borderRadius: '8px',
+                        fontWeight: '600',
+                        fontSize: '12px',
                         border: '2px solid #e5e7eb',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '6px'
+                        whiteSpace: 'nowrap',
                       }}>
-                        <span>🚫</span> Not Available
+                        N/A
                       </div>
                     ) : (
                       <button 
                         onClick={() => handleBookNow(event)}
                         style={{
                           flex: 1,
-                          padding: '14px 18px',
+                          padding: '10px 8px',
                           backgroundColor: '#a2783a',
                           color: 'white',
                           textAlign: 'center',
-                          borderRadius: '10px',
-                          fontWeight: '700',
-                          fontSize: '15px',
+                          borderRadius: '8px',
+                          fontWeight: '600',
+                          fontSize: '13px',
                           transition: 'all 0.3s',
                           border: '2px solid #a2783a',
                           cursor: 'pointer',
-                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.5px'
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
                         }}
                         onMouseEnter={(e) => {
                           e.target.style.backgroundColor = '#8b6a30';
                           e.target.style.borderColor = '#8b6a30';
-                          e.target.style.transform = 'translateY(-2px)';
-                          e.target.style.boxShadow = '0 4px 12px rgba(162, 120, 58, 0.4)';
                         }}
                         onMouseLeave={(e) => {
                           e.target.style.backgroundColor = '#a2783a';
                           e.target.style.borderColor = '#a2783a';
-                          e.target.style.transform = 'translateY(0)';
-                          e.target.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
                         }}
                       >
                         Book Now

@@ -14,6 +14,13 @@ const MerchantEvents = () => {
   const navigate = useNavigate();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   const loadEvents = useCallback(async () => {
     try {
@@ -82,7 +89,8 @@ const MerchantEvents = () => {
           </button>
         </div>
       ) : (
-        <div className="event-cards-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-5"
+          style={{ gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)' }}>
           {events.map((ev) => {
             // Get image - use first image from images array or fallback
             const eventImage = ev.images && ev.images.length > 0 

@@ -24,8 +24,8 @@ const LANGUAGES = [
   { code: "pt",    label: "Português" },
 ];
 
-const GlobeIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+const GlobeIcon = ({ size = 18 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
     stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="10" />
     <line x1="2" y1="12" x2="22" y2="12" />
@@ -123,6 +123,8 @@ const LanguageSwitcher = () => {
     </div>
   ) : null;
 
+  const isMobile = typeof window !== "undefined" && window.innerWidth <= 899;
+
   return (
     <>
       <button
@@ -132,21 +134,21 @@ const LanguageSwitcher = () => {
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 5,
-          padding: "6px 10px",
-          borderRadius: 8,
+          gap: 3,
+          padding: "3px 6px",
+          borderRadius: 6,
           border: "1px solid #e5e7eb",
           background: open ? "#f3f4f6" : "transparent",
           cursor: "pointer",
           color: "#374151",
-          fontSize: 12,
+          fontSize: 11,
           fontWeight: 600,
           transition: "all 0.15s",
         }}
         onMouseEnter={e => e.currentTarget.style.background = "#f3f4f6"}
         onMouseLeave={e => { if (!open) e.currentTarget.style.background = "transparent"; }}
       >
-        <GlobeIcon />
+        <GlobeIcon size={13} />
         <span>{current}</span>
       </button>
       {createPortal(dropdown, document.body)}

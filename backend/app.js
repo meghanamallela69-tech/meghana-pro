@@ -31,25 +31,23 @@ dotenv.config();
 app.use(
   cors({
     origin: function(origin, callback) {
-      // Allow requests with no origin (like mobile apps or curl requests)
+      // Allow requests with no origin (mobile apps, curl, Postman)
       if (!origin) return callback(null, true);
-      
-      // Allowed origins
-      const allowedOrigins = [
-        process.env.FRONTEND_URL,
-        'http://localhost:5173',
-        'http://localhost:5174',
-        'http://127.0.0.1:5173',
-        'http://127.0.0.1:5174',
-        'http://192.168.1.16:5173',
-        'http://192.168.1.6:5173',
-      ];
-      
-      if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
+
+      // Allow localhost and any private network IP (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+      const isLocalhost = origin.includes('localhost') || origin.includes('127.0.0.1');
+      const isPrivateNetwork = /^https?:\/\/(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.)/.test(origin);
+
+      if (isLocalhost || isPrivateNetwork) {
+        return callback(null, true);
       }
+
+      // Also allow the explicitly configured frontend URL
+      if (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL) {
+        return callback(null, true);
+      }
+
+      callback(new Error('Not allowed by CORS'));
     },
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     credentials: true,

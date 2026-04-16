@@ -565,7 +565,7 @@ const FullServiceBookingModal = ({ isOpen, onClose, event, onSuccess }) => {
               ))}
               {discount > 0 && (
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#16a34a", fontWeight: 600 }}>
-                  <span>Coupon ({appliedCoupon?.code})</span>
+                  <span>Coupon ({coupon.applied?.coupon?.code})</span>
                   <span>−{fmt(discount)}</span>
                 </div>
               )}

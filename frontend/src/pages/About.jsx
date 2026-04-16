@@ -5,10 +5,10 @@ const About = () => {
     <>
       {/* Hero */}
       <section className="bg-gray-100">
-        <div className="max-w-7xl mx-auto px-6 py-16">
-          <div className="rounded-2xl bg-gray-50 ring-1 ring-gray-200 px-8 py-12">
-            <h1 className="text-3xl md:text-5xl font-semibold text-gray-900">About EventHub</h1>
-            <p className="mt-3 text-gray-600 max-w-2xl">
+        <div className="max-w-7xl mx-auto px-4 py-6 md:px-6 md:py-16">
+          <div className="rounded-2xl bg-gray-50 ring-1 ring-gray-200 px-4 py-6 md:px-8 md:py-12">
+            <h1 className="text-2xl md:text-5xl font-semibold text-gray-900">About EventHub</h1>
+            <p className="mt-2 text-gray-600 max-w-2xl text-sm md:text-base">
               EventHub is a modern platform that helps you plan, book, and manage
               memorable events with trusted vendors, streamlined bookings, and secure payments.
             </p>
@@ -39,7 +39,7 @@ const About = () => {
       </section>
 
       {/* Features - 4 cards side by side */}
-      <section className="max-w-7xl mx-auto px-6 py-16">
+      <section className="max-w-7xl mx-auto px-4 py-6 md:px-6 md:py-16">
         <h3 className="text-2xl md:text-3xl font-semibold mb-8">Why Choose EventHub</h3>
         <div className="about-features-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }}>
           {[
@@ -60,7 +60,7 @@ const About = () => {
       </section>
 
       {/* Statistics - 3 cards side by side */}
-      <section className="max-w-7xl mx-auto px-6 py-16">
+      <section className="max-w-7xl mx-auto px-4 py-6 md:px-6 md:py-16">
         <h3 className="text-2xl md:text-3xl font-semibold mb-8">EventHub in Numbers</h3>
         <div className="about-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' }}>
           {[
@@ -78,8 +78,15 @@ const About = () => {
 
       <style>{`
         @media (max-width: 767px) {
-          .about-features-grid { grid-template-columns: repeat(2, 1fr) !important; }
-          .about-stats-grid    { grid-template-columns: repeat(2, 1fr) !important; }
+          .about-features-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 12px !important; }
+          .about-stats-grid    { grid-template-columns: repeat(3, 1fr) !important; gap: 10px !important; }
+          .about-stats-grid .rounded-2xl { padding: 12px 8px !important; }
+          .about-stats-grid .text-4xl { font-size: 20px !important; }
+          .about-stats-grid .text-sm { font-size: 10px !important; }
+          .about-features-grid .rounded-2xl { padding: 14px 10px !important; }
+          .about-features-grid .h-12 { width: 36px !important; height: 36px !important; }
+          .about-features-grid .font-semibold { font-size: 12px !important; }
+          .about-features-grid .text-sm { font-size: 10px !important; }
         }
         @media (min-width: 768px) and (max-width: 1023px) {
           .about-features-grid { grid-template-columns: repeat(2, 1fr) !important; }

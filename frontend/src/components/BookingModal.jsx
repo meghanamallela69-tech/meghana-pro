@@ -32,6 +32,16 @@ const BookingModal = ({ service, isOpen, onClose, onSuccess, coupons = [] }) => 
   // Ticketed States
   const [selectedTickets, setSelectedTickets] = useState({});
 
+  // Mobile detection
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia("(max-width: 767px)").matches);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const handler = (e) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
   // Common States — coupon handled by hook below
 
   // ── Effects — ALL must be before any conditional return ──────────────────
@@ -49,6 +59,15 @@ const BookingModal = ({ service, isOpen, onClose, onSuccess, coupons = [] }) => 
     token,
     eventId: service?._id,
     getAmount: () => {
+      const eventType = service?.eventType || "full-service";
+      if (eventType === "ticketed") {
+        // Calculate ticketed subtotal from selected tickets
+        const tTypes = service?.ticketTypes || [];
+        return tTypes.reduce((sum, ticket) => {
+          const qty = selectedTickets[ticket.name] || 0;
+          return sum + (parseInt(ticket.price) || 0) * qty;
+        }, 0);
+      }
       const base = service?.price || 0;
       const addons = selectedAddons.reduce((s, a) => s + (a.price || 0), 0);
       return base + addons;
@@ -286,15 +305,6 @@ const BookingModal = ({ service, isOpen, onClose, onSuccess, coupons = [] }) => 
   }
 
   const today = new Date().toISOString().split("T")[0];
-  const [isMobile, setIsMobile] = useState(() => window.matchMedia("(max-width: 767px)").matches);
-
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width: 767px)");
-    const handler = (e) => setIsMobile(e.matches);
-    mq.addEventListener("change", handler);
-    setIsMobile(mq.matches);
-    return () => mq.removeEventListener("change", handler);
-  }, []);
 
   if (showPayment && createdBooking) {
     return (
